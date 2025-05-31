@@ -53,8 +53,8 @@ class ControlMode(IntEnum):
     HUMAN_MODE = 4
 
 
-@dataclass(frozen=True, slots=True)
-class RobotState:
+@dataclass(frozen=True)
+class FrankaArmState:
     """The robot state."""
 
     timestamp_ms: int
@@ -98,23 +98,17 @@ class RemoteFranka(RemoteDevice):
         self._sock_req: zmq.Socket = self._ctx.socket(zmq.REQ)
         self._sock_req.connect(f"tcp://{device_addr}:{device_port}")
 
-        self._state_buffer: Deque[RobotState] = deque()
+        self._state_buffer: Deque[FrankaArmState] = deque()
         self._sub_sock: Optional[zmq.Socket] = None
         self._sub_thread: Optional[threading.Thread] = None
         self._listen_flag: threading.Event = threading.Event()
-
-    def __enter__(self) -> "RemoteFranka":
-        return self
-
-    def __exit__(self, exc_type, exc, tb) -> None:
-        self.close()
 
     def close(self) -> None:
         self.stop_state_listener()
         if not self._sock_req.closed:
             self._sock_req.close()
 
-    def get_state(self) -> RobotState:
+    def get_state(self) -> FrankaArmState:
         """Return a single state sample"""
         self._send(MsgID.GET_STATE_REQ, b"")
         payload = self._recv_expect(MsgID.GET_STATE_RESP)
@@ -228,11 +222,7 @@ class RemoteFranka(RemoteDevice):
 
         def _worker() -> None:
             while self._listen_flag.is_set():
-                try:
-                    raw = sock.recv(flags=zmq.NOBLOCK)
-                except zmq.Again:
-                    time.sleep(0.001)
-                    continue
+                raw = sock.recv()
                 try:
                     state = self._decode_state(raw)
                     self._state_buffer.append(state)
@@ -252,16 +242,16 @@ class RemoteFranka(RemoteDevice):
             self._sub_sock.close()
             self._sub_sock = None
 
-    def get_state_buffer(self) -> List[RobotState]:
+    def get_state_buffer(self) -> List[FrankaArmState]:
         """Return a *copy* of the internal state buffer."""
         return list(self._state_buffer)
 
-    def latest_state(self) -> Optional[RobotState]:
+    def latest_state(self) -> Optional[FrankaArmState]:
         """Return the most recent *RobotState* or *None* if buffer is empty."""
         return self._state_buffer[-1] if self._state_buffer else None
 
     @staticmethod
-    def _decode_state(buf: bytes) -> RobotState:
+    def _decode_state(buf: bytes) -> FrankaArmState:
         """Convert the bytes into a :class:`RobotState` instance."""
         if len(buf) != _STATE_SIZE:
             raise CommandError("RobotState payload size mismatch")
@@ -288,7 +278,7 @@ class RemoteFranka(RemoteDevice):
         i += 6
         K_F_ext_hat_K = values[i : i + 6]
 
-        return RobotState(
+        return FrankaArmState(
             timestamp_ms=ts,
             O_T_EE=O_T_EE,
             O_T_EE_d=O_T_EE_d,

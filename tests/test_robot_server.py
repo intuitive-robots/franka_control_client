@@ -2,7 +2,7 @@ import socket
 import struct
 import unittest
 from collections import deque
-from typing import Deque, List
+from typing import Deque, List, Optional
 
 from franka_control_client.device.robot import franka as rf_mod
 from franka_control_client.core.exception import CommandError
@@ -18,7 +18,7 @@ RemoteFranka = rf_mod.RemoteFranka
 class _FakeSocket:
     """Fake socket used for unit‑testing."""
 
-    def __init__(self, frames: List[bytes] | None = None) -> None:
+    def __init__(self, frames: Optional[List[bytes]] = None) -> None:
         self._frames: Deque[bytes] = deque(frames or [])
         self.sent: list[bytes] = []
         self.closed = False

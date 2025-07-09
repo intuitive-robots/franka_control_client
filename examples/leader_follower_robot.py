@@ -1,11 +1,11 @@
-import sys
 import os
+import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from franka_control_client.device.franka_robot.franka_arm import (
-    RemoteFranka,
     ControlMode,
+    RemoteFranka,
 )
 
 LEADER_ROBOT_IP = "127.0.0.1"
@@ -23,8 +23,8 @@ def run_leader_follower_example():
         client_follower.connect()
         client_leader.connect()
         leader_port = client_leader.get_sub_port()
-        client_leader.start_control(ControlMode.HUMAN_MODE)
-        client_follower.start_control(
+        client_leader.set_control_mode(ControlMode.HUMAN_MODE)
+        client_follower.set_control_mode(
             ControlMode.JOINT_VELOCITY,
             controller_ip=LEADER_ROBOT_IP,
             controller_port=leader_port,

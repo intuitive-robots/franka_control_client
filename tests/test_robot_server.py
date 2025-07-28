@@ -134,7 +134,7 @@ class TestRemoteFrankaAPI(unittest.TestCase):
         rf = _instantiate_rf(fake_sock)
 
         with self.assertRaises(ValueError):
-            rf.start_control(ControlMode.CARTESIAN_POSITION)
+            rf.set_control_mode(ControlMode.CARTESIAN_POSITION)
 
     def test_start_control_payload_and_success(self) -> None:
         ip = "192.168.0.2"
@@ -146,7 +146,7 @@ class TestRemoteFrankaAPI(unittest.TestCase):
         fake_sock = _FakeSocket([fake_resp])
         rf = _instantiate_rf(fake_sock)
 
-        rf.start_control(
+        rf.set_control_mode(
             ControlMode.JOINT_POSITION, controller_ip=ip, controller_port=port
         )
 

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import socket
-import struct
-from dataclasses import dataclass
+import struct, time
+from dataclasses import dataclass, astuple
 from enum import IntEnum
 from typing import Final, Optional, Tuple
 
@@ -14,7 +14,7 @@ _STATE_STRUCT: Final = struct.Struct(
     "!I"  # timestamp [ms] – 4 B
     "16d16d"  # O_T_EE, O_T_EE_d – 256 B
     "7d7d7d7d7d"  # q, q_d, dq, dq_d, tau_ext_hat_filt – 280 B
-    "6d6d"  # O_F_ext_hat_K, K_F_ext_hat_K –  96 B
+    "6d6d"  # O_F_ext_hat_K, K_F_ext_hat_K – 96 B
 )
 _STATE_SIZE: Final = _STATE_STRUCT.size
 
@@ -66,6 +66,7 @@ class RemoteFranka(RemoteDevice):
             device_port (int): The port number for communication with the Franka robot.
         """
         super().__init__(device_addr, device_port)
+        self.default_pose: Tuple[float, ...] = (-1,)
 
     def get_state(self) -> FrankaArmState:
         """Return a single state sample"""
@@ -79,7 +80,7 @@ class RemoteFranka(RemoteDevice):
         payload = self._recv_expect(MsgID.GET_CONTROL_MODE_RESP)
         return ControlMode(payload[0])
 
-    def start_control(
+    def set_control_mode(
         self,
         mode: ControlMode,
         *,
@@ -129,9 +130,64 @@ class RemoteFranka(RemoteDevice):
             topic=topic,
         )
 
+    def set_default_pose(self) -> None:
+        """
+        Set the current end-effector pose as the default pose.
+
+        Raises:
+            CommandError: If unable to retrieve current robot state.
+        """
+        try:
+            self.default_pose = self.get_state().O_T_EE_d
+        except Exception as exc:
+            raise CommandError(f"Failed to set default pose: {exc}")
+
+    def move_to_default_pose(self) -> None:
+        """
+        Move the robot to the previously stored default pose.
+
+        Raises:
+            CommandError: If no default pose has been set or movement fails.
+        """
+        if self.default_pose[0] == -1:
+            raise CommandError("Default pose not set")
+        self.move_to_position(self.default_pose)
+
+    def move_to_position(self, o_t_ee_d: Tuple[float, ...]) -> None:
+        """
+        Move the robot to the specified end-effector position.
+
+        Args:
+            o_t_ee_d: Target end-effector pose as 4x4 transformation matrix.
+
+        Raises:
+            CommandError: If position data is invalid or movement command fails.
+        """
+        if len(o_t_ee_d) != 16:
+            raise CommandError(f"Expected 16 pose values, got {len(o_t_ee_d)}")
+        try:
+            payload = struct.pack("16d", *o_t_ee_d)
+            self._send(MsgID.MOVE_TO_POSITION_REQ, payload)
+        except struct.error as exc:
+            raise CommandError(f"Failed to pack position data: {exc}")
+
+    def move_list_position(self, positions: list[Tuple[float, ...]]) -> None:
+        """
+        Move the robot through a list of end-effector positions.
+        Args:
+            positions: List of target end-effector poses, each as a 4x4 transformation matrix.
+        
+        Raises: 
+            CommandError: If any position data is invalid or movement command fails.
+        """
+        if not positions:
+            raise CommandError("Position list cannot be empty")
+        for pos in positions:
+            self.move_to_position(pos)
+
     @staticmethod
     def _decode_state(buf: bytes) -> FrankaArmState:
-        """Convert the bytes into a :class:`RobotState` instance."""
+        """Convert the bytes into a :class:`FrankaArmState` instance."""
         if len(buf) != _STATE_SIZE:
             raise CommandError("RobotState payload size mismatch")
         values = _STATE_STRUCT.unpack(buf)

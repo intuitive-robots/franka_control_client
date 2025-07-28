@@ -30,17 +30,18 @@ Python struct: `!I 16d16d 7d7d7d7d7d 6d6d`
 
 ## 2 Message Identifiers (MsgID)
 
-| Hex    | Symbol                 | Direction | Description                                      |
-| ------ | ---------------------  | --------- | ------------------------------------------------ |
-| `0x01` | `GET_STATE_REQ`        | C → S     | request a single state                           |
-| `0x02` | `GET_CONTROL_MODE_REQ` | C → S     | ask for active control mode                      |
-| `0x03` | `SET_CONTROL_MODE_REQ` | C → S     | switch to desired mode                           |
-| `0x04` | `GET_SUB_PORT_REQ`     | C → S     | query PUB port number                            |
-| `0x51` | `GET_STATE_RESP`       | S → C     | contains one                                     |
-| `0x52` | `GET_CONTROL_MODE_RESP`| S → C     | 1 × `uint8` (see table 5)                        |
-| `0x53` | `SET_CONTROL_MODE_RESP`| S → C     | 1 × `uint8` status (0 = OK)                      |
-| `0x54` | `GET_SUB_PORT_RESP`    | S → C     | 2 × `uint8` TCP port (big‑endian)                |
-| `0xFF` | `ERROR`                | S → C     | 1 × error code                                   |
+| Hex    | Symbol              | Direction | Description                       |
+|--------|---------------------| --------- |-----------------------------------|
+| `0x01` | `GET_STATE_REQ`     | C → S     | request a single state            |
+| `0x02` | `QUERY_STATE_REQ`   | C → S     | ask for active control mode       |
+| `0x03` | `START_CONTROL_REQ` | C → S     | switch to desired mode            |
+| `0x04` | `GET_SUB_PORT_REQ`  | C → S     | query PUB port number             |
+| `0x05` | `MOVE_TO_POSITION_REQ`                   |   C → S         | move robot to a specific position |
+| `0x51` | `GET_STATE_RESP`    | S → C     | contains one                      |
+| `0x52` | `QUERY_STATE_RESP`  | S → C     | 1 × `uint8` (see table 5)         |
+| `0x53` | `START_CONTROL_RESP` | S → C     | 1 × `uint8` status (0 = OK)       |
+| `0x54` | `GET_SUB_PORT_RESP` | S → C     | 2 × `uint8` TCP port (big‑endian) |
+| `0xFF` | `ERROR`             | S → C     | 1 × error code                    |
 
 ---
 

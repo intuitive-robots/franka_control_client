@@ -20,3 +20,15 @@ class MsgID(IntEnum):
     GET_SUB_PORT_RESP = 0x54
 
     ERROR = 0xFF
+
+
+class RequestResult(IntEnum):
+    SUCCESS = 0x00            # Operation completed successfully
+    FAIL = 0x01               # Generic failure
+    INVALID_ARG = 0x02        # Request payload invalid or out of range
+    BUSY = 0x03               # Device is busy / command rejected temporarily
+    UNSUPPORTED = 0x04        # Command not supported in current mode
+    TIMEOUT = 0x05            # Operation timed out
+    COMM_ERROR = 0x06         # Communication or CRC error
+    INTERNAL_ERROR = 0x07     # Internal logic or hardware fault
+

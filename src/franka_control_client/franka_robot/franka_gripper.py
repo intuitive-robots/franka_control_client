@@ -53,7 +53,9 @@ class RemoteGripper(RemoteDevice):
     def _decode_state(buf: bytes) -> GripperState:
         if len(buf) != _STATE_SIZE:
             raise CommandError("State payload size mismatch")
-        timestamp, width, max_width, grasped, temperature = _STATE_STRUCT.unpack(buf)
+        timestamp, width, max_width, grasped, temperature = (
+            _STATE_STRUCT.unpack(buf)
+        )
         return GripperState(
             timestamp_ms=timestamp,
             width=width,

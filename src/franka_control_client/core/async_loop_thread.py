@@ -1,58 +1,73 @@
 from __future__ import annotations
-from abc import abstractmethod
+
 import asyncio
-import threading
 import concurrent.futures
-import zmq
-import zmq.asyncio
-from typing import Optional, ClassVar
+import threading
+from abc import abstractmethod
 from collections.abc import Coroutine
+from typing import ClassVar, Optional
+
+import zmq
+from zmq.asyncio import Context as AsyncZMQContext
+from zmq.asyncio import Socket as AsyncZMQSocket
 
 
-class AsyncLoopThread:
-    _instance: Optional[AsyncLoopThread] = None
+class AsyncLoop:
+    _instance: Optional[AsyncLoop] = None
     _lock: ClassVar[threading.Lock] = threading.Lock()
 
     def __init__(self) -> None:
+        self._loop_started = threading.Event()
         self.loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
-        self.thread: threading.Thread = threading.Thread(target=self._run_loop, daemon=True)
+        self.thread: threading.Thread = threading.Thread(
+            target=self._run_loop, daemon=True
+        )
+        self._ctx: AsyncZMQContext = AsyncZMQContext.instance()
         self.thread.start()
+        self._loop_started.wait(timeout=3)
 
     def _run_loop(self) -> None:
         asyncio.set_event_loop(self.loop)
+        self._loop_started.set()
         self.loop.run_forever()
 
     @classmethod
-    def get_instance(cls) -> AsyncLoopThread:
+    def get_instance(cls) -> AsyncLoop:
         with cls._lock:
             if cls._instance is None:
                 cls._instance = cls()
             return cls._instance
 
-    def submit_coroutine(self, coro: Coroutine) -> concurrent.futures.Future:
+    def get_zmq_context(self) -> AsyncZMQContext:
+        """Get an asyncio-compatible ZMQ context."""
+        return self._ctx
+
+    def submit_task(self, coro: Coroutine) -> concurrent.futures.Future:
         """Submit a coroutine to be executed on the loop thread."""
         return asyncio.run_coroutine_threadsafe(coro, self.loop)
 
 
-class LatestMessageSubscriber:
+class LatestMsgSubscriber:
     """A ZMQ SUB socket that keeps only the latest received message."""
 
     def __init__(self, url: str, topic: str = "") -> None:
         self.url: str = url
         self.topic: str = topic
-        self.ctx: zmq.asyncio.Context = zmq.asyncio.Context.instance()
+        self.loop: AsyncLoop = AsyncLoop.get_instance()
+        self.ctx: AsyncZMQContext = AsyncZMQContext.instance()
         self.latest_bytes_message: Optional[bytes] = None
         self.running: bool = True
-
-        self.loop_thread: AsyncLoopThread = AsyncLoopThread.get_instance()
-        self.future: asyncio.Future = self.loop_thread.submit_coroutine(self._run())
+        self.future: concurrent.futures.Future = self.loop.submit_task(
+            self._run()
+        )
 
     async def _run(self) -> None:
-        socket = self.ctx.socket(zmq.SUB)
+        socket: AsyncZMQSocket = self.ctx.socket(zmq.SUB)
         socket.connect(self.url)
         socket.setsockopt_string(zmq.SUBSCRIBE, self.topic)
-        print(f"[Subscriber] Connected to {self.url}, subscribed to '{self.topic}'")
-
+        print(
+            f"[Subscriber] Connected to {self.url}, subscribed to '{self.topic}'"
+        )
         while self.running:
             try:
                 msg: bytes = await socket.recv()

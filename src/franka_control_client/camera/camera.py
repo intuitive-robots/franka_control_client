@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ...core.remote_device import RemoteDevice
+from ..core.remote_device import RemoteDevice
 
 
 @dataclass

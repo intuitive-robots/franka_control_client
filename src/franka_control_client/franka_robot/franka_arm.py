@@ -22,11 +22,13 @@ class FrankaArmRequestID(MsgID):
 class ControlMode(IntEnum):
     """Control modes supported by the robot."""
 
-    CARTESIAN_POSITION = 0
-    CARTESIAN_VELOCITY = 1
-    JOINT_POSITION = 2
-    JOINT_VELOCITY = 3
-    HUMAN_MODE = 4
+    IDLE = 0  # Robot idle / no control command
+    JOINT_POSITION = 1  # Position control in joint space
+    JOINT_VELOCITY = 2  # Velocity control in joint space
+    CARTESIAN_POSE = 3  # Pose control in Cartesian space
+    CARTESIAN_VELOCITY = 4  # Velocity control in Cartesian space
+    JOINT_TORQUE = 5  # Joint torque control mode
+    GRAVITY_COMP = 6  # Gravity compensation mode
 
 
 @dataclass

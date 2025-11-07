@@ -68,11 +68,16 @@ class RemoteDevice(ABC):
             except zmq.ZMQError:
                 pass
         self._req_socket = self._ctx.socket(zmq.REQ)
-        if self._req_socket is None:
-            raise ConnectionError
-        self._req_socket.connect(
-            f"tcp://{self._device_addr}:{self._device_port}"
-        )
+        assert self._req_socket is not None
+        try:
+            self._req_socket.connect(
+                f"tcp://{self._device_addr}:{self._device_port}"
+            )
+        except zmq.ZMQError:
+            raise ConnectionError(
+                f"Failed to connect to "
+                f"tcp://{self._device_addr}:{self._device_port}"
+            )
 
     def disconnect(self) -> None:
         try:

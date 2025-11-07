@@ -4,9 +4,9 @@ import struct
 from dataclasses import dataclass
 from typing import Final
 
-from ...core.exception import CommandError
-from ...core.message import MsgID
-from ...core.remote_device import RemoteDevice, State
+from ..core.exception import CommandError
+from ..core.message import MsgID
+from ..core.remote_device import RemoteDevice, State
 
 _STATE_STRUCT: Final = struct.Struct(
     "!Idd?H"
@@ -27,8 +27,8 @@ class GripperState(State):
 class RemoteGripper(RemoteDevice):
     """Remote client for a gripper device."""
 
-    def __init__(self, device_addr: str, device_port: int) -> None:
-        super().__init__(device_addr, device_port)
+    # def __init__(self, device_addr: str, device_port: int) -> None:
+    #     super().__init__(device_addr, device_port)
 
     def get_state(self) -> GripperState:
         """Return a single state sample"""

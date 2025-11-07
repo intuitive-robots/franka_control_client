@@ -16,7 +16,7 @@ class FrankaArmRequestID(MsgID):
     SET_FRANKA_ARM_CONTROL_MODE = 2
     GET_FRANKA_ARM_STATE_PUB_PORT = 3
     MOVE_FRANKA_ARM_TO_JOINT_POSITION = 4
-    GET_FRANKA_GRIPPER_STATE = 5
+    MOVE_FRANKA_ARM_TO_CARTESIAN_POSITION = 5
 
 
 class ControlMode(IntEnum):
@@ -166,73 +166,77 @@ class RemoteFranka(RemoteDevice):
         (mode_value,) = struct.unpack("!B", payload[:1])
         return ControlMode(mode_value)
 
-    # def set_control_mode(
-    #     self,
-    #     mode: ControlMode,
-    #     *,
-    #     controller_ip: Optional[str] = None,
-    #     controller_port: Optional[int] = None,
-    #     subscribe_server: bool = False,
-    # ) -> None:
-    #     """
-    #     Switch the robot into *mode*.
+    def set_franka_arm_control_mode(self, mode: ControlMode) -> None:
+        """
+        Switch the Franka arm into the desired control mode.
 
-    #     For any mode **other than** :pyattr:`ControlMode.HUMAN_MODE` you *must*
-    #     provide ``controller_ip`` and ``controller_port`` - these parameters
-    #     tell the robot where your *SUB* socket lives.  If ``subscribe_server``
-    #     is *True* we start a background thread that subscribes to
-    #     state updates.
-    #     """
-    #     payload = bytearray([mode.value])
+        Args:
+            mode (ControlMode): Target control mode.
+            controller_ip (str, optional): IP of the controller (for subscriber-based control).
+            controller_port (int, optional): Port of the controller.
+        Raises:
+            CommandError: If mode switch fails or arguments are invalid.
+        """
+        header, payload = self.request(
+            FrankaArmRequestID.SET_FRANKA_ARM_CONTROL_MODE, bytes([mode.value])
+        )
 
-    #     if mode != ControlMode.HUMAN_MODE:
-    #         if controller_ip is None or controller_port is None:
-    #             raise ValueError("Controller_ip and Controller_port required")
+    def move_franka_arm_to_joint_position(
+        self, joint_positions: Tuple[float, ...]
+    ) -> None:
+        """
+        Move the Franka arm to the specified joint position.
 
-    #         try:
-    #             payload += socket.inet_aton(controller_ip)
-    #         except OSError:
-    #             raise ValueError(f"Invalid IPv4 address: {controller_ip}")
+        Args:
+            joint_positions (tuple of 7 floats): Target joint angles (radians).
+        Raises:
+            CommandError: If packing or response fails.
+        """
+        if len(joint_positions) != 7:
+            raise CommandError(
+                f"Expected 7 joint values, got {len(joint_positions)}"
+            )
 
-    #         payload += struct.pack("!H", controller_port)
+        try:
+            payload = struct.pack("!7d", *joint_positions)
+        except struct.error as exc:
+            raise CommandError(f"Failed to pack joint position data: {exc}")
 
-    #     _, status = self.request(
-    #         FrankaArmRequestID.SET_FRANKA_ARM_CONTROL_MODE, bytes(payload)
-    #     )
+        header, _ = self.request(
+            FrankaArmRequestID.MOVE_FRANKA_ARM_TO_JOINT_POSITION, payload
+        )
 
-    # def move_to_default_pose(self) -> None:
-    #     """
-    #     Move the robot to the previously stored default pose.
+        if header is None or header.message_id != RequestResultID.SUCCESS:
+            raise CommandError(
+                f"MOVE_FRANKA_ARM_TO_JOINT_POSITION failed (status={getattr(header, 'message_id', None)})"
+            )
 
-    #     Raises:
-    #         CommandError: If no default pose has been set or movement fails.
-    #     """
-    #     if self.default_pose[0] == -1:
-    #         raise CommandError("Default pose not set")
-    #     self.move_to_position(self.default_pose)
+    def move_franka_arm_to_cartesian_position(
+        self, pose_matrix: Tuple[float, ...]
+    ) -> None:
+        """
+        Move the Franka arm to the specified Cartesian pose.
 
-    # def move_to_position(self, o_t_ee_d: Tuple[float, ...]) -> None:
-    #     """
-    #     Move the robot to the specified end-effector position.
+        Args:
+            pose_matrix (tuple of 16 floats): 4x4 transformation matrix (row-major).
+        Raises:
+            CommandError: If packing or command execution fails.
+        """
+        if len(pose_matrix) != 16:
+            raise CommandError(
+                f"Expected 16 pose values, got {len(pose_matrix)}"
+            )
 
-    #     Args:
-    #         o_t_ee_d: Target end-effector pose as 4x4 transformation matrix.
+        try:
+            payload = struct.pack("!16d", *pose_matrix)
+        except struct.error as exc:
+            raise CommandError(f"Failed to pack pose data: {exc}")
 
-    #     Raises:
-    #         CommandError: If position data is invalid or movement command fails.
-    #     """
-    #     if len(o_t_ee_d) != 16:
-    #         raise CommandError(f"Expected 16 pose values, got {len(o_t_ee_d)}")
-    #     try:
-    #         payload = struct.pack("16d", *o_t_ee_d)
-    #         header, _ = self.request(
-    #             FrankaArmRequestID.MOVE_FRANKA_ARM_TO_JOINT_POSITION, payload
-    #         )
-    #         if header is None:
-    #             raise CommandError("Failed to receive response")
-    #         if header.message_id != RequestResultID.SUCCESS:
-    #             raise CommandError(
-    #                 f"MOVE_TO_POSITION failed (status={header.message_id})"
-    #             )
-    #     except struct.error as exc:
-    #         raise CommandError(f"Failed to pack position data: {exc}")
+        header, _ = self.request(
+            FrankaArmRequestID.MOVE_FRANKA_ARM_TO_CARTESIAN_POSITION, payload
+        )
+
+        if header is None or header.message_id != RequestResultID.SUCCESS:
+            raise CommandError(
+                f"MOVE_FRANKA_ARM_TO_CARTESIAN_POSITION failed (status={getattr(header, 'message_id', None)})"
+            )

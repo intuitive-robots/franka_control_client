@@ -6,6 +6,7 @@ from enum import IntEnum
 from typing import Optional, Tuple
 
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 from ..core.async_loop_thread import CommandPublisher, LatestMsgSubscriber
 from ..core.exception import CommandError
@@ -54,8 +55,9 @@ class ControlMode(IntEnum):
     GRAVITY_COMP = 6  # Gravity compensation mode
 
 
+# pylint: disable=invalid-name
 @dataclass
-class FrankaArmState(BinaryMsg):
+class FrankaArmState:
     """
     Represents the 636-byte Robot Arm State message.
 
@@ -83,12 +85,17 @@ class FrankaArmState(BinaryMsg):
     O_F_ext_hat_K: tuple[float, ...]
     K_F_ext_hat_K: tuple[float, ...]
 
-    _STRUCT = struct.Struct("!I 16d16d 7d7d7d7d7d 6d6d")
+    # Derived fields
+    pos: tuple[float, ...]
+    quat: tuple[float, ...]
+    vel: tuple[float, ...]  # (vx, vy, vz, wx, wy, wz)
+
+    _STRUCT = struct.Struct("!I16d16d7d7d7d7d7d6d6d")
     SIZE = _STRUCT.size  # 636 bytes
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> FrankaArmState:
-        """Unpack bytes into a FrankaArmState."""
+    def from_bytes(cls, data: bytes) -> "FrankaArmState":
+        """Unpack bytes into a FrankaArmState and compute derived pose and velocity."""
         if len(data) < cls.SIZE:
             raise ValueError(
                 f"Data too short: expected {cls.SIZE} bytes, got {len(data)}"
@@ -97,24 +104,65 @@ class FrankaArmState(BinaryMsg):
         unpacked = cls._STRUCT.unpack_from(data)
         timestamp_ms = unpacked[0]
         offset = 1
+
+        # Extract fields
+        O_T_EE = tuple(unpacked[offset : offset + 16])
+        O_T_EE_d = tuple(unpacked[offset + 16 : offset + 32])
+        q = tuple(unpacked[offset + 32 : offset + 39])
+        q_d = tuple(unpacked[offset + 39 : offset + 46])
+        dq = tuple(unpacked[offset + 46 : offset + 53])
+        dq_d = tuple(unpacked[offset + 53 : offset + 60])
+        tau_ext_hat_filtered = tuple(unpacked[offset + 60 : offset + 67])
+        O_F_ext_hat_K = tuple(unpacked[offset + 67 : offset + 73])
+        K_F_ext_hat_K = tuple(unpacked[offset + 73 : offset + 79])
+
+        # === Derived quantities ===
+        T = np.array(O_T_EE, dtype=np.float64).reshape(4, 4)
+
+        # Position (translation)
+        pos = tuple(T[:3, 3])
+
+        # Orientation quaternion (x, y, z, w)
+        # TODO: verify quaternion order
+        quat = tuple(R.from_matrix(T[:3, :3]).as_quat(False))
+
+        # Approximate Cartesian velocity from difference between current and desired pose
+        T_d = np.array(O_T_EE_d, dtype=np.float64).reshape(4, 4)
+        dT = T_d[:3, 3] - T[:3, 3]
+        # Linear velocity (placeholder: not time-scaled)
+        vx, vy, vz = dT.tolist()
+        # Angular velocity (placeholder from orientation diff)
+        R_d = R.from_matrix(T_d[:3, :3])
+        R_c = R.from_matrix(T[:3, :3])
+        dR = R_d * R_c.inv()
+        wx, wy, wz = dR.as_rotvec().tolist()
+
+        vel = (vx, vy, vz, wx, wy, wz)
+
         return cls(
             timestamp_ms=timestamp_ms,
-            O_T_EE=tuple(unpacked[offset : offset + 16]),
-            O_T_EE_d=tuple(unpacked[offset + 16 : offset + 32]),
-            q=tuple(unpacked[offset + 32 : offset + 39]),
-            q_d=tuple(unpacked[offset + 39 : offset + 46]),
-            dq=tuple(unpacked[offset + 46 : offset + 53]),
-            dq_d=tuple(unpacked[offset + 53 : offset + 60]),
-            tau_ext_hat_filtered=tuple(unpacked[offset + 60 : offset + 67]),
-            O_F_ext_hat_K=tuple(unpacked[offset + 67 : offset + 73]),
-            K_F_ext_hat_K=tuple(unpacked[offset + 73 : offset + 79]),
+            O_T_EE=O_T_EE,
+            O_T_EE_d=O_T_EE_d,
+            q=q,
+            q_d=q_d,
+            dq=dq,
+            dq_d=dq_d,
+            tau_ext_hat_filtered=tau_ext_hat_filtered,
+            O_F_ext_hat_K=O_F_ext_hat_K,
+            K_F_ext_hat_K=K_F_ext_hat_K,
+            pos=pos,
+            quat=quat,
+            vel=vel,
         )
 
     def __repr__(self):
+        q_short = ", ".join(f"{v:.3f}" for v in self.q)
+        dq_short = ", ".join(f"{v:.3f}" for v in self.dq)
+        p_short = ", ".join(f"{v:.3f}" for v in self.pos)
         return (
-            f"RobotArmState(ts={self.timestamp_ms}ms, "
-            f"q={tuple(round(v, 3) for v in self.q)}, "
-            f"dq={tuple(round(v, 3) for v in self.dq)})"
+            f"FrankaArmState(ts={self.timestamp_ms}ms, "
+            f"pos=[{p_short}], "
+            f"q=[{q_short}], dq=[{dq_short}])"
         )
 
 

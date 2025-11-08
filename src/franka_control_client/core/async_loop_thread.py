@@ -11,8 +11,13 @@ import zmq
 from zmq.asyncio import Context as AsyncZMQContext
 from zmq.asyncio import Socket as AsyncZMQSocket
 
+from .message import MsgHeader
+from .utils import get_socket_bind_url
+
 
 class AsyncLoop:
+    """A singleton class that runs an asyncio event loop in a separate thread."""
+
     _instance: Optional[AsyncLoop] = None
     _lock: ClassVar[threading.Lock] = threading.Lock()
 
@@ -33,6 +38,7 @@ class AsyncLoop:
 
     @classmethod
     def get_instance(cls) -> AsyncLoop:
+        """Get the singleton instance of AsyncLoop."""
         with cls._lock:
             if cls._instance is None:
                 cls._instance = cls()
@@ -85,3 +91,17 @@ class LatestMsgSubscriber:
         self.running = False
         self.future.cancel()
         print(f"[Subscriber] {self.url} stopped")
+
+
+class CommandPublisher:
+    """A ZMQ PUB socket for sending command messages."""
+
+    def __init__(self, ip_addr) -> None:
+        self.socket: zmq.Socket = zmq.Context.instance().socket(zmq.PUB)
+        self.socket.bind(f"tcp://{ip_addr}:0")
+        self.url = get_socket_bind_url(self.socket)
+
+    def send_command(self, msg_id: int, payload: bytes) -> None:
+        """Send a command message."""
+        header = MsgHeader(message_id=msg_id, payload_length=len(payload))
+        self.socket.send(header.to_bytes() + payload)

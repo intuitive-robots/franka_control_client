@@ -13,10 +13,12 @@ from typing import ClassVar
 
 
 class MsgID(IntEnum):
-    pass
+    """Abstract Identifiers for different message types."""
 
 
 class RequestResultID(MsgID):
+    """Identifiers for request result messages."""
+
     SUCCESS = 200
     FAIL = 201
     INVALID_ARG = 202
@@ -61,7 +63,7 @@ class MsgHeader(BinaryMsg):
     message_id: int
     payload_length: int
     flags: int = 0
-    timestamp: int = field(default_factory=lambda: time.time_ns())
+    timestamp: int = field(default_factory=time.time_ns)
 
     _STRUCT = struct.Struct("<BBHQ")
     SIZE = _STRUCT.size  # 12 bytes

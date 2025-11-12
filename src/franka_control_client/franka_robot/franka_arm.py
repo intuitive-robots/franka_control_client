@@ -193,9 +193,14 @@ class RemoteFranka(RemoteDevice):
                 f"No local interface found in the same subnet as {device_addr}"
             )
         self.command_publisher = CommandPublisher(local_ip)
-        self.arm_state_sub = LatestMsgSubscriber(
-            f"tcp://{device_addr}:{self.get_franka_arm_state_pub_port()}"
-        )
+        self.arm_state_sub = LatestMsgSubscriber()
+
+    def connect(self) -> None:
+        super().connect()
+        state_pub_addr = self.get_franka_arm_state_pub_port()
+        if state_pub_addr is None:
+            raise CommandError("Failed to get Franka arm state pub port")
+        self.arm_state_sub.connect(state_pub_addr)
 
     def get_franka_arm_state(self) -> FrankaArmState:
         """Return a single state sample"""
@@ -204,15 +209,15 @@ class RemoteFranka(RemoteDevice):
             raise CommandError("Failed to get Franka arm state")
         return FrankaArmState.from_bytes(payload)
 
-    def get_franka_arm_state_pub_port(self) -> Optional[int]:
+    def get_franka_arm_state_pub_port(self) -> Optional[str]:
         """Return the latest published state sample, if any."""
-        _, payload = self.request(
+        header, payload = self.request(
             FrankaArmServiceID.GET_FRANKA_ARM_STATE_PUB_PORT, b""
         )
+        print(f"Header: {header}, Payload: {payload}")
         if payload is None:
             raise CommandError("Failed to get Franka arm state pub port")
-        (port,) = struct.unpack("!H", payload[:2])
-        return port
+        return payload.decode("utf-8")
 
     def get_franka_arm_control_mode(self) -> ControlMode:
         """Return the currently active control mode."""
@@ -239,10 +244,11 @@ class RemoteFranka(RemoteDevice):
         Raises:
             CommandError: If mode switch fails or arguments are invalid.
         """
-        header, payload = self.request(
+        self.request(
             FrankaArmServiceID.SET_FRANKA_ARM_CONTROL_MODE,
             bytes([mode.value]) + self.command_publisher.url.encode(),
         )
+        print(f"Set Franka arm control mode to {self.command_publisher.url}")
 
     def move_franka_arm_to_joint_position(
         self, joint_positions: Tuple[float, ...]
@@ -358,9 +364,11 @@ class RemoteFranka(RemoteDevice):
             raise ValueError(
                 f"Expected 6 Cartesian velocities, got {arr.size}"
             )
+        print(f"Sending Cartesian velocity command: {arr}")
         self.command_publisher.send_command(
             FrankaArmTopicID.CARTESIAN_VELOCITY_CMD, struct.pack("!6d", *arr)
         )
+        print(f"pack Size: {struct.calcsize('!6d')} bytes")
 
     def send_joint_torque_command(self, joint_torques) -> None:
         """

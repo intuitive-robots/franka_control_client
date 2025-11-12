@@ -56,16 +56,21 @@ class AsyncLoop:
 class LatestMsgSubscriber:
     """A ZMQ SUB socket that keeps only the latest received message."""
 
-    def __init__(self, url: str, topic: str = "") -> None:
-        self.url: str = url
-        self.topic: str = topic
+    def __init__(self) -> None:
+        self.url: str = ""
+        self.topic: str = ""
         self.loop: AsyncLoop = AsyncLoop.get_instance()
         self.ctx: AsyncZMQContext = AsyncZMQContext.instance()
         self.latest_bytes_message: Optional[bytes] = None
-        self.running: bool = True
-        self.future: concurrent.futures.Future = self.loop.submit_task(
-            self._run()
-        )
+        self.running: bool = False
+        self.future: Optional[concurrent.futures.Future] = None
+
+    def connect(self, url: str, topic: str = "") -> None:
+        """Connect the subscriber and start receiving messages."""
+        self.url = url
+        self.topic = topic
+        self.running = True
+        self.future = self.loop.submit_task(self._run())
 
     async def _run(self) -> None:
         socket: AsyncZMQSocket = self.ctx.socket(zmq.SUB)
@@ -104,4 +109,5 @@ class CommandPublisher:
     def send_command(self, msg_id: int, payload: bytes) -> None:
         """Send a command message."""
         header = MsgHeader(message_id=msg_id, payload_length=len(payload))
+        print(header)
         self.socket.send(header.to_bytes() + payload)

@@ -124,6 +124,7 @@ class RemoteDevice(ABC):
                     f"MsgID={response_header.message_id}, "
                     f"Flags=0x{response_header.flags:02X}, "
                     f"Len={response_header.payload_length}, "
-                    f"Ts={response_header.timestamp}"
+                    f"Ts={response_header.timestamp}, "
+                    f"{result[MsgHeader.SIZE :].decode('utf-8')}"
                 )
             return response_header, result[MsgHeader.SIZE :]

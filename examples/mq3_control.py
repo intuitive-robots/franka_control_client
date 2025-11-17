@@ -35,8 +35,8 @@ if __name__ == "__main__":
                     vel.tolist() + angular_vel.tolist()
                 )
                 print(f"Received input data: {vel}")
-            # else:
-            #     robot.send_cartesian_velocity_command([0, 0, 0, 0, 0, 0])
+            else:
+                robot.send_cartesian_velocity_command([0, 0, 0, 0, 0, 0])
             time.sleep(0.05)
     except KeyboardInterrupt:
         pass

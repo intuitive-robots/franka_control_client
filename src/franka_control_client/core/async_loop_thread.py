@@ -11,7 +11,6 @@ import zmq
 from zmq.asyncio import Context as AsyncZMQContext
 from zmq.asyncio import Socket as AsyncZMQSocket
 
-from .message import MsgHeader
 from .utils import get_socket_bind_url
 
 
@@ -94,7 +93,8 @@ class LatestMsgSubscriber:
     def stop(self) -> None:
         """Stop the subscriber and cancel its running task."""
         self.running = False
-        self.future.cancel()
+        if self.future:
+            self.future.cancel()
         print(f"[Subscriber] {self.url} stopped")
 
 
@@ -106,8 +106,6 @@ class CommandPublisher:
         self.socket.bind(f"tcp://{ip_addr}:0")
         self.url = get_socket_bind_url(self.socket)
 
-    def send_command(self, msg_id: int, payload: bytes) -> None:
+    def send_command(self, data: bytes) -> None:
         """Send a command message."""
-        header = MsgHeader(message_id=msg_id, payload_length=len(payload))
-        print(header)
-        self.socket.send(header.to_bytes() + payload)
+        self.socket.send(data)

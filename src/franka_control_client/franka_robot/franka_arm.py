@@ -9,38 +9,26 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 
 from ..core.async_loop_thread import CommandPublisher, LatestMsgSubscriber
-from ..core.exception import CommandError
-from ..core.message import BinaryMsg, MsgID, RequestResultID
+from ..core.exception import CommandError, DeviceConnectionError
+from ..core.message import FrankaResponseCode
 from ..core.remote_device import RemoteDevice
 from ..core.utils import get_local_ip_in_same_subnet
 
+# class FrankaArmTopicID(MsgID):
+#     """Response IDs for Franka arm commands."""
 
-class FrankaArmServiceID(MsgID):
-    """Request IDs for Franka arm commands."""
+#     # Publishers (robot → client)
+#     FRANKA_ARM_STATE_PUB = 100  # Publish the current robot arm state
+#     FRANKA_GRIPPER_STATE_PUB = 101  # Publish the current robot gripper state
 
-    GET_FRANKA_ARM_STATE = 0
-    GET_FRANKA_ARM_CONTROL_MODE = 1
-    SET_FRANKA_ARM_CONTROL_MODE = 2
-    GET_FRANKA_ARM_STATE_PUB_PORT = 3
-    MOVE_FRANKA_ARM_TO_JOINT_POSITION = 4
-    MOVE_FRANKA_ARM_TO_CARTESIAN_POSITION = 5
-
-
-class FrankaArmTopicID(MsgID):
-    """Response IDs for Franka arm commands."""
-
-    # Publishers (robot → client)
-    FRANKA_ARM_STATE_PUB = 100  # Publish the current robot arm state
-    FRANKA_GRIPPER_STATE_PUB = 101  # Publish the current robot gripper state
-
-    # Commands (client → robot)
-    JOINT_POSITION_CMD = 110  # Command robot joints to reach target positions
-    JOINT_VELOCITY_CMD = 111  # Command robot joints with velocity targets
-    CARTESIAN_POSE_CMD = 112  # Command robot end-effector to a Cartesian pose
-    CARTESIAN_VELOCITY_CMD = (
-        113  # Command robot end-effector with Cartesian velocities
-    )
-    JOINT_TORQUE_CMD = 114  # Command robot joints torques
+#     # Commands (client → robot)
+#     JOINT_POSITION_CMD = 110  # Command robot joints to reach target positions
+#     JOINT_VELOCITY_CMD = 111  # Command robot joints with velocity targets
+#     CARTESIAN_POSE_CMD = 112  # Command robot end-effector to a Cartesian pose
+#     CARTESIAN_VELOCITY_CMD = (
+#         113  # Command robot end-effector with Cartesian velocities
+#     )
+#     JOINT_TORQUE_CMD = 114  # Command robot joints torques
 
 
 class ControlMode(IntEnum):
@@ -94,7 +82,7 @@ class FrankaArmState:
     SIZE = _STRUCT.size  # 636 bytes
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> "FrankaArmState":
+    def from_bytes(cls, data: bytes) -> FrankaArmState:
         """Unpack bytes into a FrankaArmState and compute derived pose and velocity."""
         if len(data) < cls.SIZE:
             raise ValueError(
@@ -189,7 +177,7 @@ class RemoteFranka(RemoteDevice):
         self.default_pose: Tuple[float, ...] = (-1,)
         local_ip = get_local_ip_in_same_subnet(device_addr)
         if local_ip is None:
-            raise ConnectionError(
+            raise DeviceConnectionError(
                 f"No local interface found in the same subnet as {device_addr}"
             )
         self.command_publisher = CommandPublisher(local_ip)
@@ -204,16 +192,14 @@ class RemoteFranka(RemoteDevice):
 
     def get_franka_arm_state(self) -> FrankaArmState:
         """Return a single state sample"""
-        _, payload = self.request(FrankaArmServiceID.GET_FRANKA_ARM_STATE, b"")
+        _, payload = self.request("GET_FRANKA_ARM_STATE", b"")
         if payload is None:
             raise CommandError("Failed to get Franka arm state")
         return FrankaArmState.from_bytes(payload)
 
     def get_franka_arm_state_pub_port(self) -> Optional[str]:
         """Return the latest published state sample, if any."""
-        header, payload = self.request(
-            FrankaArmServiceID.GET_FRANKA_ARM_STATE_PUB_PORT, b""
-        )
+        header, payload = self.request("GET_FRANKA_ARM_STATE_PUB_PORT", b"")
         print(f"Header: {header}, Payload: {payload}")
         if payload is None:
             raise CommandError("Failed to get Franka arm state pub port")
@@ -221,16 +207,16 @@ class RemoteFranka(RemoteDevice):
 
     def get_franka_arm_control_mode(self) -> ControlMode:
         """Return the currently active control mode."""
-        header, payload = self.request(
-            FrankaArmServiceID.GET_FRANKA_ARM_CONTROL_MODE, b""
-        )
-        if header is None:
-            raise CommandError("Failed to get Franka arm control mode")
-        if header.message_id != RequestResultID.SUCCESS:
+        header, payload = self.request("GET_FRANKA_ARM_CONTROL_MODE", b"")
+        if header != FrankaResponseCode.SUCCESS:
             raise CommandError(
-                f"GET_FRANKA_ARM_CONTROL_MODE failed (status={header.message_id})"
+                f"GET_FRANKA_ARM_CONTROL_MODE failed (status={header})"
             )
-        (mode_value,) = struct.unpack("!B", payload[:1])
+        if payload is None or len(payload) != 1:
+            raise CommandError(
+                "Invalid payload for GET_FRANKA_ARM_CONTROL_MODE"
+            )
+        (mode_value,) = struct.unpack("!B", payload)
         return ControlMode(mode_value)
 
     def set_franka_arm_control_mode(self, mode: ControlMode) -> None:
@@ -245,7 +231,7 @@ class RemoteFranka(RemoteDevice):
             CommandError: If mode switch fails or arguments are invalid.
         """
         self.request(
-            FrankaArmServiceID.SET_FRANKA_ARM_CONTROL_MODE,
+            "SET_FRANKA_ARM_CONTROL_MODE",
             bytes([mode.value]) + self.command_publisher.url.encode(),
         )
         print(f"Set Franka arm control mode to {self.command_publisher.url}")
@@ -270,13 +256,11 @@ class RemoteFranka(RemoteDevice):
             payload = struct.pack("!7d", *joint_positions)
         except struct.error as exc:
             raise CommandError(f"Failed to pack joint position data: {exc}")
-        header, _ = self.request(
-            FrankaArmServiceID.MOVE_FRANKA_ARM_TO_JOINT_POSITION, payload
-        )
+        header, _ = self.request("MOVE_FRANKA_ARM_TO_JOINT_POSITION", payload)
 
-        if header is None or header.message_id != RequestResultID.SUCCESS:
+        if header is None or header != FrankaResponseCode.SUCCESS:
             raise CommandError(
-                f"MOVE_FRANKA_ARM_TO_JOINT_POSITION failed (status={getattr(header, 'message_id', None)})"
+                f"MOVE_FRANKA_ARM_TO_JOINT_POSITION failed (status={header})"
             )
 
     def move_franka_arm_to_cartesian_position(
@@ -301,10 +285,10 @@ class RemoteFranka(RemoteDevice):
             raise CommandError(f"Failed to pack pose data: {exc}")
 
         header, _ = self.request(
-            FrankaArmServiceID.MOVE_FRANKA_ARM_TO_CARTESIAN_POSITION, payload
+            "MOVE_FRANKA_ARM_TO_CARTESIAN_POSITION", payload
         )
 
-        if header is None or header.message_id != RequestResultID.SUCCESS:
+        if header is None or header != FrankaResponseCode.SUCCESS:
             raise CommandError(
                 f"MOVE_FRANKA_ARM_TO_CARTESIAN_POSITION failed (status={getattr(header, 'message_id', None)})"
             )
@@ -317,9 +301,7 @@ class RemoteFranka(RemoteDevice):
         arr = np.asarray(joint_positions, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint angles, got {arr.size}")
-        self.command_publisher.send_command(
-            FrankaArmTopicID.JOINT_POSITION_CMD, struct.pack("!7d", *arr)
-        )
+        self.command_publisher.send_command(struct.pack("!7d", *arr))
 
     def send_cartesian_pose_command(self, pose) -> None:
         """
@@ -333,10 +315,7 @@ class RemoteFranka(RemoteDevice):
         arr = np.asarray(pose, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 pose values, got {arr.size}")
-        self.command_publisher.send_command(
-            FrankaArmTopicID.CARTESIAN_POSE_CMD,
-            struct.pack("!7d", *arr),
-        )
+        self.command_publisher.send_command(struct.pack("!7d", *arr))
 
     def send_joint_velocity_command(self, joint_velocities) -> None:
         """
@@ -346,9 +325,7 @@ class RemoteFranka(RemoteDevice):
         arr = np.asarray(joint_velocities, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint velocities, got {arr.size}")
-        self.command_publisher.send_command(
-            FrankaArmTopicID.JOINT_VELOCITY_CMD, struct.pack("!7d", *arr)
-        )
+        self.command_publisher.send_command(struct.pack("!7d", *arr))
 
     def send_cartesian_velocity_command(self, cartesian_velocities) -> None:
         """
@@ -364,11 +341,9 @@ class RemoteFranka(RemoteDevice):
             raise ValueError(
                 f"Expected 6 Cartesian velocities, got {arr.size}"
             )
-        print(f"Sending Cartesian velocity command: {arr}")
-        self.command_publisher.send_command(
-            FrankaArmTopicID.CARTESIAN_VELOCITY_CMD, struct.pack("!6d", *arr)
-        )
-        print(f"pack Size: {struct.calcsize('!6d')} bytes")
+        # print(f"Sending Cartesian velocity command: {arr}")
+        self.command_publisher.send_command(struct.pack("!6d", *arr))
+        # print(f"pack Size: {struct.calcsize('!6d')} bytes")
 
     def send_joint_torque_command(self, joint_torques) -> None:
         """
@@ -378,6 +353,4 @@ class RemoteFranka(RemoteDevice):
         arr = np.asarray(joint_torques, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint torques, got {arr.size}")
-        self.command_publisher.send_command(
-            FrankaArmTopicID.JOINT_TORQUE_CMD, struct.pack("!7d", *arr)
-        )
+        self.command_publisher.send_command(struct.pack("!7d", *arr))

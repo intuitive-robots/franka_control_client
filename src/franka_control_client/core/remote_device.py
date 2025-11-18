@@ -10,12 +10,11 @@ import threading
 from abc import ABC
 from dataclasses import dataclass
 from traceback import print_exc
-from typing import Final, Optional, Tuple
+from typing import Final, List, Optional, Tuple
 
 import zmq
 
-from .exception import CommandError
-from .message import MsgHeader, MsgID, RequestResultID
+from .exception import CommandError, DeviceConnectionError
 
 
 @dataclass(frozen=True)
@@ -70,11 +69,11 @@ class RemoteDevice(ABC):
             self._req_socket.connect(
                 f"tcp://{self._device_addr}:{self._device_port}"
             )
-        except zmq.ZMQError:
-            raise ConnectionError(
+        except zmq.ZMQError as e:
+            raise DeviceConnectionError(
                 f"Failed to connect to "
-                f"tcp://{self._device_addr}:{self._device_port}"
-            )
+                f"tcp://{self._device_addr}:{self._device_port}: {e}"
+            ) from e
 
     def disconnect(self) -> None:
         """Disconnects from the server."""
@@ -92,39 +91,27 @@ class RemoteDevice(ABC):
     #     return self._state_buffer[-1] if self._state_buffer else None
 
     def request(
-        self, msg_id: MsgID, payload: bytes, timeout: int = 2
-    ) -> Tuple[Optional[MsgHeader], Optional[bytes]]:
-        result = None
-        header = MsgHeader(message_id=msg_id, payload_length=len(payload))
-        message = header.to_bytes() + payload
+        self, service_name: str, payload: bytes, timeout: int = 2
+    ) -> Tuple[str, Optional[bytes]]:
+        result: List[bytes] = []
         try:
-            self._req_socket.send(message, copy=False)
+            self._req_socket.send_multipart(
+                [service_name.encode("utf-8"), payload]
+            )
             if self._req_socket.poll(timeout * 1000) & zmq.POLLIN:
-                result = self._req_socket.recv()
+                result = self._req_socket.recv_multipart()
             else:
                 raise CommandError(
                     f"Timeout waiting for response (> {timeout}s)"
                 )
-            if result is None or len(result) < MsgHeader.SIZE:
+            if len(result) != 2:
                 raise CommandError("Received empty or too short response")
-
         except Exception as e:
             print(
                 f"Error when sending message from send_message function in "
                 f"simpub.core.utils: {e}"
             )
             print_exc()
-        finally:
-            if result is None:
-                return None, None
-            response_header = MsgHeader.from_bytes(result)
-            if response_header.message_id != RequestResultID.SUCCESS:
-                print(
-                    f"Received error response: "
-                    f"MsgID={response_header.message_id}, "
-                    f"Flags=0x{response_header.flags:02X}, "
-                    f"Len={response_header.payload_length}, "
-                    f"Ts={response_header.timestamp}, "
-                    f"{result[MsgHeader.SIZE :].decode('utf-8')}"
-                )
-            return response_header, result[MsgHeader.SIZE :]
+        if len(result) != 2:
+            return "", None
+        return result[0].decode("utf-8"), result[1]

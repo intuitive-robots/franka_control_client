@@ -2,7 +2,7 @@ class RemoteDeviceError(Exception):
     """Base exception for remote device operations."""
 
 
-class ConnectionError(RemoteDeviceError):
+class DeviceConnectionError(RemoteDeviceError):
     """Exception raised when connection fails."""
 
 
@@ -12,3 +12,7 @@ class DeviceNotReadyError(RemoteDeviceError):
 
 class CommandError(RemoteDeviceError):
     """Exception raised when command execution fails."""
+
+
+class MessageError(RemoteDeviceError):
+    """Exception raised when message processing fails."""

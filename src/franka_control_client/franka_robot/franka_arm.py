@@ -14,22 +14,6 @@ from ..core.message import FrankaResponseCode
 from ..core.remote_device import RemoteDevice
 from ..core.utils import get_local_ip_in_same_subnet
 
-# class FrankaArmTopicID(MsgID):
-#     """Response IDs for Franka arm commands."""
-
-#     # Publishers (robot → client)
-#     FRANKA_ARM_STATE_PUB = 100  # Publish the current robot arm state
-#     FRANKA_GRIPPER_STATE_PUB = 101  # Publish the current robot gripper state
-
-#     # Commands (client → robot)
-#     JOINT_POSITION_CMD = 110  # Command robot joints to reach target positions
-#     JOINT_VELOCITY_CMD = 111  # Command robot joints with velocity targets
-#     CARTESIAN_POSE_CMD = 112  # Command robot end-effector to a Cartesian pose
-#     CARTESIAN_VELOCITY_CMD = (
-#         113  # Command robot end-effector with Cartesian velocities
-#     )
-#     JOINT_TORQUE_CMD = 114  # Command robot joints torques
-
 
 class ControlMode(IntEnum):
     """Control modes supported by the robot."""
@@ -161,26 +145,24 @@ class RemoteFranka(RemoteDevice):
     This class extends the RemoteDevice class and provides
     specific functionality for interacting with a Franka robot.
     Attributes:
-        device_addr (str): Address of the Franka robot.
-        device_port (int): Port for communication with the Franka robot.
+        robot_name (str): Name of the Franka robot.
     """
 
-    def __init__(self, device_addr: str, device_port: int) -> None:
+    def __init__(self, robot_name: str) -> None:
         """
         Initialize the RemoteFranka instance.
 
         Args:
-            device_addr (str): The IP address of the Franka robot.
-            device_port (int): The port number for communication with the Franka robot.
+            robot_name (str): The name of the Franka robot.
         """
-        super().__init__(device_addr, device_port)
+        super().__init__(robot_name)
         self.default_pose: Tuple[float, ...] = (-1,)
-        local_ip = get_local_ip_in_same_subnet(device_addr)
+        local_ip = get_local_ip_in_same_subnet(robot_name)
         if local_ip is None:
             raise DeviceConnectionError(
-                f"No local interface found in the same subnet as {device_addr}"
+                f"No local interface found in the same subnet as {robot_name}"
             )
-        self.command_publisher = CommandPublisher(local_ip)
+        self.joint_command_pub = CommandPublisher(local_ip)
         self.arm_state_sub = LatestMsgSubscriber()
 
     def connect(self) -> None:
@@ -192,18 +174,10 @@ class RemoteFranka(RemoteDevice):
 
     def get_franka_arm_state(self) -> FrankaArmState:
         """Return a single state sample"""
-        _, payload = self.request("GET_FRANKA_ARM_STATE", b"")
+        _, payload = self.call("GET_FRANKA_ARM_STATE", b"")
         if payload is None:
             raise CommandError("Failed to get Franka arm state")
         return FrankaArmState.from_bytes(payload)
-
-    def get_franka_arm_state_pub_port(self) -> Optional[str]:
-        """Return the latest published state sample, if any."""
-        header, payload = self.request("GET_FRANKA_ARM_STATE_PUB_PORT", b"")
-        print(f"Header: {header}, Payload: {payload}")
-        if payload is None:
-            raise CommandError("Failed to get Franka arm state pub port")
-        return payload.decode("utf-8")
 
     def get_franka_arm_control_mode(self) -> ControlMode:
         """Return the currently active control mode."""
@@ -277,20 +251,6 @@ class RemoteFranka(RemoteDevice):
         if len(pose_matrix) != 16:
             raise CommandError(
                 f"Expected 16 pose values, got {len(pose_matrix)}"
-            )
-
-        try:
-            payload = struct.pack("!16d", *pose_matrix)
-        except struct.error as exc:
-            raise CommandError(f"Failed to pack pose data: {exc}")
-
-        header, _ = self.request(
-            "MOVE_FRANKA_ARM_TO_CARTESIAN_POSITION", payload
-        )
-
-        if header is None or header != FrankaResponseCode.SUCCESS:
-            raise CommandError(
-                f"MOVE_FRANKA_ARM_TO_CARTESIAN_POSITION failed (status={getattr(header, 'message_id', None)})"
             )
 
     def send_joint_position_command(self, joint_positions) -> None:

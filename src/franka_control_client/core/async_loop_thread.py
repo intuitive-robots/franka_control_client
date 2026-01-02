@@ -10,6 +10,7 @@ from typing import ClassVar, Optional
 import zmq
 from zmq.asyncio import Context as AsyncZMQContext
 from zmq.asyncio import Socket as AsyncZMQSocket
+import pyzlc
 
 from .utils import get_socket_bind_url
 
@@ -55,14 +56,9 @@ class AsyncLoop:
 class LatestMsgSubscriber:
     """A ZMQ SUB socket that keeps only the latest received message."""
 
-    def __init__(self) -> None:
-        self.url: str = ""
-        self.topic: str = ""
-        self.loop: AsyncLoop = AsyncLoop.get_instance()
-        self.ctx: AsyncZMQContext = AsyncZMQContext.instance()
-        self.latest_bytes_message: Optional[bytes] = None
-        self.running: bool = False
-        self.future: Optional[concurrent.futures.Future] = None
+    def __init__(self, topic_name: str) -> None:
+        self.topic_name: str = topic_name
+        pyzlc.register_sub
 
     def connect(self, url: str, topic: str = "") -> None:
         """Connect the subscriber and start receiving messages."""

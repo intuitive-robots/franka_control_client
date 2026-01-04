@@ -1,142 +1,55 @@
 from __future__ import annotations
 
 import struct
-from dataclasses import dataclass
-from enum import IntEnum
-from typing import Optional, Tuple
+from enum import Enum
+from typing import TypedDict, Tuple, List
 
 import numpy as np
-from scipy.spatial.transform import Rotation as R
+import pyzlc
 
-from ..core.async_loop_thread import CommandPublisher, LatestMsgSubscriber
-from ..core.exception import CommandError, DeviceConnectionError
+from ..core.latest_msg_subscriber import LatestMsgSubscriber
+from ..core.exception import CommandError
 from ..core.message import FrankaResponseCode
 from ..core.remote_device import RemoteDevice
-from ..core.utils import get_local_ip_in_same_subnet
 
 
-class ControlMode(IntEnum):
-    """Control modes supported by the robot."""
-
-    IDLE = 0  # Robot idle / no control command
-    JOINT_POSITION = 1  # Position control in joint space
-    JOINT_VELOCITY = 2  # Velocity control in joint space
-    CARTESIAN_POSE = 3  # Pose control in Cartesian space
-    CARTESIAN_VELOCITY = 4  # Velocity control in Cartesian space
-    JOINT_TORQUE = 5  # Joint torque control mode
-    GRAVITY_COMP = 6  # Gravity compensation mode
+class ControlMode(str, Enum):
+    IDLE = "IDLE"
+    JOINT_POSITION = "JointPosition"
+    JOINT_VELOCITY = "JointVelocity"
+    CARTESIAN_POSE = "CartesianPose"
+    CARTESIAN_VELOCITY = "CartesianVelocity"
+    JOINT_TORQUE = "JointTorque"
+    GRAVITY_COMP = "GravityComp"
 
 
-# pylint: disable=invalid-name
-@dataclass
-class FrankaArmState:
+class FrankaArmState(TypedDict):
     """
-    Represents the 636-byte Robot Arm State message.
-
-    Format: !I 16d16d 7d7d7d7d7d 6d6d  (big-endian)
-      timestamp_ms          (uint32)
-      O_T_EE                (16 x float64)
-      O_T_EE_d              (16 x float64)
-      q                     (7 x float64)
-      q_d                   (7 x float64)
-      dq                    (7 x float64)
-      dq_d                  (7 x float64)
-      tau_ext_hat_filtered  (7 x float64)
-      O_F_ext_hat_K         (6 x float64)
-      K_F_ext_hat_K         (6 x float64)
+    Franka arm state structure.
     """
+    time_ms: int
+    O_T_EE: List[float]
+    O_T_EE_d: List[float]
+    q: List[float]
+    q_d: List[float]
+    dq: List[float]
+    dq_d: List[float]
+    tau_ext_hat_filtered: List[float]
+    O_F_ext_hat_K: List[float]
+    K_F_ext_hat_K: List[float]
 
-    timestamp_ms: int
-    O_T_EE: tuple[float, ...]
-    O_T_EE_d: tuple[float, ...]
-    q: tuple[float, ...]
-    q_d: tuple[float, ...]
-    dq: tuple[float, ...]
-    dq_d: tuple[float, ...]
-    tau_ext_hat_filtered: tuple[float, ...]
-    O_F_ext_hat_K: tuple[float, ...]
-    K_F_ext_hat_K: tuple[float, ...]
 
-    # Derived fields
-    pos: tuple[float, ...]
-    quat: tuple[float, ...]
-    vel: tuple[float, ...]  # (vx, vy, vz, wx, wy, wz)
+class CartesianPoseCommand(TypedDict):
+    """
+    Cartesian pose command structure.
+    """
+    pos: List[float]  # x, y, z and quaternion x, y, z, w
 
-    _STRUCT = struct.Struct("!I16d16d7d7d7d7d7d6d6d")
-    SIZE = _STRUCT.size  # 636 bytes
-
-    @classmethod
-    def from_bytes(cls, data: bytes) -> FrankaArmState:
-        """Unpack bytes into a FrankaArmState and compute derived pose and velocity."""
-        if len(data) < cls.SIZE:
-            raise ValueError(
-                f"Data too short: expected {cls.SIZE} bytes, got {len(data)}"
-            )
-
-        unpacked = cls._STRUCT.unpack_from(data)
-        timestamp_ms = unpacked[0]
-        offset = 1
-
-        # Extract fields
-        O_T_EE = tuple(unpacked[offset : offset + 16])
-        O_T_EE_d = tuple(unpacked[offset + 16 : offset + 32])
-        q = tuple(unpacked[offset + 32 : offset + 39])
-        q_d = tuple(unpacked[offset + 39 : offset + 46])
-        dq = tuple(unpacked[offset + 46 : offset + 53])
-        dq_d = tuple(unpacked[offset + 53 : offset + 60])
-        tau_ext_hat_filtered = tuple(unpacked[offset + 60 : offset + 67])
-        O_F_ext_hat_K = tuple(unpacked[offset + 67 : offset + 73])
-        K_F_ext_hat_K = tuple(unpacked[offset + 73 : offset + 79])
-
-        # === Derived quantities ===
-        T = np.array(O_T_EE, dtype=np.float64).reshape(4, 4)
-
-        # Position (translation)
-        pos = tuple(T[:3, 3])
-
-        # Orientation quaternion (x, y, z, w)
-        # TODO: verify quaternion order
-        quat = tuple(R.from_matrix(T[:3, :3]).as_quat(False))
-
-        # Approximate Cartesian velocity from difference between current and desired pose
-        T_d = np.array(O_T_EE_d, dtype=np.float64).reshape(4, 4)
-        dT = T_d[:3, 3] - T[:3, 3]
-        # Linear velocity (placeholder: not time-scaled)
-        vx, vy, vz = dT.tolist()
-        # Angular velocity (placeholder from orientation diff)
-        R_d = R.from_matrix(T_d[:3, :3])
-        R_c = R.from_matrix(T[:3, :3])
-        dR = R_d * R_c.inv()
-        wx, wy, wz = dR.as_rotvec().tolist()
-
-        vel = (vx, vy, vz, wx, wy, wz)
-
-        return cls(
-            timestamp_ms=timestamp_ms,
-            O_T_EE=O_T_EE,
-            O_T_EE_d=O_T_EE_d,
-            q=q,
-            q_d=q_d,
-            dq=dq,
-            dq_d=dq_d,
-            tau_ext_hat_filtered=tau_ext_hat_filtered,
-            O_F_ext_hat_K=O_F_ext_hat_K,
-            K_F_ext_hat_K=K_F_ext_hat_K,
-            pos=pos,
-            quat=quat,
-            vel=vel,
-        )
-
-    def __repr__(self):
-        q_short = ", ".join(f"{v:.3f}" for v in self.q)
-        dq_short = ", ".join(f"{v:.3f}" for v in self.dq)
-        p_short = ", ".join(f"{v:.3f}" for v in self.pos)
-        return (
-            f"FrankaArmState(ts={self.timestamp_ms}ms, "
-            f"pos=[{p_short}], "
-            f"q=[{q_short}], dq=[{dq_short}])"
-        )
-
+class CartesianVelocityCommand(TypedDict):
+    """
+    Cartesian velocity command structure.
+    """
+    vel: List[float]  # vx, vy, vz, wx, wy, wz
 
 class RemoteFranka(RemoteDevice):
     """
@@ -157,58 +70,30 @@ class RemoteFranka(RemoteDevice):
         """
         super().__init__(robot_name)
         self.default_pose: Tuple[float, ...] = (-1,)
-        local_ip = get_local_ip_in_same_subnet(robot_name)
-        if local_ip is None:
-            raise DeviceConnectionError(
-                f"No local interface found in the same subnet as {robot_name}"
-            )
-        self.joint_command_pub = CommandPublisher(local_ip)
-        self.arm_state_sub = LatestMsgSubscriber()
+        self.arm_state_sub = LatestMsgSubscriber(f"{robot_name}/franka_arm/state")
+        # command publisher
+        self.joint_position_publisher = pyzlc.Publisher(f"{robot_name}/franka_arm/joint_position_command")
+        self.joint_velocity_publisher = pyzlc.Publisher(f"{robot_name}/franka_arm/joint_velocity_command")
+        self.cartesian_pose_publisher = pyzlc.Publisher(f"{robot_name}/franka_arm/cartesian_pose_command")
+        self.cartesian_velocity_publisher = pyzlc.Publisher(f"{robot_name}/franka_arm/cartesian_velocity_command")
+        self.joint_torque_publisher = pyzlc.Publisher(f"{robot_name}/franka_arm/joint_torque_command")
 
-    def connect(self) -> None:
-        super().connect()
-        state_pub_addr = self.get_franka_arm_state_pub_port()
-        if state_pub_addr is None:
-            raise CommandError("Failed to get Franka arm state pub port")
-        self.arm_state_sub.connect(state_pub_addr)
 
     def get_franka_arm_state(self) -> FrankaArmState:
         """Return a single state sample"""
-        _, payload = self.call("GET_FRANKA_ARM_STATE", b"")
-        if payload is None:
+        state = pyzlc.call("GET_FRANKA_ARM_STATE", b"")
+        if state is None:
             raise CommandError("Failed to get Franka arm state")
-        return FrankaArmState.from_bytes(payload)
+        return state
 
-    def get_franka_arm_control_mode(self) -> ControlMode:
+    def get_franka_arm_control_mode(self) -> str:
         """Return the currently active control mode."""
-        header, payload = self.request("GET_FRANKA_ARM_CONTROL_MODE", b"")
-        if header != FrankaResponseCode.SUCCESS:
-            raise CommandError(
-                f"GET_FRANKA_ARM_CONTROL_MODE failed (status={header})"
-            )
-        if payload is None or len(payload) != 1:
-            raise CommandError(
-                "Invalid payload for GET_FRANKA_ARM_CONTROL_MODE"
-            )
-        (mode_value,) = struct.unpack("!B", payload)
-        return ControlMode(mode_value)
+        return pyzlc.call("GET_FRANKA_ARM_CONTROL_MODE", pyzlc.empty)
 
     def set_franka_arm_control_mode(self, mode: ControlMode) -> None:
-        """
-        Switch the Franka arm into the desired control mode.
-
-        Args:
-            mode (ControlMode): Target control mode.
-            controller_ip (str, optional): IP of the controller (for subscriber-based control).
-            controller_port (int, optional): Port of the controller.
-        Raises:
-            CommandError: If mode switch fails or arguments are invalid.
-        """
-        self.request(
-            "SET_FRANKA_ARM_CONTROL_MODE",
-            bytes([mode.value]) + self.command_publisher.url.encode(),
-        )
-        print(f"Set Franka arm control mode to {self.command_publisher.url}")
+        """Set the control mode of the Franka arm."""
+        pyzlc.call("SET_FRANKA_ARM_CONTROL_MODE", mode.value)
+        print(f"Set Franka arm control mode to {mode.value}")
 
     def move_franka_arm_to_joint_position(
         self, joint_positions: Tuple[float, ...]
@@ -230,7 +115,7 @@ class RemoteFranka(RemoteDevice):
             payload = struct.pack("!7d", *joint_positions)
         except struct.error as exc:
             raise CommandError(f"Failed to pack joint position data: {exc}")
-        header, _ = self.request("MOVE_FRANKA_ARM_TO_JOINT_POSITION", payload)
+        header, _ = pyzlc.call("MOVE_FRANKA_ARM_TO_JOINT_POSITION", payload)
 
         if header is None or header != FrankaResponseCode.SUCCESS:
             raise CommandError(
@@ -261,7 +146,7 @@ class RemoteFranka(RemoteDevice):
         arr = np.asarray(joint_positions, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint angles, got {arr.size}")
-        self.command_publisher.send_command(struct.pack("!7d", *arr))
+        self.joint_position_publisher.publish(struct.pack("!7d", *arr))
 
     def send_cartesian_pose_command(self, pose) -> None:
         """
@@ -275,7 +160,7 @@ class RemoteFranka(RemoteDevice):
         arr = np.asarray(pose, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 pose values, got {arr.size}")
-        self.command_publisher.send_command(struct.pack("!7d", *arr))
+        self.cartesian_pose_publisher.publish(CartesianPoseCommand(pos=arr.tolist()))
 
     def send_joint_velocity_command(self, joint_velocities) -> None:
         """
@@ -285,7 +170,7 @@ class RemoteFranka(RemoteDevice):
         arr = np.asarray(joint_velocities, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint velocities, got {arr.size}")
-        self.command_publisher.send_command(struct.pack("!7d", *arr))
+        self.joint_velocity_publisher.publish(struct.pack("!7d", *arr))
 
     def send_cartesian_velocity_command(self, cartesian_velocities) -> None:
         """
@@ -301,9 +186,7 @@ class RemoteFranka(RemoteDevice):
             raise ValueError(
                 f"Expected 6 Cartesian velocities, got {arr.size}"
             )
-        # print(f"Sending Cartesian velocity command: {arr}")
-        self.command_publisher.send_command(struct.pack("!6d", *arr))
-        # print(f"pack Size: {struct.calcsize('!6d')} bytes")
+        self.cartesian_velocity_publisher.publish(CartesianVelocityCommand(vel=arr.tolist()))
 
     def send_joint_torque_command(self, joint_torques) -> None:
         """
@@ -313,4 +196,4 @@ class RemoteFranka(RemoteDevice):
         arr = np.asarray(joint_torques, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint torques, got {arr.size}")
-        self.command_publisher.send_command(struct.pack("!7d", *arr))
+        self.joint_torque_publisher.publish(struct.pack("!7d", *arr))

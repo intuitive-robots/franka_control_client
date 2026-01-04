@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import enum
 import struct
-import time
 from abc import ABC, abstractmethod
 from enum import IntEnum
 from typing import ClassVar

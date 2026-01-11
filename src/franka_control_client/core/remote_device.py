@@ -53,6 +53,7 @@ class RemoteDevice(ABC):
         for _ in range(5):
             if pyzlc.check_node_info(self._name):
                 pyzlc.info("Connected to remote device '%s'.", self._name)
+                print(pyzlc.check_node_info(self._name))
                 return
             time.sleep(0.5)
         if not pyzlc.check_node_info(self._name):

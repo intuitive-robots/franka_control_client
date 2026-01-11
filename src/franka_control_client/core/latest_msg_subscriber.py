@@ -6,12 +6,15 @@ import pyzlc
 
 MessageT = TypeVar("MessageT", bound=Union[dict[str, Any], str])
 
+
 class LatestMsgSubscriber(Generic[MessageT]):
     """A ZMQ SUB socket that keeps only the latest received message."""
 
     def __init__(self, topic_name: str) -> None:
         self.topic_name: str = topic_name
-        pyzlc.register_subscriber_handler(self.topic_name, self._handle_message)
+        pyzlc.register_subscriber_handler(
+            self.topic_name, self._handle_message
+        )
         self.last_message: Optional[MessageT] = None
 
     def _handle_message(self, msg: MessageT) -> None:
@@ -25,4 +28,3 @@ class LatestMsgSubscriber(Generic[MessageT]):
     def stop(self) -> None:
         """Stop the subscriber and cancel its running task."""
         raise NotImplementedError
-

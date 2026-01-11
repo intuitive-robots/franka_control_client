@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import struct
+from dataclasses import dataclass
 from enum import Enum
 from typing import TypedDict, Tuple, List
-
+import pyzlc
 import numpy as np
 import pyzlc
 
@@ -15,18 +16,20 @@ from ..core.remote_device import RemoteDevice
 
 class ControlMode(str, Enum):
     IDLE = "IDLE"
-    JOINT_POSITION = "JointPosition"
-    JOINT_VELOCITY = "JointVelocity"
-    CARTESIAN_POSE = "CartesianPose"
-    CARTESIAN_VELOCITY = "CartesianVelocity"
-    JOINT_TORQUE = "JointTorque"
-    GRAVITY_COMP = "GravityComp"
+    HybridJointImpedance = "HybridJointImpedance"
+    # JOINT_POSITION = "JointPosition"
+    # JOINT_VELOCITY = "JointVelocity"
+    # CARTESIAN_POSE = "CartesianPose"
+    # CARTESIAN_VELOCITY = "CartesianVelocity"
+    # JOINT_TORQUE = "JointTorque"
+    # GRAVITY_COMP = "GravityComp"
 
 
 class FrankaArmState(TypedDict):
     """
     Franka arm state structure.
     """
+
     time_ms: int
     O_T_EE: List[float]
     O_T_EE_d: List[float]
@@ -39,17 +42,29 @@ class FrankaArmState(TypedDict):
     K_F_ext_hat_K: List[float]
 
 
+class JointPositionCommand(TypedDict):
+    """
+    Joint position command structure.
+    """
+
+    pos: List[float]  # 7 joint angles in radians
+
+
 class CartesianPoseCommand(TypedDict):
     """
     Cartesian pose command structure.
     """
+
     pos: List[float]  # x, y, z and quaternion x, y, z, w
+
 
 class CartesianVelocityCommand(TypedDict):
     """
     Cartesian velocity command structure.
     """
+
     vel: List[float]  # vx, vy, vz, wx, wy, wz
+
 
 class RemoteFranka(RemoteDevice):
     """
@@ -70,29 +85,59 @@ class RemoteFranka(RemoteDevice):
         """
         super().__init__(robot_name)
         self.default_pose: Tuple[float, ...] = (-1,)
-        self.arm_state_sub = LatestMsgSubscriber(f"{robot_name}/franka_arm/state")
+        self.arm_state_sub = LatestMsgSubscriber(
+            f"{robot_name}/franka_arm_state"
+        )
         # command publisher
-        self.joint_position_publisher = pyzlc.Publisher(f"{robot_name}/franka_arm/joint_position_command")
-        self.joint_velocity_publisher = pyzlc.Publisher(f"{robot_name}/franka_arm/joint_velocity_command")
-        self.cartesian_pose_publisher = pyzlc.Publisher(f"{robot_name}/franka_arm/cartesian_pose_command")
-        self.cartesian_velocity_publisher = pyzlc.Publisher(f"{robot_name}/franka_arm/cartesian_velocity_command")
-        self.joint_torque_publisher = pyzlc.Publisher(f"{robot_name}/franka_arm/joint_torque_command")
+        self.joint_position_publisher = pyzlc.Publisher(
+            f"{robot_name}/joint_position_command"
+        )
+        self.joint_velocity_publisher = pyzlc.Publisher(
+            f"{robot_name}/joint_velocity_command"
+        )
+        self.cartesian_pose_publisher = pyzlc.Publisher(
+            f"{robot_name}/cartesian_pose_command"
+        )
+        self.cartesian_velocity_publisher = pyzlc.Publisher(
+            f"{robot_name}/cartesian_velocity_command"
+        )
+        self.joint_torque_publisher = pyzlc.Publisher(
+            f"{robot_name}/joint_torque_command"
+        )
 
+    def connect(self) -> None:
+        """
+        Connect to the Franka robot.
+
+        Raises:
+            DeviceConnectionError: If the connection fails.
+        """
+        super().connect()
+        for _ in range(5):
+            if self.arm_state_sub.last_message is not None:
+                pyzlc.info("Franka arm state subscriber connected.")
+                return
+            pyzlc.info("Waiting for Franka arm state...")
+            pyzlc.sleep(1)
+
+    @property
+    def current_state(self) -> FrankaArmState:
+        """Return the latest Franka arm state."""
+        return self.arm_state_sub.get_latest()
 
     def get_franka_arm_state(self) -> FrankaArmState:
         """Return a single state sample"""
-        state = pyzlc.call("GET_FRANKA_ARM_STATE", b"")
-        if state is None:
-            raise CommandError("Failed to get Franka arm state")
-        return state
+        return pyzlc.call(f"{self._name}/get_franka_arm_state", pyzlc.empty)
 
     def get_franka_arm_control_mode(self) -> str:
         """Return the currently active control mode."""
-        return pyzlc.call("GET_FRANKA_ARM_CONTROL_MODE", pyzlc.empty)
+        return pyzlc.call(
+            f"{self._name}/get_franka_arm_control_mode", pyzlc.empty
+        )
 
     def set_franka_arm_control_mode(self, mode: ControlMode) -> None:
         """Set the control mode of the Franka arm."""
-        pyzlc.call("SET_FRANKA_ARM_CONTROL_MODE", mode.value)
+        pyzlc.call(f"{self._name}/set_franka_arm_control_mode", mode.value)
         print(f"Set Franka arm control mode to {mode.value}")
 
     def move_franka_arm_to_joint_position(
@@ -115,7 +160,9 @@ class RemoteFranka(RemoteDevice):
             payload = struct.pack("!7d", *joint_positions)
         except struct.error as exc:
             raise CommandError(f"Failed to pack joint position data: {exc}")
-        header, _ = pyzlc.call("MOVE_FRANKA_ARM_TO_JOINT_POSITION", payload)
+        header, _ = pyzlc.call(
+            f"{self._name}/move_franka_arm_to_joint_position", payload
+        )
 
         if header is None or header != FrankaResponseCode.SUCCESS:
             raise CommandError(
@@ -147,7 +194,9 @@ class RemoteFranka(RemoteDevice):
         arr = np.asarray(joint_positions, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint angles, got {arr.size}")
-        raise NotImplementedError
+        self.joint_position_publisher.publish(
+            JointPositionCommand(pos=arr.tolist())
+        )
 
     def send_cartesian_pose_command(self, pose) -> None:
         """
@@ -187,7 +236,9 @@ class RemoteFranka(RemoteDevice):
             raise ValueError(
                 f"Expected 6 Cartesian velocities, got {arr.size}"
             )
-        self.cartesian_velocity_publisher.publish(CartesianVelocityCommand(vel=arr.tolist()))
+        self.cartesian_velocity_publisher.publish(
+            CartesianVelocityCommand(vel=arr.tolist())
+        )
 
     def send_joint_torque_command(self, joint_torques) -> None:
         """

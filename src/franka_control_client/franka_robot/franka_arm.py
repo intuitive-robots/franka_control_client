@@ -137,6 +137,7 @@ class RemoteFranka(RemoteDevice):
             raise CommandError(
                 f"Expected 16 pose values, got {len(pose_matrix)}"
             )
+        raise NotImplementedError
 
     def send_joint_position_command(self, joint_positions) -> None:
         """
@@ -146,7 +147,7 @@ class RemoteFranka(RemoteDevice):
         arr = np.asarray(joint_positions, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint angles, got {arr.size}")
-        self.joint_position_publisher.publish(struct.pack("!7d", *arr))
+        raise NotImplementedError
 
     def send_cartesian_pose_command(self, pose) -> None:
         """
@@ -160,7 +161,7 @@ class RemoteFranka(RemoteDevice):
         arr = np.asarray(pose, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 pose values, got {arr.size}")
-        self.cartesian_pose_publisher.publish(CartesianPoseCommand(pos=arr.tolist()))
+        raise NotImplementedError
 
     def send_joint_velocity_command(self, joint_velocities) -> None:
         """
@@ -170,7 +171,7 @@ class RemoteFranka(RemoteDevice):
         arr = np.asarray(joint_velocities, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint velocities, got {arr.size}")
-        self.joint_velocity_publisher.publish(struct.pack("!7d", *arr))
+        raise NotImplementedError
 
     def send_cartesian_velocity_command(self, cartesian_velocities) -> None:
         """
@@ -196,4 +197,4 @@ class RemoteFranka(RemoteDevice):
         arr = np.asarray(joint_torques, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint torques, got {arr.size}")
-        self.joint_torque_publisher.publish(struct.pack("!7d", *arr))
+        raise NotImplementedError

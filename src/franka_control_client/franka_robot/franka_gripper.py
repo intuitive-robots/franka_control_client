@@ -4,12 +4,11 @@ import struct
 import threading
 from dataclasses import dataclass
 from typing import Final
-
 import numpy as np
+import pyzlc
 
-from ..core.async_loop_thread import CommandPublisher, LatestMsgSubscriber
 from ..core.exception import CommandError, DeviceConnectionError
-from ..core.remote_device import RemoteDevice, State
+from ..core.remote_device import RemoteDevice
 from ..core.utils import get_local_ip_in_same_subnet
 
 _STATE_STRUCT: Final = struct.Struct(
@@ -46,21 +45,21 @@ class GripperState:
 class RemoteFrankaGripper(RemoteDevice):
     """Remote client for a gripper device."""
 
-    def __init__(self, device_addr: str, device_port: int) -> None:
-        super().__init__(device_addr, device_port)
-        local_ip = get_local_ip_in_same_subnet(device_addr)
+    def __init__(self, device_name: str) -> None:
+        super().__init__(device_name)
+        local_ip = get_local_ip_in_same_subnet(device_name)
         if local_ip is None:
             raise DeviceConnectionError(
-                f"No local interface found in the same subnet as {device_addr}"
+                f"No local interface found in the same subnet as {device_name}"
             )
         self.command_publisher = CommandPublisher(local_ip)
-        self.state_subscriber = LatestMsgSubscriber()
+        self.state_subscriber = LatestMsgSubscriber(
+            f"{self._name}/robot_state"
+        )
 
-    # def get_state(self) -> GripperState:
-    #     """Return a single state sample"""
-    #     self._send(MsgID.GET_STATE_REQ, b"")
-    #     payload = self._recv_expect(MsgID.GET_STATE_RESP)
-    #     return self._decode_state(payload)
+    def get_robot_state(self):
+        """Return a single state sample"""
+        return pyzlc.call(f"{self._name}/REQUEST_ROBOT_STATE", pyzlc.empty)
 
     # def start_state_listener(
     #     self,

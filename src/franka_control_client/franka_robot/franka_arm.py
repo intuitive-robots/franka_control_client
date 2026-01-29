@@ -155,16 +155,13 @@ class RemoteFranka(RemoteDevice):
             raise CommandError(
                 f"Expected 7 joint values, got {len(joint_positions)}"
             )
-
-        try:
-            payload = struct.pack("!7d", *joint_positions)
-        except struct.error as exc:
-            raise CommandError(f"Failed to pack joint position data: {exc}")
         header, _ = pyzlc.call(
-            f"{self._name}/move_franka_arm_to_joint_position", payload
+            f"{self._name}/move_franka_arm_to_joint_position",
+            list(joint_positions),
+            10.0,
         )
 
-        if header is None or header != FrankaResponseCode.SUCCESS:
+        if header is None or header != FrankaResponseCode.SUCCESS.value:
             raise CommandError(
                 f"MOVE_FRANKA_ARM_TO_JOINT_POSITION failed (status={header})"
             )
@@ -249,3 +246,4 @@ class RemoteFranka(RemoteDevice):
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint torques, got {arr.size}")
         raise NotImplementedError
+

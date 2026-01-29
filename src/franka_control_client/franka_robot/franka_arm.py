@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import struct
-from dataclasses import dataclass
 from enum import Enum
 from typing import TypedDict, Tuple, List
 import pyzlc
 import numpy as np
-import pyzlc
 
 from ..core.latest_msg_subscriber import LatestMsgSubscriber
 from ..core.exception import CommandError
@@ -246,4 +243,3 @@ class RemoteFranka(RemoteDevice):
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint torques, got {arr.size}")
         raise NotImplementedError
-

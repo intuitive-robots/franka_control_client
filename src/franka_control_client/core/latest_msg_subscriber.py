@@ -1,10 +1,10 @@
 from __future__ import annotations
 from abc import abstractmethod
-from typing import TypeVar, Generic, Optional, Union, Any
+from typing import TypeVar, Generic, Optional, Union, Any, Dict
 import pyzlc
 
 
-MessageT = TypeVar("MessageT", bound=Union[dict[str, Any], str])
+MessageT = TypeVar("MessageT", bound=Union[Dict[str, Any], str])
 
 
 class LatestMsgSubscriber(Generic[MessageT]):

@@ -2,7 +2,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TypeVar, Generic, Optional, Union, Any, Dict
 import pyzlc
-
+import time
 
 MessageT = TypeVar("MessageT", bound=Union[Dict[str, Any], str])
 
@@ -19,10 +19,9 @@ class LatestMsgSubscriber(Generic[MessageT]):
 
     def _handle_message(self, msg: MessageT) -> None:
         self.last_message = msg
+        print(f"time delay: {time.perf_counter() - msg['timestamp']}")
 
-    @abstractmethod
-    def get_latest(self) -> MessageT:
-        assert self.last_message is not None, "No message received yet"
+    def get_latest(self) -> Optional[MessageT]:
         return self.last_message
 
     def stop(self) -> None:

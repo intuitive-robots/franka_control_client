@@ -1,9 +1,4 @@
 import threading
-from typing import Protocol
-from ..camera.camera import CameraDevice
-from ..franka_robot.franka_arm import RemoteFranka
-from ..franka_robot.franka_gripper import RemoteFrankaGripper
-
 import sys
 import select
 import tty
@@ -70,53 +65,3 @@ class NonBlockingKeyPress(object):
             termios.tcflush(sys.stdin, termios.TCIOFLUSH)
             return data
         return False
-
-
-class DataCollector(Protocol):
-
-    def connect(self) -> None: ...
-
-    def close(self) -> None: ...
-
-    def save_step(self) -> None: ...
-
-    def save_episode(self) -> None: ...
-
-    def reset(self) -> None: ...
-
-    def discard(self) -> None: ...
-
-
-class ImageDataWrapper:
-    def __init__(self, camera_device: CameraDevice) -> None:
-        self.camera_device = camera_device
-
-    def save_step(self) -> None:
-        # Implement the logic to save image data from the camera device
-        pass
-
-    def save_episode(self) -> None:
-        # Implement the logic to save the entire episode data from the camera device
-        pass
-
-    def __getattr__(self, name):
-        return getattr(self.camera_device, name)
-
-
-class RobotDataWrapper:
-    def __init__(
-        self, arm: RemoteFranka, gripper: RemoteFrankaGripper
-    ) -> None:
-        self.arm = arm
-        self.gripper = gripper
-
-    def save_step(self) -> None:
-        # Implement the logic to save robot state data
-        pass
-
-    def save_episode(self) -> None:
-        # Implement the logic to save the entire episode data from the robot device
-        pass
-
-    def __getattr__(self, name):
-        return getattr(self.robot_device, name)

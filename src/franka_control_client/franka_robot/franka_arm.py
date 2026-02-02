@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TypedDict, Tuple, List
+from typing import TypedDict, Tuple, List, Optional
 import pyzlc
 import numpy as np
 
@@ -118,7 +118,7 @@ class RemoteFranka(RemoteDevice):
             pyzlc.sleep(1)
 
     @property
-    def current_state(self) -> FrankaArmState:
+    def current_state(self) -> Optional[FrankaArmState]:
         """Return the latest Franka arm state."""
         return self.arm_state_sub.get_latest()
 

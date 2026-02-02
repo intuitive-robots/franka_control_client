@@ -1,5 +1,4 @@
 from __future__ import annotations
-from abc import abstractmethod
 from typing import TypeVar, Generic, Optional, Union, Any, Dict
 import pyzlc
 import time
@@ -16,10 +15,14 @@ class LatestMsgSubscriber(Generic[MessageT]):
             self.topic_name, self._handle_message
         )
         self.last_message: Optional[MessageT] = None
+        while self.last_message is None:
+            time.sleep(1)
+        pyzlc.info(
+            f"Waiting for first message on topic '{self.topic_name}'..."
+        )
 
     def _handle_message(self, msg: MessageT) -> None:
         self.last_message = msg
-        print(f"time delay: {time.perf_counter() - msg['timestamp']}")
 
     def get_latest(self) -> Optional[MessageT]:
         return self.last_message

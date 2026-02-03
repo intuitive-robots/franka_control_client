@@ -5,7 +5,7 @@ from typing import Dict
 from ..camera.camera import CameraDevice
 from ..franka_robot.franka_arm import RemoteFranka
 from ..franka_robot.franka_gripper import RemoteFrankaGripper
-
+from ..robotiq_grippper.robotiq_gripper import RemoteRobotiqGripper
 
 class HarewareDataWrapper(abc.ABC):
 
@@ -92,3 +92,40 @@ class PandaArmDataWrapper(HarewareDataWrapper):
 
     def __getattr__(self, name):
         return getattr(self.arm, name)
+
+class RobotiqGripperDataWrapper(HarewareDataWrapper):
+    def __init__(self, gripper: RemoteRobotiqGripper) -> None:
+        self.gripper = gripper
+        self.key = f"observation.state.robotiq_gripper.{gripper._name}"
+        feature = {self.key: {"dtype": "float32", "shape": (7,)}}
+        super().__init__(feature)
+
+    def capture_step(self) -> Dict[str, np.ndarray]:
+        state = self.gripper.current_state
+        if state is None:
+            raise ValueError("No Robotiq gripper state data received.")
+        data = np.array(
+            [
+                state["commanded_position"],
+                state["commanded_speed"],
+                state["commanded_force"],
+                state["position"],
+                state["current"],
+                state["raw_commanded_position"],
+                state["raw_position"],
+            ],
+            dtype=np.float32,
+        )
+        return {self.key: data}
+
+    def discard(self) -> None:
+        pass
+
+    def reset(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+    def __getattr__(self, name):
+        return getattr(self.gripper, name)

@@ -41,6 +41,7 @@ class CameraDevice(RemoteDevice):
     def get_image(self) -> Optional[np.ndarray]:
         """Get the latest RGB image from the camera."""
         frame: Optional[CameraFrame] = self.image_subscriber.get_latest()
+        print("frame:", frame)
         if frame is None:
             raise ValueError("No image data received from camera device.")
         image_array = np.frombuffer(frame["rgb_data"], dtype=np.uint8)

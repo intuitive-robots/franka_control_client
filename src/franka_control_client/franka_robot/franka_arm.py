@@ -73,7 +73,7 @@ class RemoteFranka(RemoteDevice):
         robot_name (str): Name of the Franka robot.
     """
 
-    def __init__(self, robot_name: str) -> None:
+    def __init__(self, robot_name: str, enable_publishers: bool = True) -> None:
         """
         Initialize the RemoteFranka instance.
 
@@ -85,22 +85,30 @@ class RemoteFranka(RemoteDevice):
         self.arm_state_sub = LatestMsgSubscriber(
             f"{robot_name}/franka_arm_state"
         )
-        # command publisher
-        self.joint_position_publisher = pyzlc.Publisher(
-            f"{robot_name}/joint_position_command"
-        )
-        self.joint_velocity_publisher = pyzlc.Publisher(
-            f"{robot_name}/joint_velocity_command"
-        )
-        self.cartesian_pose_publisher = pyzlc.Publisher(
-            f"{robot_name}/cartesian_pose_command"
-        )
-        self.cartesian_velocity_publisher = pyzlc.Publisher(
-            f"{robot_name}/cartesian_velocity_command"
-        )
-        self.joint_torque_publisher = pyzlc.Publisher(
-            f"{robot_name}/joint_torque_command"
-        )
+        self._enable_publishers = enable_publishers
+        # command publishers (optional for read-only clients)
+        if enable_publishers:
+            self.joint_position_publisher = pyzlc.Publisher(
+                f"{robot_name}/joint_position_command"
+            )
+            self.joint_velocity_publisher = pyzlc.Publisher(
+                f"{robot_name}/joint_velocity_command"
+            )
+            self.cartesian_pose_publisher = pyzlc.Publisher(
+                f"{robot_name}/cartesian_pose_command"
+            )
+            self.cartesian_velocity_publisher = pyzlc.Publisher(
+                f"{robot_name}/cartesian_velocity_command"
+            )
+            self.joint_torque_publisher = pyzlc.Publisher(
+                f"{robot_name}/joint_torque_command"
+            )
+        else:
+            self.joint_position_publisher = None
+            self.joint_velocity_publisher = None
+            self.cartesian_pose_publisher = None
+            self.cartesian_velocity_publisher = None
+            self.joint_torque_publisher = None
 
     def connect(self) -> None:
         """
@@ -185,6 +193,10 @@ class RemoteFranka(RemoteDevice):
         Send a joint position command to the Franka arm.
         Accepts tuple, list, numpy array, or torch tensor (no type checking).
         """
+        if not self._enable_publishers:
+            raise RuntimeError(
+                "Publishers disabled for this RemoteFranka instance."
+            )
         arr = np.asarray(joint_positions, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint angles, got {arr.size}")
@@ -201,6 +213,10 @@ class RemoteFranka(RemoteDevice):
         Raises:
             CommandError: If packing or command execution fails.
         """
+        if not self._enable_publishers:
+            raise RuntimeError(
+                "Publishers disabled for this RemoteFranka instance."
+            )
         arr = np.asarray(pose, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 pose values, got {arr.size}")
@@ -211,6 +227,10 @@ class RemoteFranka(RemoteDevice):
         Send a joint velocity command to the Franka arm.
         Accepts tuple, list, numpy array, or torch tensor (no type checking).
         """
+        if not self._enable_publishers:
+            raise RuntimeError(
+                "Publishers disabled for this RemoteFranka instance."
+            )
         arr = np.asarray(joint_velocities, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint velocities, got {arr.size}")
@@ -225,6 +245,10 @@ class RemoteFranka(RemoteDevice):
         Raises:
             CommandError: If packing or command execution fails.
         """
+        if not self._enable_publishers:
+            raise RuntimeError(
+                "Publishers disabled for this RemoteFranka instance."
+            )
         arr = np.asarray(cartesian_velocities, dtype=np.float64).reshape(-1)
         if arr.size != 6:
             raise ValueError(
@@ -239,6 +263,10 @@ class RemoteFranka(RemoteDevice):
         Send a joint torque command to the Franka arm.
         Accepts tuple, list, numpy array, or torch tensor (no type checking).
         """
+        if not self._enable_publishers:
+            raise RuntimeError(
+                "Publishers disabled for this RemoteFranka instance."
+            )
         arr = np.asarray(joint_torques, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint torques, got {arr.size}")

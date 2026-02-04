@@ -1,4 +1,6 @@
 import time
+from pathlib import Path
+import shutil
 from enum import Enum
 import numpy as np
 from typing import Callable, Dict, Optional, List, Tuple
@@ -8,7 +10,7 @@ from lerobot.datasets.lerobot_dataset import LeRobotDataset
 from concurrent.futures import Future
 
 from .utils import NonBlockingKeyPress, UIConsole
-from .wrapper import HarewareDataWrapper
+from .wrapper import HardwareDataWrapper
 
 
 class DataCollectionState(str, Enum):
@@ -72,7 +74,7 @@ class DataCollectionManager:
 
     def __init__(
         self,
-        data_collectors: List[HarewareDataWrapper],
+        data_collectors: List[HardwareDataWrapper],
         data_dir: str,
         task: str,
         fps: int = 50,

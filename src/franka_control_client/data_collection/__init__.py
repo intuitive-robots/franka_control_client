@@ -1,8 +1,8 @@
 from .data_collection_manager import DataCollectionManager
-from .wrapper import HarewareDataWrapper, ImageDataWrapper
+from .wrapper import HardwareDataWrapper, ImageDataWrapper
 
 __all__ = [
     "DataCollectionManager",
-    "HarewareDataWrapper",
+    "HardwareDataWrapper",
     "ImageDataWrapper",
 ]

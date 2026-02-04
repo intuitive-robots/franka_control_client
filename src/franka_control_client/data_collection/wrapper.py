@@ -3,11 +3,12 @@ import numpy as np
 from typing import Dict
 
 from ..camera.camera import CameraDevice
+from ..core.latest_msg_subscriber import LatestMsgSubscriber
 from ..franka_robot.franka_arm import RemoteFranka
 from ..franka_robot.franka_gripper import RemoteFrankaGripper
-from ..robotiq_grippper.robotiq_gripper import RemoteRobotiqGripper
+from ..robotiq_gripper.robotiq_gripper import RemoteRobotiqGripper
 
-class HarewareDataWrapper(abc.ABC):
+class HardwareDataWrapper(abc.ABC):
 
     def __init__(self, feature: dict) -> None:
         self.feature = feature
@@ -31,7 +32,7 @@ class HarewareDataWrapper(abc.ABC):
         raise NotImplementedError("Subclasses must implement close method.")
 
 
-class ImageDataWrapper(HarewareDataWrapper):
+class ImageDataWrapper(HardwareDataWrapper):
     def __init__(self, camera_device: CameraDevice) -> None:
         self.camera_device = camera_device
         self.key = f"observation.image.{camera_device._name}"
@@ -74,7 +75,7 @@ class ImageDataWrapper(HarewareDataWrapper):
         pass
 
 
-class PandaArmDataWrapper(HarewareDataWrapper):
+class PandaArmDataWrapper(HardwareDataWrapper):
     def __init__(self, arm: RemoteFranka) -> None:
         self.arm = arm
         self.key = f"observation.state.q.{arm._name}"
@@ -92,12 +93,20 @@ class PandaArmDataWrapper(HarewareDataWrapper):
 
     def __getattr__(self, name):
         return getattr(self.arm, name)
+    def discard(self) -> None:
+        pass
 
-class RobotiqGripperDataWrapper(HarewareDataWrapper):
+    def reset(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+class RobotiqGripperDataWrapper(HardwareDataWrapper):
     def __init__(self, gripper: RemoteRobotiqGripper) -> None:
         self.gripper = gripper
         self.key = f"observation.state.robotiq_gripper.{gripper._name}"
-        feature = {self.key: {"dtype": "float32", "shape": (7,)}}
+        feature = {self.key: {"dtype": "float32", "shape": (2,)}}
         super().__init__(feature)
 
     def capture_step(self) -> Dict[str, np.ndarray]:
@@ -106,13 +115,13 @@ class RobotiqGripperDataWrapper(HarewareDataWrapper):
             raise ValueError("No Robotiq gripper state data received.")
         data = np.array(
             [
-                state["commanded_position"],
-                state["commanded_speed"],
-                state["commanded_force"],
+                # state["commanded_position"],
+                # state["commanded_speed"],
+                # state["commanded_force"],
                 state["position"],
                 state["current"],
-                state["raw_commanded_position"],
-                state["raw_position"],
+                # state["raw_commanded_position"],
+                # state["raw_position"],
             ],
             dtype=np.float32,
         )
@@ -129,3 +138,62 @@ class RobotiqGripperDataWrapper(HarewareDataWrapper):
 
     def __getattr__(self, name):
         return getattr(self.gripper, name)
+
+class GelloArmDataWrapper(HardwareDataWrapper):
+    def __init__(self, name: str = "gello") -> None:
+        self._name = name
+        self.arm_state_sub = LatestMsgSubscriber(f"{name}/gello_arm_state")
+        self.key = f"action.joint_position.{name}"
+        feature = {self.key: {"dtype": "float32", "shape": (7,)}}
+        super().__init__(feature)
+
+    def capture_step(self) -> Dict[str, np.ndarray]:
+        state = self.arm_state_sub.get_latest()
+        if state is None:
+            raise ValueError("No Gello arm state data received.")
+        joints = np.asarray(state["joint_state"], dtype=np.float32).reshape(-1)
+        if joints.size != 7:
+            raise ValueError(
+                f"Expected 7 Gello arm joints, got {joints.size}."
+            )
+        return {self.key: joints}
+
+    def discard(self) -> None:
+        pass
+
+    def reset(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+
+class GelloGripperDataWrapper(HardwareDataWrapper):
+    def __init__(self, name: str = "gello") -> None:
+        self._name = name
+        self.gripper_state_sub = LatestMsgSubscriber(
+            f"{name}/gello_gripper_state"
+        )
+        self.key = f"action.gripper.{name}"
+        feature = {self.key: {"dtype": "float32", "shape": (1,)}}
+        super().__init__(feature)
+
+    def capture_step(self) -> Dict[str, np.ndarray]:
+        state = self.gripper_state_sub.get_latest()
+        if state is None:
+            raise ValueError("No Gello gripper state data received.")
+        gripper = np.asarray(state["gripper"], dtype=np.float32).reshape(-1)
+        if gripper.size != 1:
+            raise ValueError(
+                f"Expected 1 Gello gripper value, got {gripper.size}."
+            )
+        return {self.key: gripper}
+
+    def discard(self) -> None:
+        pass
+
+    def reset(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass

@@ -27,11 +27,15 @@ class RobotiqGraspCommand(TypedDict, total=True):
 class RemoteRobotiqGripper(RemoteDevice):
     """Remote client for a Robotiq gripper device."""
 
-    def __init__(self, device_name: str) -> None:
+    def __init__(self, device_name: str, enable_publishers: bool = True) -> None:
         super().__init__(device_name)
-        self.command_publisher = pyzlc.Publisher(
-            f"{self._name}/robotiq_gripper_command",
-        )
+        self._enable_publishers = enable_publishers
+        if enable_publishers:
+            self.command_publisher = pyzlc.Publisher(
+                f"{self._name}/robotiq_gripper_command",
+            )
+        else:
+            self.command_publisher = None
         self.state_subscriber = LatestMsgSubscriber(
             f"{self._name}/robotiq_gripper_state"
         )
@@ -57,6 +61,10 @@ class RemoteRobotiqGripper(RemoteDevice):
             force (float): Desired force, scaled by config scale_alpha/scale_beta.
             blocking (bool): Wait for completion if true.
         """
+        if not self._enable_publishers:
+            raise RuntimeError(
+                "Publishers disabled for this RemoteRobotiqGripper instance."
+            )
         self.command_publisher.publish(
             RobotiqGraspCommand(
                 position=position,

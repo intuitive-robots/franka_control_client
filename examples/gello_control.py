@@ -23,8 +23,10 @@ if __name__ == "__main__":
     gello = GelloAgent(port=gello_port)
     pyzlc.init("gello_control_client", "192.168.0.117", group_name="DroidGroup")
     name = "gello"
+    ## Publishers for Gello states
     arm_state_pub = pyzlc.Publisher(f"{name}/gello_arm_state")
     gripper_state_pub = pyzlc.Publisher(f"{name}/gello_gripper_state")
+    ##
     robot = RemoteFranka("FrankaPanda")
     robotiq = RemoteRobotiqGripper("FrankaPanda")
     robot.connect()
@@ -51,8 +53,8 @@ if __name__ == "__main__":
             # print("arm joints now:", robot.get_franka_arm_state()["q"])
             gripper_value = float(gello_joint_state[-1])
             ##publish states
-            # arm_state_pub.publish({"joint_state": arm_joints.tolist()})
-            # gripper_state_pub.publish({"gripper": gripper_value})
+            arm_state_pub.publish({"joint_state": arm_joints.tolist()})
+            gripper_state_pub.publish({"gripper": gripper_value})
 
             # Send arm joint positions to robot
             robot.send_joint_position_command(arm_joints)

@@ -17,8 +17,8 @@ class LatestMsgSubscriber(Generic[MessageT]):
         self.last_message: Optional[MessageT] = None
         while self.last_message is None:
             time.sleep(1)
-        pyzlc.info(
-            f"Waiting for first message on topic '{self.topic_name}'..."
+            pyzlc.info(
+                f"Waiting for first message on topic '{self.topic_name}'..."
         )
 
     def _handle_message(self, msg: MessageT) -> None:

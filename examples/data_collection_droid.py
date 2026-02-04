@@ -100,10 +100,10 @@ if __name__ == "__main__":
         # camera_left = ImageDataWrapper(
         #     CameraDevice("zed_left", preview=False)
         # )
-        print("Left camera wrapper created for data collection.")   
-        camera_right = ImageDataWrapper(
-            CameraDevice("zed_right", previe00w=False)
-        )
+        # print("Left camera wrapper created for data collection.")   
+        # camera_right = ImageDataWrapper(
+        #     CameraDevice("zed_right", previe00w=False)
+        # )
         # camera_wrist = ImageDataWrapper(
         #     CameraDevice("zed_wrist", preview=False)
         # )
@@ -118,27 +118,28 @@ if __name__ == "__main__":
         print("Robotiq gripper connected for data collection.")
         
         gello_arm = GelloArmDataWrapper(name="gello")
+        print("Gello arm wrapper created for data collection.")
         gello_gripper = GelloGripperDataWrapper(name="gello")
         print("Gello arm and gripper wrappers created for data collection.")
-        resetter = EpisodeResetWrapper(
-            franka,
-            robotiq,
-            gello_arm,
-            gello_gripper,
-        )
-        print("Resetter wrapper created for data collection.")
+        # resetter = EpisodeResetWrapper(
+        #     franka,
+        #     robotiq,
+        #     gello_arm,
+        #     gello_gripper,
+        # )
+        # print("Resetter wrapper created for data collection.")
         name = time.strftime("%Y%m%d_%H%M%S", time.localtime())
         data_dir = f"./datasets/{name}"
         data_collection_manager = DataCollectionManager(
             [
-                camera_left,
-                camera_right,
-                camera_wrist,
+                # camera_left,
+                # camera_right,
+                # camera_wrist,
                 franka_arm,
                 robotiq_gripper,
                 gello_arm,
                 gello_gripper,
-                resetter,
+                # resetter,
             ],
             data_dir,
             task="droid",

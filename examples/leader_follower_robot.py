@@ -2,7 +2,7 @@
 # import sys
 
 # from franka_control_client.franka_robot.franka_arm import (ControlMode,
-#                                                            RemoteFranka)
+#                                                            RemotePandaArm)
 
 # sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -15,8 +15,8 @@
 
 
 # def run_leader_follower_example():
-#     client_leader = RemoteFranka(LEADER_ROBOT_IP, LEADER_ROBOT_PORT)
-#     client_follower = RemoteFranka(FOLLOWER_ROBOT_IP, FOLLOWER_ROBOT_PORT)
+#     client_leader = RemotePandaArm(LEADER_ROBOT_IP, LEADER_ROBOT_PORT)
+#     client_follower = RemotePandaArm(FOLLOWER_ROBOT_IP, FOLLOWER_ROBOT_PORT)
 
 #     try:
 #         client_follower.connect()

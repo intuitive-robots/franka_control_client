@@ -1,25 +1,25 @@
 import time
 
 # test robot server interactions for Franka arm
-from franka_control_client.franka_robot.franka_arm import (
+from franka_control_client.franka_robot.panda_arm import (
     ControlMode,
-    FrankaArmState,
-    RemoteFranka,
+    PandaArmState,
+    RemotePandaArm,
 )
 
 
 def test_get_franka_arm_state():
-    robot = RemoteFranka("127.0.0.1", 5555)
+    robot = RemotePandaArm("127.0.0.1", 5555)
     print("Connecting to Franka robot...")
     robot.connect()
     print("Fetching Franka arm state...")
     state = robot.get_franka_arm_state()
-    assert isinstance(state, FrankaArmState)
+    assert isinstance(state, PandaArmState)
     robot.disconnect()
 
 
 def test_get_franka_arm_state_pub_port():
-    robot = RemoteFranka("127.0.0.1", 5555)
+    robot = RemotePandaArm("127.0.0.1", 5555)
     robot.connect()
     pub_port = robot.get_franka_arm_state_pub_port()
     print(f"Franka arm state pub port: {pub_port}")
@@ -27,7 +27,7 @@ def test_get_franka_arm_state_pub_port():
 
 
 def test_get_franka_arm_control_mode():
-    robot = RemoteFranka("127.0.0.1", 5555)
+    robot = RemotePandaArm("127.0.0.1", 5555)
     robot.connect()
     control_mode = robot.get_franka_arm_control_mode()
     assert control_mode == ControlMode.IDLE
@@ -35,7 +35,7 @@ def test_get_franka_arm_control_mode():
 
 
 def test_set_control_mode_success():
-    robot = RemoteFranka("127.0.0.1", 5555)
+    robot = RemotePandaArm("127.0.0.1", 5555)
     robot.connect()
     robot.set_franka_arm_control_mode(ControlMode.CARTESIAN_VELOCITY)
     for _ in range(100):
@@ -45,7 +45,7 @@ def test_set_control_mode_success():
 
 
 # def test_move_to_position_success(fake_franka_server):
-#     robot = RemoteFranka("127.0.0.1", 5555)
+#     robot = RemotePandaArm("127.0.0.1", 5555)
 #     robot.connect()
 #     pose = tuple(float(i) for i in range(16))
 #     robot.move_to_position(pose)

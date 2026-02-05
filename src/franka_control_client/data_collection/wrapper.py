@@ -4,9 +4,10 @@ from typing import Dict
 
 from ..camera.camera import CameraDevice
 from ..core.latest_msg_subscriber import LatestMsgSubscriber
-from ..franka_robot.franka_arm import RemoteFranka
-from ..franka_robot.franka_gripper import RemoteFrankaGripper
+from ..franka_robot.panda_arm import RemotePandaArm
+from ..franka_robot.panda_gripper import RemotePandaGripper
 from ..robotiq_gripper.robotiq_gripper import RemoteRobotiqGripper
+
 
 class HardwareDataWrapper(abc.ABC):
 
@@ -76,7 +77,7 @@ class ImageDataWrapper(HardwareDataWrapper):
 
 
 class PandaArmDataWrapper(HardwareDataWrapper):
-    def __init__(self, arm: RemoteFranka) -> None:
+    def __init__(self, arm: RemotePandaArm) -> None:
         self.arm = arm
         self.key = f"observation.state.q.{arm._name}"
         feature = {
@@ -93,6 +94,7 @@ class PandaArmDataWrapper(HardwareDataWrapper):
 
     def __getattr__(self, name):
         return getattr(self.arm, name)
+
     def discard(self) -> None:
         pass
 
@@ -101,6 +103,7 @@ class PandaArmDataWrapper(HardwareDataWrapper):
 
     def close(self) -> None:
         pass
+
 
 class RobotiqGripperDataWrapper(HardwareDataWrapper):
     def __init__(self, gripper: RemoteRobotiqGripper) -> None:
@@ -138,6 +141,7 @@ class RobotiqGripperDataWrapper(HardwareDataWrapper):
 
     def __getattr__(self, name):
         return getattr(self.gripper, name)
+
 
 class GelloArmDataWrapper(HardwareDataWrapper):
     def __init__(self, name: str = "gello") -> None:

@@ -20,7 +20,7 @@ class GraspCommand(TypedDict, total=True):
     speed: float
 
 
-class RemoteFrankaGripper(RemoteDevice):
+class RemotePandaGripper(RemoteDevice):
     """Remote client for a gripper device."""
 
     def __init__(self, device_name: str) -> None:

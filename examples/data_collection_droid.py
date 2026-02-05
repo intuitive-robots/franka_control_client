@@ -1,6 +1,7 @@
 import time
 import os
 import sys
+
 # Add hardware directory to path to import GelloAgent
 # sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 # from hardware.gello_zlc import GelloAgent
@@ -19,18 +20,19 @@ from franka_control_client.data_collection.wrapper import (
     GelloArmDataWrapper,
     GelloGripperDataWrapper,
 )
-from franka_control_client.franka_robot.franka_arm import (
+from franka_control_client.franka_robot.panda_arm import (
     ControlMode,
-    RemoteFranka,
+    RemotePandaArm,
 )
 from franka_control_client.robotiq_gripper.robotiq_gripper import (
     RemoteRobotiqGripper,
 )
 
+
 class EpisodeResetWrapper(HardwareDataWrapper):
     def __init__(
         self,
-        franka: RemoteFranka,
+        franka: RemotePandaArm,
         robotiq: RemoteRobotiqGripper,
         gello_arm: GelloArmDataWrapper,
         gello_gripper: GelloGripperDataWrapper,
@@ -75,9 +77,7 @@ class EpisodeResetWrapper(HardwareDataWrapper):
                 blocking=False,
             )
         else:
-            pyzlc.info(
-                "Robotiq publishers disabled; skipping gripper reset."
-            )
+            pyzlc.info("Robotiq publishers disabled; skipping gripper reset.")
 
     def close(self) -> None:
         pass
@@ -96,11 +96,11 @@ if __name__ == "__main__":
         #         "Make sure hardware/gello_zlc.py is running "
         #         "or set GelloArmDataWrapper(name=...) to match."
         #     )
-        #todo: seperate connection from wrapper creation
+        # todo: seperate connection from wrapper creation
         # camera_left = ImageDataWrapper(
         #     CameraDevice("zed_left", preview=False)
         # )
-        # print("Left camera wrapper created for data collection.")   
+        # print("Left camera wrapper created for data collection.")
         # camera_right = ImageDataWrapper(
         #     CameraDevice("zed_right", previe00w=False)
         # )
@@ -108,7 +108,7 @@ if __name__ == "__main__":
         #     CameraDevice("zed_wrist", preview=False)
         # )
 
-        franka = RemoteFranka("FrankaPanda", enable_publishers=False)
+        franka = RemotePandaArm("FrankaPanda", enable_publishers=False)
         franka.connect()
         franka_arm = PandaArmDataWrapper(franka)
         print("Franka arm connected for data collection.")
@@ -116,7 +116,7 @@ if __name__ == "__main__":
         robotiq.connect()
         robotiq_gripper = RobotiqGripperDataWrapper(robotiq)
         print("Robotiq gripper connected for data collection.")
-        
+
         gello_arm = GelloArmDataWrapper(name="gello")
         print("Gello arm wrapper created for data collection.")
         gello_gripper = GelloGripperDataWrapper(name="gello")

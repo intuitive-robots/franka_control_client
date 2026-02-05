@@ -22,7 +22,7 @@ class ControlMode(str, Enum):
     # GRAVITY_COMP = "GravityComp"
 
 
-class FrankaArmState(TypedDict):
+class PandaArmState(TypedDict):
     """
     Franka arm state structure.
     """
@@ -63,9 +63,9 @@ class CartesianVelocityCommand(TypedDict):
     vel: List[float]  # vx, vy, vz, wx, wy, wz
 
 
-class RemoteFranka(RemoteDevice):
+class RemotePandaArm(RemoteDevice):
     """
-    RemoteFranka class for controlling a Franka robot.
+    RemotePandaArm class for controlling a Franka robot.
 
     This class extends the RemoteDevice class and provides
     specific functionality for interacting with a Franka robot.
@@ -73,9 +73,11 @@ class RemoteFranka(RemoteDevice):
         robot_name (str): Name of the Franka robot.
     """
 
-    def __init__(self, robot_name: str, enable_publishers: bool = True) -> None:
+    def __init__(
+        self, robot_name: str, enable_publishers: bool = True
+    ) -> None:
         """
-        Initialize the RemoteFranka instance.
+        Initialize the RemotePandaArm instance.
 
         Args:
             robot_name (str): The name of the Franka robot.
@@ -126,11 +128,11 @@ class RemoteFranka(RemoteDevice):
             pyzlc.sleep(1)
 
     @property
-    def current_state(self) -> Optional[FrankaArmState]:
+    def current_state(self) -> Optional[PandaArmState]:
         """Return the latest Franka arm state."""
         return self.arm_state_sub.get_latest()
 
-    def get_franka_arm_state(self) -> FrankaArmState:
+    def get_franka_arm_state(self) -> PandaArmState:
         """Return a single state sample"""
         return pyzlc.call(f"{self._name}/get_franka_arm_state", pyzlc.empty)
 
@@ -195,7 +197,7 @@ class RemoteFranka(RemoteDevice):
         """
         if not self._enable_publishers:
             raise RuntimeError(
-                "Publishers disabled for this RemoteFranka instance."
+                "Publishers disabled for this RemotePandaArm instance."
             )
         arr = np.asarray(joint_positions, dtype=np.float64).reshape(-1)
         if arr.size != 7:
@@ -215,7 +217,7 @@ class RemoteFranka(RemoteDevice):
         """
         if not self._enable_publishers:
             raise RuntimeError(
-                "Publishers disabled for this RemoteFranka instance."
+                "Publishers disabled for this RemotePandaArm instance."
             )
         arr = np.asarray(pose, dtype=np.float64).reshape(-1)
         if arr.size != 7:
@@ -229,7 +231,7 @@ class RemoteFranka(RemoteDevice):
         """
         if not self._enable_publishers:
             raise RuntimeError(
-                "Publishers disabled for this RemoteFranka instance."
+                "Publishers disabled for this RemotePandaArm instance."
             )
         arr = np.asarray(joint_velocities, dtype=np.float64).reshape(-1)
         if arr.size != 7:
@@ -247,7 +249,7 @@ class RemoteFranka(RemoteDevice):
         """
         if not self._enable_publishers:
             raise RuntimeError(
-                "Publishers disabled for this RemoteFranka instance."
+                "Publishers disabled for this RemotePandaArm instance."
             )
         arr = np.asarray(cartesian_velocities, dtype=np.float64).reshape(-1)
         if arr.size != 6:
@@ -265,7 +267,7 @@ class RemoteFranka(RemoteDevice):
         """
         if not self._enable_publishers:
             raise RuntimeError(
-                "Publishers disabled for this RemoteFranka instance."
+                "Publishers disabled for this RemotePandaArm instance."
             )
         arr = np.asarray(joint_torques, dtype=np.float64).reshape(-1)
         if arr.size != 7:

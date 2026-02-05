@@ -9,9 +9,9 @@ import pyzlc
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from hardware.gello_zlc import GelloAgent
 
-from franka_control_client.franka_robot.franka_arm import (
+from franka_control_client.franka_robot.panda_arm import (
     ControlMode,
-    RemoteFranka,
+    RemotePandaArm,
 )
 from franka_control_client.robotiq_gripper.robotiq_gripper import (
     RemoteRobotiqGripper,
@@ -21,13 +21,15 @@ if __name__ == "__main__":
     # Initialize Gello agent
     gello_port = "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT94EVRT-if00-port0"
     gello = GelloAgent(port=gello_port)
-    pyzlc.init("gello_control_client", "192.168.0.117", group_name="DroidGroup")
+    pyzlc.init(
+        "gello_control_client", "192.168.0.117", group_name="DroidGroup"
+    )
     name = "gello"
     ## Publishers for Gello states
     arm_state_pub = pyzlc.Publisher(f"{name}/gello_arm_state")
     gripper_state_pub = pyzlc.Publisher(f"{name}/gello_gripper_state")
     ##
-    robot = RemoteFranka("FrankaPanda")
+    robot = RemotePandaArm("FrankaPanda")
     robotiq = RemoteRobotiqGripper("FrankaPanda")
     robot.connect()
     robotiq.connect()
@@ -60,9 +62,15 @@ if __name__ == "__main__":
             robot.send_joint_position_command(arm_joints)
             # Send gripper command to Robotiq (expects 0.0=open, 1.0=close)
             gripper_cmd = max(0.0, min(1.0, gripper_value))
-            if last_gripper_cmd is None or abs(gripper_cmd - last_gripper_cmd) > 1e-3:
+            if (
+                last_gripper_cmd is None
+                or abs(gripper_cmd - last_gripper_cmd) > 1e-3
+            ):
                 robotiq.send_grasp_command(
-                    position=gripper_cmd, speed=1, force=0.3, blocking=False #todo: add into cofig
+                    position=gripper_cmd,
+                    speed=1,
+                    force=0.3,
+                    blocking=False,  # todo: add into cofig
                 )
                 last_gripper_cmd = gripper_cmd
 
@@ -75,9 +83,9 @@ if __name__ == "__main__":
             # if state is not None and (now - last_log_time) >= 0.5:
             #     log_file.write(f"{time.time():.6f}\t{state}\n")
             #     last_log_time = now
-            
+
             # print(f"Gello joints: {arm_joints.round(3).tolist()} | Gripper: {gripper_value:.3f}")
-            
+
             time.sleep(0.002)
     except KeyboardInterrupt:
         print("Stopping Gello control...")

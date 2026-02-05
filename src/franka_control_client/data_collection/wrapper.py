@@ -105,6 +105,29 @@ class PandaArmDataWrapper(HardwareDataWrapper):
         pass
 
 
+class PandaGripperDataWrapper(HardwareDataWrapper):
+    def __init__(self, gripper: RemotePandaGripper) -> None:
+        self.gripper = gripper
+        self.key = f"observation.state.gripper_width.{gripper._name}"
+        feature = {self.key: {"dtype": "float32", "shape": (1,)}}
+        super().__init__(feature)
+
+    def capture_step(self) -> Dict[str, np.ndarray]:
+        state = self.gripper.current_state
+        if state is None:
+            raise ValueError("No gripper state data received from the robot.")
+        return {self.key: np.array([state["width"]], dtype=np.float32)}
+
+    def discard(self) -> None:
+        pass
+
+    def reset(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+
 class RobotiqGripperDataWrapper(HardwareDataWrapper):
     def __init__(self, gripper: RemoteRobotiqGripper) -> None:
         self.gripper = gripper

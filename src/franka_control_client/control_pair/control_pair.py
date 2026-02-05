@@ -30,7 +30,6 @@ class ControlPair(abc.ABC):
             "Subclasses must implement control_step method."
         )
 
-    @abc.abstractmethod
     def _control_task(self) -> None:
         try:
             while self.is_running:

@@ -10,7 +10,7 @@ FOLLOWER_GRIPPER_CLOSE = 0.025
 FOLLOWER_GRIPPER_OPEN = 0.07
 
 
-class SinglePandaControlPair(ControlPair):
+class SinglePandaKTControlPair(ControlPair):
     def __init__(self, leader: FrankaPanda, follower: FrankaPanda) -> None:
         self.leader = leader
         self.follower = follower

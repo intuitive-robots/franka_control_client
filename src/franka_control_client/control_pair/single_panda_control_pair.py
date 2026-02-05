@@ -1,6 +1,5 @@
 import pyzlc
 
-from ..data_collection.wrapper import HardwareDataWrapper
 from .control_pair import ControlPair
 from ..franka_robot.franka_panda import FrankaPanda
 

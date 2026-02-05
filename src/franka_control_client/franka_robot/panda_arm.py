@@ -88,29 +88,21 @@ class RemotePandaArm(RemoteDevice):
             f"{robot_name}/franka_arm_state"
         )
         self._enable_publishers = enable_publishers
-        # command publishers (optional for read-only clients)
-        if enable_publishers:
-            self.joint_position_publisher = pyzlc.Publisher(
-                f"{robot_name}/joint_position_command"
-            )
-            self.joint_velocity_publisher = pyzlc.Publisher(
-                f"{robot_name}/joint_velocity_command"
-            )
-            self.cartesian_pose_publisher = pyzlc.Publisher(
-                f"{robot_name}/cartesian_pose_command"
-            )
-            self.cartesian_velocity_publisher = pyzlc.Publisher(
-                f"{robot_name}/cartesian_velocity_command"
-            )
-            self.joint_torque_publisher = pyzlc.Publisher(
-                f"{robot_name}/joint_torque_command"
-            )
-        else:
-            self.joint_position_publisher = None
-            self.joint_velocity_publisher = None
-            self.cartesian_pose_publisher = None
-            self.cartesian_velocity_publisher = None
-            self.joint_torque_publisher = None
+        self.joint_position_publisher = pyzlc.Publisher(
+            f"{robot_name}/joint_position_command"
+        )
+        self.joint_velocity_publisher = pyzlc.Publisher(
+            f"{robot_name}/joint_velocity_command"
+        )
+        self.cartesian_pose_publisher = pyzlc.Publisher(
+            f"{robot_name}/cartesian_pose_command"
+        )
+        self.cartesian_velocity_publisher = pyzlc.Publisher(
+            f"{robot_name}/cartesian_velocity_command"
+        )
+        self.joint_torque_publisher = pyzlc.Publisher(
+            f"{robot_name}/joint_torque_command"
+        )
 
     def connect(self) -> None:
         """

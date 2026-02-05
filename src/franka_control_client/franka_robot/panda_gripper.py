@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import TypedDict, Optional
 import pyzlc
 
 from ..core.remote_device import RemoteDevice
@@ -30,6 +30,20 @@ class RemotePandaGripper(RemoteDevice):
         )
         self.state_subscriber = LatestMsgSubscriber(
             f"{self._name}/franka_gripper_state"
+        )
+
+    @property
+    def current_state(self) -> Optional[GripperStateMsg]:
+        """Return the latest gripper state."""
+        msg = self.state_subscriber.last_message
+        if msg is None:
+            return None
+        return GripperStateMsg(
+            width=msg["width"],
+            max_width=msg["max_width"],
+            is_grasped=msg["is_grasped"],
+            temperature=msg["temperature"],
+            time=msg["time"],
         )
 
     def open(self, speed: float = 0.1) -> None:

@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Callable, Dict, Optional, List, Tuple
 
 
-from .utils import NonBlockingKeyPress, UIConsole
+from .utils import NonBlockingKeyPress, UIConsole, VoidEvent
 from .wrapper import HardwareDataWrapper
 
 
@@ -78,6 +78,8 @@ class DataCollectionManager(abc.ABC):
         self.fps = fps
         self.last_timestamp = None
         self._ui_console = UIConsole()
+        self._start_collecting_event = VoidEvent()
+        self._stop_collecting_event = VoidEvent()
         self._state_machine = DataCollectionStateMachine(
             initial_state=DataCollectionState.WAITING,
             on_enter=self._on_state_enter,
@@ -123,6 +125,16 @@ class DataCollectionManager(abc.ABC):
             DataCollectionState.EXITING,
             action=self._close,
         )
+
+    def register_start_collecting_event(
+        self, handler: Callable[[], None]
+    ) -> None:
+        self._start_collecting_event.subscribe(handler)
+
+    def register_stop_collecting_event(
+        self, handler: Callable[[], None]
+    ) -> None:
+        self._stop_collecting_event.subscribe(handler)
 
     def run(self) -> None:
         self._on_state_enter(self._state_machine.state)
@@ -177,6 +189,7 @@ class DataCollectionManager(abc.ABC):
     @abc.abstractmethod
     def _start_collecting(self) -> None:
         self._ui_console.update_hint("Starting data collection...")
+        self._start_collecting_event.emit()
 
     @abc.abstractmethod
     def _save_episode(self) -> None:
@@ -191,7 +204,8 @@ class DataCollectionManager(abc.ABC):
 
     @abc.abstractmethod
     def _stop_collecting(self) -> None:
-        raise NotImplementedError
+        self._ui_console.update_hint("Stopping data collection...")
+        self._stop_collecting_event.emit()
 
     def _reset_to_waiting(self) -> None:
         for collector in self.data_collectors:

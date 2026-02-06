@@ -25,14 +25,28 @@ class ControlPair(abc.ABC):
             self.control_task_thread = None
 
     @abc.abstractmethod
+    def control_rest(self) -> None:
+        raise NotImplementedError(
+            "Subclasses must implement control_rest method."
+        )
+
+    @abc.abstractmethod
     def control_step(self) -> None:
         raise NotImplementedError(
             "Subclasses must implement control_step method."
         )
+    
+    @abc.abstractmethod
+    def control_end(self) -> None:
+        raise NotImplementedError(
+            "Subclasses must implement control_end method."
+        )
 
     def _control_task(self) -> None:
         try:
+            self.control_rest()
             while self.is_running:
                 self.control_step()
+            self.control_end()
         except Exception as e:
             print(f"Control task encountered an error: {e}")

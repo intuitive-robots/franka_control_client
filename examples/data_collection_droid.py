@@ -6,145 +6,69 @@ import sys
 # sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 # from hardware.gello_zlc import GelloAgent
 
-# # Allow running this script directly without installing the package.
-# sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
-# import pyzlc
+import time
+from typing import List
+
 import pyzlc
+
 from franka_control_client.camera.camera import CameraDevice
-from franka_control_client.data_collection import DataCollectionManager
+from franka_control_client.data_collection.lerobot_data_collection import (
+    LeRobotDataCollection,
+)
 from franka_control_client.data_collection.wrapper import (
     HardwareDataWrapper,
     ImageDataWrapper,
+)
+from franka_control_client.data_collection.wrapper import (
     PandaArmDataWrapper,
     RobotiqGripperDataWrapper,
-    GelloArmDataWrapper,
-    GelloGripperDataWrapper,
+    GelloDataWrapper
 )
-from franka_control_client.franka_robot.panda_arm import (
-    ControlMode,
+from franka_control_client.franka_robot.franka_panda import (
     RemotePandaArm,
 )
-from franka_control_client.robotiq_gripper.robotiq_gripper import (
-    RemoteRobotiqGripper,
+
+from franka_control_client.gello.gello import(
+    RemoteGello
 )
-
-
-class EpisodeResetWrapper(HardwareDataWrapper):
-    def __init__(
-        self,
-        franka: RemotePandaArm,
-        robotiq: RemoteRobotiqGripper,
-        gello_arm: GelloArmDataWrapper,
-        gello_gripper: GelloGripperDataWrapper,
-        gripper_speed: float = 1.0,
-        gripper_force: float = 0.3,
-    ) -> None:
-        self._franka = franka
-        self._robotiq = robotiq
-        self._gello_arm = gello_arm
-        self._gello_gripper = gello_gripper
-        self._gripper_speed = gripper_speed
-        self._gripper_force = gripper_force
-        super().__init__({})
-
-    def capture_step(self):
-        return {}
-
-    def discard(self) -> None:
-        pass
-
-    def reset(self) -> None:
-        try:
-            arm_payload = self._gello_arm.capture_step()
-            arm_joints = arm_payload[self._gello_arm.key]
-            gripper_payload = self._gello_gripper.capture_step()
-            gripper_value = float(gripper_payload[self._gello_gripper.key][0])
-        except Exception as exc:
-            pyzlc.warn(f"Reset skipped: failed to read Gello state ({exc})")
-            return
-        self._franka.move_franka_arm_to_joint_position(
-            tuple(arm_joints.tolist())
-        )
-        self._franka.set_franka_arm_control_mode(
-            ControlMode.HybridJointImpedance
-        )
-        if getattr(self._robotiq, "_enable_publishers", True):
-            gripper_cmd = max(0.0, min(1.0, gripper_value))
-            self._robotiq.send_grasp_command(
-                position=gripper_cmd,
-                speed=self._gripper_speed,
-                force=self._gripper_force,
-                blocking=False,
-            )
-        else:
-            pyzlc.info("Robotiq publishers disabled; skipping gripper reset.")
-
-    def close(self) -> None:
-        pass
-
+from franka_control_client.robotiq_gripper.robotiq_gripper import (
+    RemoteRobotiqGripper
+)
+from franka_control_client.franka_robot.panda_robotiq import (
+    PandaRobotiq
+)
+from franka_control_client.control_pair.gello_panda_control_pair import (
+    GelloPandControlPair,
+)
 
 if __name__ == "__main__":
     pyzlc.init(
-        "data_collection_droid",
+        "data_collection",
         "192.168.0.117",
         group_name="DroidGroup",
     )
-    try:
-        # if not pyzlc.check_node_info("gello"):
-        #     pyzlc.info(
-        #         "Gello node 'gello' not found. "
-        #         "Make sure hardware/gello_zlc.py is running "
-        #         "or set GelloArmDataWrapper(name=...) to match."
-        #     )
-        # todo: seperate connection from wrapper creation
-        # camera_left = ImageDataWrapper(
-        #     CameraDevice("zed_left", preview=False)
-        # )
-        # print("Left camera wrapper created for data collection.")
-        # camera_right = ImageDataWrapper(
-        #     CameraDevice("zed_right", previe00w=False)
-        # )
-        # camera_wrist = ImageDataWrapper(
-        #     CameraDevice("zed_wrist", preview=False)
-        # )
-
-        franka = RemotePandaArm("FrankaPanda", enable_publishers=False)
-        franka.connect()
-        franka_arm = PandaArmDataWrapper(franka)
-        print("Franka arm connected for data collection.")
-        robotiq = RemoteRobotiqGripper("FrankaPanda", enable_publishers=False)
-        robotiq.connect()
-        robotiq_gripper = RobotiqGripperDataWrapper(robotiq)
-        print("Robotiq gripper connected for data collection.")
-
-        gello_arm = GelloArmDataWrapper(name="gello")
-        print("Gello arm wrapper created for data collection.")
-        gello_gripper = GelloGripperDataWrapper(name="gello")
-        print("Gello arm and gripper wrappers created for data collection.")
-        # resetter = EpisodeResetWrapper(
-        #     franka,
-        #     robotiq,
-        #     gello_arm,
-        #     gello_gripper,
-        # )
-        # print("Resetter wrapper created for data collection.")
-        name = time.strftime("%Y%m%d_%H%M%S", time.localtime())
-        data_dir = f"./datasets/{name}"
-        data_collection_manager = DataCollectionManager(
-            [
-                # camera_left,
-                # camera_right,
-                # camera_wrist,
-                franka_arm,
-                robotiq_gripper,
-                gello_arm,
-                gello_gripper,
-                # resetter,
-            ],
-            data_dir,
-            task="droid",
-            fps=30,
-        )
-        data_collection_manager.run()
-    finally:
-        pyzlc.shutdown()
+    leader = RemoteGello("gello")
+    follower = PandaRobotiq(
+        "PandaRobotiq",
+        RemotePandaArm("FrankaPanda"),
+        RemoteRobotiqGripper("FrankaPanda"),
+    )
+    control_pair = GelloPandControlPair(leader, follower)
+    camera_left = ImageDataWrapper(CameraDevice("zed_left", preview=False))
+    data_collectors: List[HardwareDataWrapper] = []
+    data_collectors.append(camera_left)
+    data_collectors.append(GelloDataWrapper(leader))
+    data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
+    data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
+    name = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+    data_collection_manager = LeRobotDataCollection(
+        data_collectors, f"/home/irl-admin/Franka_Control_Feb/dataset/{name}", task="pepper"
+    )
+    data_collection_manager.register_start_collecting_event(
+        control_pair.start_control_pair
+    )
+    data_collection_manager.register_stop_collecting_event(
+        control_pair.stop_control_pair
+    )
+    data_collection_manager.run()
+    pyzlc.shutdown()

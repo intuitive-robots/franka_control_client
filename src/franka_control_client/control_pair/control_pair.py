@@ -1,7 +1,7 @@
 import abc
 from typing import Optional
 import threading
-
+import pyzlc
 
 class ControlPair(abc.ABC):
 
@@ -10,6 +10,7 @@ class ControlPair(abc.ABC):
         self.is_running: bool = False
 
     def start_control_pair(self) -> None:
+        pyzlc.info("Start control")
         if self.is_running:
             return
         self.is_running = True
@@ -44,7 +45,9 @@ class ControlPair(abc.ABC):
 
     def _control_task(self) -> None:
         try:
+            pyzlc.info("Resetting...")
             self.control_rest()
+            pyzlc.sleep(1)
             while self.is_running:
                 self.control_step()
             self.control_end()

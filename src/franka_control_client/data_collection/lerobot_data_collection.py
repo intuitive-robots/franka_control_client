@@ -33,7 +33,8 @@ class LeRobotDataCollection(DataCollectionManager):
         self.data_save_future: Optional[Future] = None
 
     def _start_collecting(self) -> None:
-        self._ui_console.update_hint("Starting data collection...")
+        # Emit start-collection event (e.g., start control pair).
+        super()._start_collecting()
         assert self.data_save_future is None
         # empty the queue
         while not self.data_save_queue.empty():
@@ -85,6 +86,8 @@ class LeRobotDataCollection(DataCollectionManager):
         self._ui_console.log("Episode discarded.")
 
     def _stop_collecting(self) -> None:
+        # Emit stop-collection event (e.g., stop control pair) first.
+        super()._stop_collecting()
         assert self.data_save_future is not None
         self.data_save_queue.put(None)  # signal to stop saving
         self.data_save_future.result()  # wait for saving to complete
@@ -94,9 +97,9 @@ class LeRobotDataCollection(DataCollectionManager):
         super()._reset_to_waiting()
 
     def _close(self) -> None:
-        if self._closed:
+        if self._close:
             return
-        self._closed = True
+        self._close = True
 
         # Ensure the background saver thread can't hang on Queue.get() when exiting.
         if self.data_save_future is not None:

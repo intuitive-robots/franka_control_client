@@ -16,25 +16,30 @@ CONTROL_MODE: ControlMode = ControlMode.HybridJointImpedance
 
 class GelloPandControlPair(ControlPair):
     def __init__(self, leader: RemoteGello, follower: PandaRobotiq) -> None:
+        super().__init__()
         self.leader = leader
         self.follower = follower
         self._last_gripper_cmd: Optional[float] = None
     
-    def reset(self)-> None:
+    def control_rest(self)-> None:
         leader_arm_state = self.leader.current_state["gello_arm_state"]
         if leader_arm_state is None:
             pyzlc.error(
                 "No Gello arm state available for align."
             )
             return
-        arm_state = np.asarray(leader_arm_state, dtype=np.float64).reshape(-1)
+        arm_state = np.asarray(leader_arm_state["joint_state"], dtype=np.float64).reshape(-1)
         self.follower.panda_arm.move_franka_arm_to_joint_position(arm_state)
         self.follower.panda_arm.set_franka_arm_control_mode(CONTROL_MODE)
         leader_gripper_state = self.leader.current_state["gello_gripper_state"]
         if leader_gripper_state is None:
             return
-        gripper_value = np.asarray(leader_gripper_state, dtype=np.float64).reshape(-1)
-        gripper_cmd = max(0.0, min(1.0, gripper_value))
+        gripper_value = np.asarray(
+            leader_gripper_state["gripper"], dtype=np.float64
+        ).reshape(-1)
+        if gripper_value.size < 1:
+            return
+        gripper_cmd = float(np.clip(gripper_value[0], 0.0, 1.0))
         self.follower.robotiq_gripper.send_grasp_command(
                 position=gripper_cmd,
                 speed=GRIPPER_SPEED,
@@ -47,13 +52,17 @@ class GelloPandControlPair(ControlPair):
         if leader_arm_state is None:
             return
         self.follower.panda_arm.send_joint_position_command(
-            np.asarray(leader_arm_state, dtype=np.float64).reshape(-1)
+            np.asarray(leader_arm_state["joint_state"], dtype=np.float64).reshape(-1)
         )
         leader_gripper_state = self.leader.current_state["gello_gripper_state"]
         if leader_gripper_state is None:
             return
-        gripper_value = np.asarray(leader_gripper_state, dtype=np.float64).reshape(-1)
-        gripper_cmd = max(0.0, min(1.0, gripper_value))
+        gripper_value = np.asarray(
+            leader_gripper_state["gripper"], dtype=np.float64
+        ).reshape(-1)
+        if gripper_value.size < 1:
+            return
+        gripper_cmd = float(np.clip(gripper_value[0], 0.0, 1.0))
         if (
             self._last_gripper_cmd is None
             or abs(gripper_cmd - self._last_gripper_cmd)

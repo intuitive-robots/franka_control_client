@@ -7,7 +7,7 @@ from ..core.latest_msg_subscriber import LatestMsgSubscriber
 from ..franka_robot.panda_arm import RemotePandaArm
 from ..franka_robot.panda_gripper import RemotePandaGripper
 from ..robotiq_gripper.robotiq_gripper import RemoteRobotiqGripper
-
+from ..gello.gello import RemoteGello
 
 class HardwareDataWrapper(abc.ABC):
 
@@ -165,56 +165,41 @@ class RobotiqGripperDataWrapper(HardwareDataWrapper):
     def __getattr__(self, name):
         return getattr(self.gripper, name)
 
-
-class GelloArmDataWrapper(HardwareDataWrapper):
-    def __init__(self, name: str = "gello") -> None:
-        self._name = name
-        self.arm_state_sub = LatestMsgSubscriber(f"{name}/gello_arm_state")
-        self.key = f"action.joint_position.{name}"
-        feature = {self.key: {"dtype": "float32", "shape": (7,)}}
+class GelloDataWrapper(HardwareDataWrapper):
+    def __init__(self, robot: RemoteGello) -> None:
+        self.robot=robot
+        self.arm_key = f"action.joint_position.{robot._name}"
+        self.gripper_key = f"action.gripper.{robot._name}"
+        feature = {
+            self.arm_key: {"dtype": "float32", "shape": (7,)},
+            self.gripper_key: {"dtype": "float32", "shape": (1,)},
+        }
         super().__init__(feature)
 
     def capture_step(self) -> Dict[str, np.ndarray]:
-        state = self.arm_state_sub.get_latest()
-        if state is None:
+        arm_state = self.robot.current_state["gello_arm_state"]
+
+        gripper_state = self.robot.current_state["gello_gripper_state"]
+        if arm_state is None:
             raise ValueError("No Gello arm state data received.")
-        joints = np.asarray(state["joint_state"], dtype=np.float32).reshape(-1)
+        joints = np.asarray(arm_state["joint_state"], dtype=np.float32).reshape(
+            -1
+        )
         if joints.size != 7:
             raise ValueError(
                 f"Expected 7 Gello arm joints, got {joints.size}."
             )
-        return {self.key: joints}
-
-    def discard(self) -> None:
-        pass
-
-    def reset(self) -> None:
-        pass
-
-    def close(self) -> None:
-        pass
-
-
-class GelloGripperDataWrapper(HardwareDataWrapper):
-    def __init__(self, name: str = "gello") -> None:
-        self._name = name
-        self.gripper_state_sub = LatestMsgSubscriber(
-            f"{name}/gello_gripper_state"
-        )
-        self.key = f"action.gripper.{name}"
-        feature = {self.key: {"dtype": "float32", "shape": (1,)}}
-        super().__init__(feature)
-
-    def capture_step(self) -> Dict[str, np.ndarray]:
-        state = self.gripper_state_sub.get_latest()
-        if state is None:
+        if gripper_state is None:
             raise ValueError("No Gello gripper state data received.")
-        gripper = np.asarray(state["gripper"], dtype=np.float32).reshape(-1)
+        gripper = np.asarray(
+            gripper_state["gripper"], dtype=np.float32
+        ).reshape(-1)
         if gripper.size != 1:
             raise ValueError(
                 f"Expected 1 Gello gripper value, got {gripper.size}."
             )
-        return {self.key: gripper}
+
+        return {self.arm_key: joints, self.gripper_key: gripper}
 
     def discard(self) -> None:
         pass

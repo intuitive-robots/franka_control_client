@@ -35,9 +35,9 @@ class IRL_HardwareDataWrapper(abc.ABC):
 
 
 class ImageDataWrapper(IRL_HardwareDataWrapper):
-    def __init__(self, camera_device: CameraDevice,hw_name:str , hw_type:str = "camera",capture_interval:int = 30) -> None:
+    def __init__(self, camera_device: CameraDevice,hw_name:str , hw_type:str = "camera",fps:int = 30) -> None:
         self.camera_device = camera_device
-        self.capture_interval = capture_interval
+        self.fps = fps
         super().__init__(hw_type,hw_name)
 
     def capture_step(self) -> Dict[str, np.ndarray]:

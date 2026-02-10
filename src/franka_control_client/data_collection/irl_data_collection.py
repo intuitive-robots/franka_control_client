@@ -178,6 +178,7 @@ class IRLDataCollection(DataCollectionManager):
                 self.camera_streams.append(hw)
         self.camera_frame_idx = [0] * len(self.camera_streams)
         self.camera_last_capture_times: List[float] = [0.0] * len(self.camera_streams)  # Track last capture time for each camera
+        self._last_robot_time: Optional[float] = None
         
 
 
@@ -188,25 +189,34 @@ class IRLDataCollection(DataCollectionManager):
         self._create_empty_data()
         self.timestamps = []
         self.cur_timestep = 0
+        self._last_robot_time = None
 
     def _collect_step(self) -> None:
         # print("debug:time start collect")
         to_tensor = lambda x: torch.tensor(x, dtype=torch.float64)
-        cur_time = time.time()
+        start_time = time.perf_counter()
         self._capture_camera_frames()
         # print("debug:capture_inter:",self.capture_interval)
         # print("cur_time:",cur_time)
-        if self.timestamps==[] or cur_time - self.timestamps[-1] >= self.capture_interval:
-            self.timestamps.append(cur_time)
-            leader_state = self.leader_robot.capture_step() #gello
-            follower_arm_state = self.follower_arm.capture_step()
-            follower_gripper_state = self.follower_gripper.capture_step()
-            #todo:using smarter way to wrapper
-            self.leader_robot_data.q_list.append(to_tensor(leader_state["gello_arm_state"]["joint_state"]))
-            self.leader_robot_data.gripper_state_list.append(to_tensor(leader_state["gello_gripper_state"]["gripper"]))
-            self.follower_robot_data.q_list.append(to_tensor(follower_arm_state["q"]))
-            self.follower_robot_data.gripper_state_list.append(to_tensor(follower_gripper_state["position"]))
-            self.cur_timestep += 1
+        self.timestamps.append(time.time())
+        leader_state = self.leader_robot.capture_step() #gello
+        follower_arm_state = self.follower_arm.capture_step()
+        follower_gripper_state = self.follower_gripper.capture_step()
+        #todo:using smarter way to wrapper
+        self.leader_robot_data.q_list.append(to_tensor(leader_state["gello_arm_state"]["joint_state"]))
+        self.leader_robot_data.gripper_state_list.append(to_tensor(leader_state["gello_gripper_state"]["gripper"]))
+        self.follower_robot_data.q_list.append(to_tensor(follower_arm_state["q"]))
+        self.follower_robot_data.gripper_state_list.append(to_tensor(follower_gripper_state["position"]))
+        self.cur_timestep += 1
+
+        # Throttle to target robot fps
+        if self._last_robot_time is None:
+            self._last_robot_time = start_time
+        elapsed = time.perf_counter() - start_time
+        sleep_time = max(0.0, (1.0 / self.fps) - elapsed)
+        if sleep_time > 0:
+            time.sleep(sleep_time)
+        self._last_robot_time = time.perf_counter()
 
     def _save_data_task(self) -> None:
         self._ui_console.log("Data saving task started.")
@@ -295,19 +305,21 @@ class IRLDataCollection(DataCollectionManager):
         self.follower_robot_data=FollowerData()
         self.camera_timestamps = [[] for _ in self.camera_streams]
         self.camera_frame_idx = [0] * len(self.camera_streams)  # Reset frame index for all cameras
-        self.camera_last_capture_times = [time.time()] * len(self.camera_streams)  # Initialize capture times
+        self.camera_last_capture_times = [0.0] * len(self.camera_streams)  # Initialize capture times
 
     def _capture_camera_frames(self) -> None:
         if self.camera_streams==[] :
             pyzlc.info("no camera in stream")
             return
-        cur_time = time.time()
+        cur_time = time.perf_counter()
         for idx, stream in enumerate(self.camera_streams):
-            # Check if it's time to capture for this camera based on its capture_interval
+            # Check if it's time to capture for this camera based on its fps
             # begin_time = time.time()
             # print("debug:capture begin time", begin_time,stream.hw_name)
-            if stream.capture_interval > 0 and (cur_time - self.camera_last_capture_times[idx]) < stream.capture_interval:
-                continue
+            if stream.fps > 0:
+                min_interval = 1.0 / stream.fps
+                if (cur_time - self.camera_last_capture_times[idx]) < min_interval:
+                    continue
             # print("debug:get camera")
             camera_dir = self.camera_dirs[idx]
             frame = stream.capture_step()

@@ -6,7 +6,7 @@ from typing import Callable, Dict, Optional, List, Tuple
 
 from .utils import NonBlockingKeyPress, UIConsole, VoidEvent
 from .wrapper import HardwareDataWrapper
-
+import pyzlc
 
 class DataCollectionState(str, Enum):
     WAITING = "waiting"

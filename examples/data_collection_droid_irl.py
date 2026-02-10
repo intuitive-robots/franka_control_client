@@ -12,14 +12,14 @@ from typing import List
 import pyzlc
 
 from franka_control_client.camera.camera import CameraDevice
-from franka_control_client.data_collection.lerobot_data_collection import (
-    LeRobotDataCollection,
+from franka_control_client.data_collection.irl_data_collection import (
+    IRLDataCollection,
 )
-from franka_control_client.data_collection.wrapper import (
-    HardwareDataWrapper,
+from franka_control_client.data_collection.irl_wrapper  import (
+    IRL_HardwareDataWrapper,
     ImageDataWrapper,
 )
-from franka_control_client.data_collection.wrapper import (
+from franka_control_client.data_collection.irl_wrapper import (
     PandaArmDataWrapper,
     RobotiqGripperDataWrapper,
     GelloDataWrapper
@@ -46,7 +46,7 @@ if __name__ == "__main__":
         "data_collection",
         "192.168.0.117",
         group_name="DroidGroup",
-        group_port=7721
+        group_port=7727
     )
     leader = RemoteGello("gello")
     follower = PandaRobotiq(
@@ -55,19 +55,20 @@ if __name__ == "__main__":
         RemoteRobotiqGripper("FrankaPanda"),
     )
     control_pair = GelloPandControlPair(leader, follower)
-    camera_left = ImageDataWrapper(CameraDevice("zed_left", preview=False))
-    # camera_right = ImageDataWrapper(CameraDevice("zed_right", preview=False))
-    # camera_wrist = ImageDataWrapper(CameraDevice("zed_wrist", preview=False))
-    data_collectors: List[HardwareDataWrapper] = []
+    camera_left = ImageDataWrapper(CameraDevice("zed_left", preview=False),capture_interval=0.033,hw_name="zed_left")
+    camera_right = ImageDataWrapper(CameraDevice("zed_right", preview=False),capture_interval=0.05,hw_name="zed_right")
+    camera_wrist = ImageDataWrapper(CameraDevice("zed_wrist", preview=False),capture_interval=0.1,hw_name="zed_wrist")
+    data_collectors: List[IRL_HardwareDataWrapper] = []
     data_collectors.append(camera_left)
-    # data_collectors.append(camera_right)
-    # data_collectors.append(camera_wrist)
+    data_collectors.append(camera_right)
+    data_collectors.append(camera_wrist)
     data_collectors.append(GelloDataWrapper(leader))
     data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
     data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
-    name = time.strftime("%Y%m%d_%H%M%S", time.localtime())
-    data_collection_manager = LeRobotDataCollection(
-        data_collectors, f"/home/irl-admin/Franka_Control_Feb/dataset/{name}", task="pepper"
+    # name = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+    task = "pepper"
+    data_collection_manager = IRLDataCollection(
+        data_collectors, f"/home/irl-admin/Franka_Control_Feb/irl_dataset/{task}", task, fps=100
     )
     data_collection_manager.register_start_collecting_event(
         control_pair.start_control_pair

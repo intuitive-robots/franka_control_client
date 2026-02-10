@@ -82,6 +82,6 @@ class GelloPandControlPair(ControlPair):
         self.follower.robotiq_gripper.send_grasp_command(
             position=0.0,
             speed=GRIPPER_SPEED,
-            forc=GRIPPER_FORCE,
+            force=GRIPPER_FORCE,
             blocking=True
             )

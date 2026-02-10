@@ -10,12 +10,13 @@ class ControlPair(abc.ABC):
         self.is_running: bool = False
 
     def start_control_pair(self) -> None:
-        pyzlc.info("Start control")
+        pyzlc.info("Starting control")
         if self.is_running:
             return
         self.is_running = True
         self.control_task_thread = threading.Thread(target=self._control_task)
         self.control_task_thread.start()
+        pyzlc.info("Started Control Pair")
 
     def stop_control_pair(self) -> None:
         if not self.is_running:

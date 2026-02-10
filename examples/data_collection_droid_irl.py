@@ -46,7 +46,7 @@ if __name__ == "__main__":
         "data_collection",
         "192.168.0.117",
         group_name="DroidGroup",
-        group_port=7727
+        group_port=7730
     )
     leader = RemoteGello("gello")
     follower = PandaRobotiq(
@@ -55,9 +55,9 @@ if __name__ == "__main__":
         RemoteRobotiqGripper("FrankaPanda"),
     )
     control_pair = GelloPandControlPair(leader, follower)
-    camera_left = ImageDataWrapper(CameraDevice("zed_left", preview=False),capture_interval=0.033,hw_name="zed_left")
+    camera_left = ImageDataWrapper(CameraDevice("zed_left", preview=False),capture_interval=0.1,hw_name="zed_left")
     camera_right = ImageDataWrapper(CameraDevice("zed_right", preview=False),capture_interval=0.05,hw_name="zed_right")
-    camera_wrist = ImageDataWrapper(CameraDevice("zed_wrist", preview=False),capture_interval=0.1,hw_name="zed_wrist")
+    camera_wrist = ImageDataWrapper(CameraDevice("zed_wrist", preview=False),capture_interval=0.033,hw_name="zed_wrist")
     data_collectors: List[IRL_HardwareDataWrapper] = []
     data_collectors.append(camera_left)
     data_collectors.append(camera_right)
@@ -70,6 +70,7 @@ if __name__ == "__main__":
     data_collection_manager = IRLDataCollection(
         data_collectors, f"/home/irl-admin/Franka_Control_Feb/irl_dataset/{task}", task, fps=100
     )
+    control_pair.control_rest()
     data_collection_manager.register_start_collecting_event(
         control_pair.start_control_pair
     )

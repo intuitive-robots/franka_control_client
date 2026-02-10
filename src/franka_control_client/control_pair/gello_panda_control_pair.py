@@ -30,7 +30,7 @@ class GelloPandControlPair(ControlPair):
             return
         arm_state = np.asarray(leader_arm_state["joint_state"], dtype=np.float64).reshape(-1)
         self.follower.panda_arm.move_franka_arm_to_joint_position(arm_state)
-        self.follower.panda_arm.set_franka_arm_control_mode(CONTROL_MODE)
+        # self.follower.panda_arm.set_franka_arm_control_mode(CONTROL_MODE)
         leader_gripper_state = self.leader.current_state["gello_gripper_state"]
         if leader_gripper_state is None:
             return
@@ -85,3 +85,15 @@ class GelloPandControlPair(ControlPair):
             force=GRIPPER_FORCE,
             blocking=True
             )
+        
+    def _control_task(self) -> None:
+        try:
+            # pyzlc.info("Resetting...")
+            # self.control_rest()
+            # pyzlc.sleep(1)
+            self.follower.panda_arm.set_franka_arm_control_mode(CONTROL_MODE)
+            while self.is_running:
+                self.control_step()
+            self.control_end()
+        except Exception as e:
+            print(f"Control task encountered an error: {e}")

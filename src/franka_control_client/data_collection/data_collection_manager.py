@@ -154,7 +154,7 @@ class DataCollectionManager(abc.ABC):
                         == DataCollectionState.STOPPED
                     ):
                         self._reset_to_waiting()
-                    time.sleep(0.01)
+                    # time.sleep(0.001)
         finally:
             self._close()
 

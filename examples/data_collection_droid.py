@@ -46,7 +46,7 @@ if __name__ == "__main__":
         "data_collection",
         "192.168.0.117",
         group_name="DroidGroup",
-        group_port=7721
+        group_port=7730
     )
     leader = RemoteGello("gello")
     follower = PandaRobotiq(

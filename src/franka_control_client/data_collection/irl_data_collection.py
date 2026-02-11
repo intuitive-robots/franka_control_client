@@ -189,25 +189,30 @@ class IRLDataCollection(DataCollectionManager):
         self._create_empty_data()
         self.timestamps = []
         self.cur_timestep = 0
-        self._last_robot_time = None
+        # Ensure cameras can capture immediately on a new episode.
+        self.camera_last_capture_times = [0.0] * len(self.camera_streams)
 
     def _collect_step(self) -> None:
         # print("debug:time start collect")
         to_tensor = lambda x: torch.tensor(x, dtype=torch.float64)
-        start_time = time.perf_counter()
-        self._capture_camera_frames()
+        cur_time = time.time()
         # print("debug:capture_inter:",self.capture_interval)
         # print("cur_time:",cur_time)
-        self.timestamps.append(time.time())
-        leader_state = self.leader_robot.capture_step() #gello
-        follower_arm_state = self.follower_arm.capture_step()
-        follower_gripper_state = self.follower_gripper.capture_step()
-        #todo:using smarter way to wrapper
-        self.leader_robot_data.q_list.append(to_tensor(leader_state["gello_arm_state"]["joint_state"]))
-        self.leader_robot_data.gripper_state_list.append(to_tensor(leader_state["gello_gripper_state"]["gripper"]))
-        self.follower_robot_data.q_list.append(to_tensor(follower_arm_state["q"]))
-        self.follower_robot_data.gripper_state_list.append(to_tensor(follower_gripper_state["position"]))
-        self.cur_timestep += 1
+        if self.timestamps==[] or cur_time - self.timestamps[-1] >= self.capture_interval:
+            self._capture_camera_frames()
+            self.timestamps.append(cur_time)
+            leader_state = self.leader_robot.capture_step() #gello
+            follower_arm_state = self.follower_arm.capture_step()
+            follower_gripper_state = self.follower_gripper.capture_step()
+            #todo:using smarter way to wrapper
+            self.leader_robot_data.q_list.append(to_tensor(leader_state["gello_arm_state"]["joint_state"]))
+            self.leader_robot_data.gripper_state_list.append(to_tensor(leader_state["gello_gripper_state"]["gripper"]))
+            self.follower_robot_data.q_list.append(to_tensor(follower_arm_state["q"]))
+            self.follower_robot_data.gripper_state_list.append(to_tensor(follower_gripper_state["position"]))
+            self.cur_timestep += 1
+            # end_time = time.time()
+        
+            # print("1 step of collect_step",end_time-cur_time)
 
         # Throttle to target robot fps
         if self._last_robot_time is None:
@@ -221,6 +226,8 @@ class IRLDataCollection(DataCollectionManager):
     def _save_data_task(self) -> None:
         self._ui_console.log("Data saving task started.")
         self.__flush_writes()
+        # Ensure all queued frame writes are finished before saving metadata.
+        # self.__shutdown_writer_pool()
 
         timestamps_path = self.record_dir / "timestamps.pt"
         torch.save(torch.tensor(self.timestamps, dtype=torch.float64), timestamps_path)
@@ -244,6 +251,8 @@ class IRLDataCollection(DataCollectionManager):
 
     def _discard_collecting(self) -> None:
         self._stop_collecting()
+        # Make sure all pending camera writes are finished before cleanup.
+        self.__flush_writes()
         shutil.rmtree(self.record_dir)#clean the camera framse which already saved
 
         for collector in self.data_collectors:
@@ -305,7 +314,7 @@ class IRLDataCollection(DataCollectionManager):
         self.follower_robot_data=FollowerData()
         self.camera_timestamps = [[] for _ in self.camera_streams]
         self.camera_frame_idx = [0] * len(self.camera_streams)  # Reset frame index for all cameras
-        self.camera_last_capture_times = [0.0] * len(self.camera_streams)  # Initialize capture times
+        self.camera_last_capture_times = [time.time()] * len(self.camera_streams)  # Initialize capture times
 
     def _capture_camera_frames(self) -> None:
         if self.camera_streams==[] :
@@ -323,9 +332,9 @@ class IRLDataCollection(DataCollectionManager):
             # print("debug:get camera")
             camera_dir = self.camera_dirs[idx]
             frame = stream.capture_step()
-            self.camera_timestamps[idx].append(time.time())
             if frame is None:
                 continue
+            self.camera_timestamps[idx].append(time.time())
             
             # Update last capture time for this camera
             self.camera_last_capture_times[idx] = cur_time
@@ -351,7 +360,7 @@ class IRLDataCollection(DataCollectionManager):
                 # print("debug:capture end time", end_time,self.camera_names[idx])
             except Full:
                 print(
-                    f"Camera '{self.camera_names[idx]}' writer pool backlog full, dropping frame {self.cur_timestep}"
+                    f"Camera '{self.camera_names[idx]}' writer pool backlog full, dropping frame"
                 )
                 continue
 
@@ -387,6 +396,12 @@ class IRLDataCollection(DataCollectionManager):
             return
         wait(self._writer_futures)
         self.__prune_completed_writes()
+
+    # def __shutdown_writer_pool(self) -> None:
+    #     if self._writer_pool is None:
+    #         return
+    #     self._writer_pool.shutdown(wait=True)
+    #     self._writer_pool = None
 
     @staticmethod
     def __write_frame(

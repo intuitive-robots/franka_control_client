@@ -1,6 +1,9 @@
 import abc
+import time
+from typing import Dict, Optional
+
+import cv2
 import numpy as np
-from typing import Dict
 
 from ..camera.camera import CameraDevice
 from ..core.latest_msg_subscriber import LatestMsgSubscriber
@@ -16,7 +19,7 @@ class IRL_HardwareDataWrapper(abc.ABC):
         self.hw_name = hw_name
 
     @abc.abstractmethod
-    def capture_step(self) -> Dict[str, np.ndarray]:
+    def capture_step(self) -> Optional[np.ndarray]:
         raise NotImplementedError(
             "Subclasses must implement capture_step method."
         )
@@ -35,12 +38,12 @@ class IRL_HardwareDataWrapper(abc.ABC):
 
 
 class ImageDataWrapper(IRL_HardwareDataWrapper):
-    def __init__(self, camera_device: CameraDevice,hw_name:str , hw_type:str = "camera",fps:int = 30) -> None:
+    def __init__(self, camera_device: CameraDevice,hw_name:str , hw_type:str = "camera",capture_interval:int = 0.033) -> None:
         self.camera_device = camera_device
         self.fps = fps
         super().__init__(hw_type,hw_name)
 
-    def capture_step(self) -> Dict[str, np.ndarray]:
+    def capture_step(self) -> Optional[np.ndarray]:
         # Implement the logic to save image data from the camera device
         image_data = self.camera_device.get_image()
         # check if image_data is None and data side shape

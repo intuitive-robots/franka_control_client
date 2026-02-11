@@ -55,9 +55,9 @@ if __name__ == "__main__":
         RemoteRobotiqGripper("FrankaPanda"),
     )
     control_pair = GelloPandControlPair(leader, follower)
-    camera_left = ImageDataWrapper(CameraDevice("zed_left", preview=False),fps=10,hw_name="zed_left")
-    camera_right = ImageDataWrapper(CameraDevice("zed_right", preview=False),fps=20,hw_name="zed_right")
-    camera_wrist = ImageDataWrapper(CameraDevice("zed_wrist", preview=False),fps=30,hw_name="zed_wrist")
+    camera_left = ImageDataWrapper(CameraDevice("zed_left", preview=False),capture_interval=0.033,hw_name="zed_left")
+    camera_right = ImageDataWrapper(CameraDevice("zed_right", preview=False),capture_interval=0.033,hw_name="zed_right")
+    camera_wrist = ImageDataWrapper(CameraDevice("zed_wrist", preview=False),capture_interval=0.033,hw_name="zed_wrist")
     data_collectors: List[IRL_HardwareDataWrapper] = []
     data_collectors.append(camera_left)
     data_collectors.append(camera_right)

@@ -214,14 +214,14 @@ class IRLDataCollection(DataCollectionManager):
         
             # print("1 step of collect_step",end_time-cur_time)
 
-        # Throttle to target robot fps
-        if self._last_robot_time is None:
-            self._last_robot_time = start_time
-        elapsed = time.perf_counter() - start_time
-        sleep_time = max(0.0, (1.0 / self.fps) - elapsed)
-        if sleep_time > 0:
-            time.sleep(sleep_time)
-        self._last_robot_time = time.perf_counter()
+        # # Throttle to target robot fps
+        # if self._last_robot_time is None:
+        #     self._last_robot_time = start_time
+        # elapsed = time.perf_counter() - start_time
+        # sleep_time = max(0.0, (1.0 / self.fps) - elapsed)
+        # if sleep_time > 0:
+        #     time.sleep(sleep_time)
+        # self._last_robot_time = time.perf_counter()
 
     def _save_data_task(self) -> None:
         self._ui_console.log("Data saving task started.")
@@ -322,19 +322,17 @@ class IRLDataCollection(DataCollectionManager):
             return
         cur_time = time.perf_counter()
         for idx, stream in enumerate(self.camera_streams):
-            # Check if it's time to capture for this camera based on its fps
+            # Check if it's time to capture for this camera based on its capture_interval
             # begin_time = time.time()
             # print("debug:capture begin time", begin_time,stream.hw_name)
-            if stream.fps > 0:
-                min_interval = 1.0 / stream.fps
-                if (cur_time - self.camera_last_capture_times[idx]) < min_interval:
-                    continue
+            if stream.capture_interval > 0 and (cur_time - self.camera_last_capture_times[idx]) < stream.capture_interval:
+                continue
             # print("debug:get camera")
             camera_dir = self.camera_dirs[idx]
             frame = stream.capture_step()
+            self.camera_timestamps[idx].append(time.time())
             if frame is None:
                 continue
-            self.camera_timestamps[idx].append(time.time())
             
             # Update last capture time for this camera
             self.camera_last_capture_times[idx] = cur_time
@@ -360,9 +358,10 @@ class IRLDataCollection(DataCollectionManager):
                 # print("debug:capture end time", end_time,self.camera_names[idx])
             except Full:
                 print(
-                    f"Camera '{self.camera_names[idx]}' writer pool backlog full, dropping frame"
+                    f"Camera '{self.camera_names[idx]}' writer pool backlog full, dropping frame {self.cur_timestep}"
                 )
                 continue
+
 
  
             # self.camera_metadata_list[idx].append(frame.metadata.to_dict())

@@ -6,10 +6,8 @@ from ..franka_robot.panda_robotiq import PandaRobotiq
 from ..gello.gello import RemoteGello
 import numpy as np
 from typing import Optional
-GRIPPER_SPEED = 0.5
-GRIPPER_FORCE= 0.2
-FOLLOWER_GRIPPER_CLOSE = 0.025
-FOLLOWER_GRIPPER_OPEN = 0.07
+GRIPPER_SPEED = 0.7
+GRIPPER_FORCE= 0.3
 CONTROL_HZ: float = 1000
 GRIPPER_DEADBAND: float = 1e-3
 CONTROL_MODE: ControlMode = ControlMode.HybridJointImpedance

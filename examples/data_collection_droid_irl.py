@@ -44,7 +44,7 @@ from franka_control_client.control_pair.gello_panda_control_pair import (
 if __name__ == "__main__":
     pyzlc.init(
         "data_collection",
-        "192.168.0.117",
+        "192.168.0.109",
         group_name="DroidGroup",
         group_port=7730
     )
@@ -66,9 +66,9 @@ if __name__ == "__main__":
     data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
     data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
     # name = time.strftime("%Y%m%d_%H%M%S", time.localtime())
-    task = "pepper"
+    task = "green_block"
     data_collection_manager = IRLDataCollection(
-        data_collectors, f"/home/irl-admin/Franka_Control_Feb/irl_dataset/{task}", task, fps=100
+        data_collectors, f"/home/irl-admin/new_data_collection/{task}", task, fps=50
     )
     control_pair.control_rest()
     data_collection_manager.register_start_collecting_event(

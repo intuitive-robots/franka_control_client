@@ -24,14 +24,16 @@ import torch
 class FollowerData:
         def __init__(self):
             # self.timestamp_ms_list = []
-            # self.O_T_EE_list = []
+            self.O_T_EE_list = []
             # self.O_T_EE_d_list = []
             self.q_list = []
             # self.q_d_list = []
-            # self.dq_list = []
+            self.dq_list = []
             # self.dq_d_list = []
-            # self.tau_ext_hat_filtered_list = []
+            self.tau_ext_hat_filtered_list = []
             self.gripper_state_list = []
+            self.O_F_ext_hat_K_list = []
+            self.gripper_current_list = []
 
         # def append(self):
             # self.timestamp_ms_list.append(state.timestamp_ms)
@@ -48,25 +50,29 @@ class FollowerData:
             
             tensor_lists = [
                 # torch.tensor(self.timestamp_ms_list, dtype=torch.int64),
-                # torch.stack(self.O_T_EE_list),
+                torch.stack(self.O_T_EE_list),
                 # torch.stack(self.O_T_EE_d_list),
                 torch.stack(self.q_list),
                 # torch.stack(self.q_d_list),
-                # torch.stack(self.dq_list),
+                torch.stack(self.dq_list),
                 # torch.stack(self.dq_d_list),
-                # torch.stack(self.tau_ext_hat_filtered_list),
-                torch.stack(self.gripper_state_list)
+                torch.stack(self.tau_ext_hat_filtered_list),
+                torch.stack(self.gripper_state_list),
+                torch.stack(self.O_F_ext_hat_K_list ),
+                torch.stack(self.gripper_current_list)
             ]
             paths = [
                 # path / "timestamp_ms.pt",
-                # path / "O_T_EE.pt",
+                path / "ee_pos.pt",
                 # path / "O_T_EE_d.pt",
-                path / "q.pt",
+                path / "joint_pos.pt",
                 # path / "q_d.pt",
-                # path / "dq.pt",
+                path / "joint_vel.pt",
                 # path / "dq_d.pt",
-                # path / "tau_ext_hat_filtered.pt",
+                path / "external_joint_torque.pt",
                 path / "gripper_state.pt",
+                path / "external_wrench.pt",
+                path / "gripper_current.pt"
             ]
 
             for d, p in zip(tensor_lists, paths):
@@ -89,6 +95,7 @@ class LeaderData:
         # self.dq_d_list = []
         # self.tau_ext_hat_filtered_list = []
         self.gripper_state_list = []
+        self.gripper_command_list = []#command read from robotiq
 
         # def append(self):
         #     self.timestamp_ms_list.append(state.timestamp_ms)
@@ -112,18 +119,20 @@ class LeaderData:
             # torch.stack(self.dq_list),
             # torch.stack(self.dq_d_list),
             # torch.stack(self.tau_ext_hat_filtered_list),
-                torch.stack(self.gripper_state_list)
+            torch.stack(self.gripper_state_list),
+            torch.stack(self.gripper_command_list)
             ]
         paths = [
             # path / "timestamp_ms.pt",
             # path / "O_T_EE.pt",
             # path / "O_T_EE_d.pt",
-            path / "q.pt",
+            path / "joint_pos.pt",
             # path / "q_d.pt",
             # path / "dq.pt",
             # path / "dq_d.pt",
             # path / "tau_ext_hat_filtered.pt",
             path / "gripper_state.pt",
+            path / "gripper_command.pt"
         ]
 
         for d, p in zip(tensor_lists, paths):
@@ -212,16 +221,28 @@ class IRLDataCollection(DataCollectionManager):
         #     self.follower_robot_data.gripper_state_list.append(to_tensor(follower_gripper_state["position"]))
         #     self.cur_timestep += 1
             # end_time = time.time()
-        self._capture_camera_frames()
+        
         self.timestamps.append(start_time)
         leader_state = self.leader_robot.capture_step() #gello
         follower_arm_state = self.follower_arm.capture_step()
         follower_gripper_state = self.follower_gripper.capture_step()
         #todo:using smarter way to wrapper
+        #todo:maybe change gripper command to record robotiq command
+        #leader
         self.leader_robot_data.q_list.append(to_tensor(leader_state["gello_arm_state"]["joint_state"]))
         self.leader_robot_data.gripper_state_list.append(to_tensor(leader_state["gello_gripper_state"]["gripper"]))
+        self.leader_robot_data.gripper_command_list.append(to_tensor(follower_gripper_state["commanded_position"]))
+        #follower arm
         self.follower_robot_data.q_list.append(to_tensor(follower_arm_state["q"]))
+        self.follower_robot_data.O_T_EE_list.append(to_tensor(follower_arm_state["O_T_EE"]))
+        self.follower_robot_data.dq_list.append(to_tensor(follower_arm_state["dq"]))
+        #follower gripper
+        self.follower_robot_data.tau_ext_hat_filtered_list.append(to_tensor(follower_arm_state["tau_ext_hat_filtered"]))
+        self.follower_robot_data.O_F_ext_hat_K_list.append(to_tensor(follower_arm_state["O_F_ext_hat_K"]))
         self.follower_robot_data.gripper_state_list.append(to_tensor(follower_gripper_state["position"]))
+        self.follower_robot_data.gripper_current_list.append(to_tensor(follower_gripper_state["current"]))
+        #cameras
+        self._capture_camera_frames()
         self.cur_timestep += 1
         # print("1 step of collect_step",end_time-cur_time)
 
@@ -229,16 +250,14 @@ class IRLDataCollection(DataCollectionManager):
         if self._last_robot_time is None:
             self._last_robot_time = start_time
         elapsed = time.perf_counter() - start_time
-        sleep_time = max(0.0, (1.0 / self.fps) - elapsed)
-        if sleep_time > 0:
+        sleep_time = max(0.0, (1.0 / self.fps) - elapsed)-0.0013
+        if sleep_time > 0.0:
             time.sleep(sleep_time)
         self._last_robot_time = time.perf_counter()
 
     def _save_data_task(self) -> None:
         self._ui_console.log("Data saving task started.")
         self.__flush_writes()
-        # Ensure all queued frame writes are finished before saving metadata.
-        # self.__shutdown_writer_pool()
 
         timestamps_path = self.record_dir / "timestamps.pt"
         torch.save(torch.tensor(self.timestamps, dtype=torch.float64), timestamps_path)
@@ -322,7 +341,7 @@ class IRLDataCollection(DataCollectionManager):
 
     def _create_empty_data(self):
         self.leader_robot_data = LeaderData()
-        self.follower_robot_data=FollowerData()
+        self.follower_robot_data = FollowerData()
         self.camera_timestamps = [[] for _ in self.camera_streams]
         self.camera_frame_idx = [0] * len(self.camera_streams)  # Reset frame index for all cameras
         self.camera_last_capture_times = [time.time()] * len(self.camera_streams)  # Initialize capture times
@@ -336,12 +355,12 @@ class IRLDataCollection(DataCollectionManager):
             # Check if it's time to capture for this camera based on its capture_interval
             # begin_time = time.time()
             # print("debug:capture begin time", begin_time,stream.hw_name)
-            if stream.capture_interval > 0 and (cur_time - self.camera_last_capture_times[idx]) < stream.capture_interval:
+            if stream.capture_interval > 0 and (cur_time - self.camera_last_capture_times[idx]) < (stream.capture_interval-0.0027):
                 continue
             # print("debug:get camera")
             camera_dir = self.camera_dirs[idx]
             frame = stream.capture_step()
-            self.camera_timestamps[idx].append(time.time())
+            self.camera_timestamps[idx].append(time.perf_counter())
             if frame is None:
                 continue
             

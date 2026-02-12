@@ -195,33 +195,44 @@ class IRLDataCollection(DataCollectionManager):
     def _collect_step(self) -> None:
         # print("debug:time start collect")
         to_tensor = lambda x: torch.tensor(x, dtype=torch.float64)
-        cur_time = time.time()
+        start_time=time.perf_counter()
+        # cur_time = time.time()
         # print("debug:capture_inter:",self.capture_interval)
         # print("cur_time:",cur_time)
-        if self.timestamps==[] or cur_time - self.timestamps[-1] >= self.capture_interval:
-            self._capture_camera_frames()
-            self.timestamps.append(cur_time)
-            leader_state = self.leader_robot.capture_step() #gello
-            follower_arm_state = self.follower_arm.capture_step()
-            follower_gripper_state = self.follower_gripper.capture_step()
-            #todo:using smarter way to wrapper
-            self.leader_robot_data.q_list.append(to_tensor(leader_state["gello_arm_state"]["joint_state"]))
-            self.leader_robot_data.gripper_state_list.append(to_tensor(leader_state["gello_gripper_state"]["gripper"]))
-            self.follower_robot_data.q_list.append(to_tensor(follower_arm_state["q"]))
-            self.follower_robot_data.gripper_state_list.append(to_tensor(follower_gripper_state["position"]))
-            self.cur_timestep += 1
+        # if self.timestamps==[] or cur_time - self.timestamps[-1] >= self.capture_interval:
+        #     # self._capture_camera_frames()
+        #     self.timestamps.append(cur_time)
+        #     leader_state = self.leader_robot.capture_step() #gello
+        #     follower_arm_state = self.follower_arm.capture_step()
+        #     follower_gripper_state = self.follower_gripper.capture_step()
+        #     #todo:using smarter way to wrapper
+        #     self.leader_robot_data.q_list.append(to_tensor(leader_state["gello_arm_state"]["joint_state"]))
+        #     self.leader_robot_data.gripper_state_list.append(to_tensor(leader_state["gello_gripper_state"]["gripper"]))
+        #     self.follower_robot_data.q_list.append(to_tensor(follower_arm_state["q"]))
+        #     self.follower_robot_data.gripper_state_list.append(to_tensor(follower_gripper_state["position"]))
+        #     self.cur_timestep += 1
             # end_time = time.time()
-        
-            # print("1 step of collect_step",end_time-cur_time)
+        self._capture_camera_frames()
+        self.timestamps.append(start_time)
+        leader_state = self.leader_robot.capture_step() #gello
+        follower_arm_state = self.follower_arm.capture_step()
+        follower_gripper_state = self.follower_gripper.capture_step()
+        #todo:using smarter way to wrapper
+        self.leader_robot_data.q_list.append(to_tensor(leader_state["gello_arm_state"]["joint_state"]))
+        self.leader_robot_data.gripper_state_list.append(to_tensor(leader_state["gello_gripper_state"]["gripper"]))
+        self.follower_robot_data.q_list.append(to_tensor(follower_arm_state["q"]))
+        self.follower_robot_data.gripper_state_list.append(to_tensor(follower_gripper_state["position"]))
+        self.cur_timestep += 1
+        # print("1 step of collect_step",end_time-cur_time)
 
-        # # Throttle to target robot fps
-        # if self._last_robot_time is None:
-        #     self._last_robot_time = start_time
-        # elapsed = time.perf_counter() - start_time
-        # sleep_time = max(0.0, (1.0 / self.fps) - elapsed)
-        # if sleep_time > 0:
-        #     time.sleep(sleep_time)
-        # self._last_robot_time = time.perf_counter()
+        # Throttle to target robot fps
+        if self._last_robot_time is None:
+            self._last_robot_time = start_time
+        elapsed = time.perf_counter() - start_time
+        sleep_time = max(0.0, (1.0 / self.fps) - elapsed)
+        if sleep_time > 0:
+            time.sleep(sleep_time)
+        self._last_robot_time = time.perf_counter()
 
     def _save_data_task(self) -> None:
         self._ui_console.log("Data saving task started.")

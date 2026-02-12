@@ -200,6 +200,7 @@ class IRLDataCollection(DataCollectionManager):
         self.cur_timestep = 0
         # Ensure cameras can capture immediately on a new episode.
         self.camera_last_capture_times = [0.0] * len(self.camera_streams)
+        self.last_gripper = 0.0018
 
     def _collect_step(self) -> None:
         # print("debug:time start collect")
@@ -226,6 +227,11 @@ class IRLDataCollection(DataCollectionManager):
         leader_state = self.leader_robot.capture_step() #gello
         follower_arm_state = self.follower_arm.capture_step()
         follower_gripper_state = self.follower_gripper.capture_step()
+        #robotiq sometimes can not get state in time, so use last time to pad
+        if follower_gripper_state["position"] == 0.0:
+            follower_gripper_state["position"] = self.last_gripper
+        else:
+            self.last_gripper = follower_gripper_state["position"]
         #todo:using smarter way to wrapper
         #todo:maybe change gripper command to record robotiq command
         #leader
@@ -236,9 +242,9 @@ class IRLDataCollection(DataCollectionManager):
         self.follower_robot_data.q_list.append(to_tensor(follower_arm_state["q"]))
         self.follower_robot_data.O_T_EE_list.append(to_tensor(follower_arm_state["O_T_EE"]))
         self.follower_robot_data.dq_list.append(to_tensor(follower_arm_state["dq"]))
-        #follower gripper
         self.follower_robot_data.tau_ext_hat_filtered_list.append(to_tensor(follower_arm_state["tau_ext_hat_filtered"]))
         self.follower_robot_data.O_F_ext_hat_K_list.append(to_tensor(follower_arm_state["O_F_ext_hat_K"]))
+                #follower gripper
         self.follower_robot_data.gripper_state_list.append(to_tensor(follower_gripper_state["position"]))
         self.follower_robot_data.gripper_current_list.append(to_tensor(follower_gripper_state["current"]))
         #cameras
@@ -250,7 +256,7 @@ class IRLDataCollection(DataCollectionManager):
         if self._last_robot_time is None:
             self._last_robot_time = start_time
         elapsed = time.perf_counter() - start_time
-        sleep_time = max(0.0, (1.0 / self.fps) - elapsed)-0.0013
+        sleep_time = max(0.0, (1.0 / self.fps) - elapsed)-0.0015 #adjust a little
         if sleep_time > 0.0:
             time.sleep(sleep_time)
         self._last_robot_time = time.perf_counter()
@@ -355,8 +361,9 @@ class IRLDataCollection(DataCollectionManager):
             # Check if it's time to capture for this camera based on its capture_interval
             # begin_time = time.time()
             # print("debug:capture begin time", begin_time,stream.hw_name)
-            if stream.capture_interval > 0 and (cur_time - self.camera_last_capture_times[idx]) < (stream.capture_interval-0.0027):
-                continue
+            #### To open the different frequency of cams
+            # if stream.capture_interval > 0 and (cur_time - self.camera_last_capture_times[idx]) < (stream.capture_interval-0.0027):
+            #     continue
             # print("debug:get camera")
             camera_dir = self.camera_dirs[idx]
             frame = stream.capture_step()

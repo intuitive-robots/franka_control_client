@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, Dict, Any
 import pyzlc
 
 from ..core.remote_device import RemoteDevice
@@ -8,30 +8,35 @@ from ..core.latest_msg_subscriber import LatestMsgSubscriber
 
 #build connection for inference node with policy node
 class PolicyActionMsg(TypedDict, total=True):
-    timesamp: float
+    timestamp: float
     action: list[float]
     shape: list[int]
 
 
 class PolicyObservationMsg(TypedDict, total=True):
     state: list[float]
-    #for each camera
-    width: int
-    height: int
-    channels: int
-    rgb_data: bytes
+    images: Dict[str, Any]
     task: str | None
 
 class RemotePolicy(RemoteDevice):
-    """Remote client for a gripper device."""
+    """Remote client for a policy node."""
 
-    def __init__(self, device_name: str) -> None:
+    def __init__(
+        self,
+        device_name: str,
+        obs_topic: Optional[str] = None,
+        action_topic: Optional[str] = None,
+    ) -> None:
         super().__init__(device_name)
+        if obs_topic is None:
+            obs_topic = f"{self._name}/policy_observation"
+        if action_topic is None:
+            action_topic = f"{self._name}/policy_action"
         self.obs_publisher = pyzlc.Publisher(
-            f"{self._name}/policy_observation",
+            obs_topic,
         )
         self.action_subscriber = LatestMsgSubscriber(
-            f"{self._name}/policy_action"
+            action_topic
         )
 
     @property
@@ -45,7 +50,7 @@ class RemotePolicy(RemoteDevice):
             action=msg["action"],
             shape=msg["shape"],
         )
-    #maybe put this in policy node, directly get observations 
-    def send_observation(self, ) -> None:
+    #if put this in policy node, directly get observations,policy part need few of subscriber, if put here just need one subscriber，maybe save time fore policy_node
+    def send_observation(self, obs: PolicyObservationMsg) -> None:
         """Send observation."""
-        self.obs_publisher.publish(PolicyObservationMsg())
+        self.obs_publisher.publish(obs)

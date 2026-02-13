@@ -5,10 +5,10 @@
 # from collections import deque
 
 # from franka_control_client.franka_robot import (
-#     RemoteFranka,
+#     RemotePandaArm,
 #     FrankaArmRequestID,
 #     ControlMode,
-#     FrankaArmState,
+#     PandaArmState,
 # )
 # from franka_control_client.core.exception import CommandError
 
@@ -17,7 +17,7 @@
 # # Fake socket to simulate robot server
 # # =========================================================
 # class FakeSocket:
-#     """Fake socket for testing RemoteFranka communication."""
+#     """Fake socket for testing RemotePandaArm communication."""
 
 #     def __init__(self, frames=None):
 #         self._frames = deque(frames or [])
@@ -53,10 +53,10 @@
 # # =========================================================
 # # Tests
 # # =========================================================
-# class TestRemoteFranka(unittest.TestCase):
-#     def _instantiate(self, fake_socket: FakeSocket) -> RemoteFranka:
-#         """Instantiate RemoteFranka without running __init__()."""
-#         rf: RemoteFranka = RemoteFranka.__new__(RemoteFranka)
+# class TestRemotePandaArm(unittest.TestCase):
+#     def _instantiate(self, fake_socket: FakeSocket) -> RemotePandaArm:
+#         """Instantiate RemotePandaArm without running __init__()."""
+#         rf: RemotePandaArm = RemotePandaArm.__new__(RemotePandaArm)
 #         rf._sock_req = fake_socket
 #         rf._device_addr = "127.0.0.1"
 #         rf._device_port = 9000
@@ -68,7 +68,7 @@
 #     # ---------------------------
 #     def test_get_state_success(self):
 #         # Construct a fake 636B state payload
-#         dummy_state = FrankaArmState(
+#         dummy_state = PandaArmState(
 #             timestamp_ms=123456,
 #             O_T_EE=(0.1,) * 16,
 #             O_T_EE_d=(0.2,) * 16,
@@ -91,7 +91,7 @@
 
 #         result = rf.get_state()
 
-#         self.assertIsInstance(result, FrankaArmState)
+#         self.assertIsInstance(result, PandaArmState)
 #         self.assertEqual(result.timestamp_ms, 123456)
 #         self.assertAlmostEqual(result.q[0], 1.1)
 
@@ -142,7 +142,7 @@
 #     # ---------------------------
 #     def test_set_default_pose_and_move(self):
 #         rf = self._instantiate(FakeSocket())
-#         dummy_state = FrankaArmState(
+#         dummy_state = PandaArmState(
 #             timestamp_ms=0,
 #             O_T_EE=(0.1,) * 16,
 #             O_T_EE_d=(0.2,) * 16,

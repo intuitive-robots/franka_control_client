@@ -10,17 +10,17 @@
 # from franka_control_client.franka_robot.franka_arm import (
 #     ControlMode,
 #     FrankaArmRequestID,
-#     FrankaArmState,
+#     PandaArmState,
 # )
 
 
-# def create_fake_franka_arm_state() -> FrankaArmState:
-#     """Construct a fake FrankaArmState instance with random data."""
+# def create_fake_franka_arm_state() -> PandaArmState:
+#     """Construct a fake PandaArmState instance with random data."""
 
 #     def rand_tuple(n):
 #         return tuple(random.uniform(-1.0, 1.0) for _ in range(n))
 
-#     return FrankaArmState(
+#     return PandaArmState(
 #         timestamp_ms=int(time.time_ns() // 1_000_000) % (2**32),
 #         O_T_EE=rand_tuple(16),
 #         O_T_EE_d=rand_tuple(16),
@@ -152,7 +152,7 @@
 #             return create_error_response("Invalid message ID")
 
 #     def handle_get_fake_franka_arm_state(self) -> Tuple[MsgHeader, bytes]:
-#         """Send a fake FrankaArmState response."""
+#         """Send a fake PandaArmState response."""
 #         fake_state = create_fake_franka_arm_state().to_bytes()
 #         return create_success_response(fake_state)
 

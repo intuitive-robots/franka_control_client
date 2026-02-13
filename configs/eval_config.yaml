@@ -1,0 +1,83 @@
+seed: 42
+device: cuda
+wandb:
+  enable: false
+  project: "lerobot-pi0-eval"
+  entity: "your_wandb_entity"
+  mode: "disabled"
+policy:
+  dtype: "bfloat16" # we use flash-attn which requires bfloat16, during training this is handled by mixed precision, during inference we set the full model to bfloat16
+
+dataset_path: "/home/irl-admin/gianluca/lerobot_dataset_stats/pepper"  #"/home/irl-admin/gianluca/eval_pull_2026-01-27_17-35-18/datasets/lerobot/move_block" #"/home/irl-admin/gianluca/lerobot_dataset_stats/pepper" 
+task_instruction: "Pick up the bell pepper and place it in the bowl." #"Move the block to the center, then move it back to its initial position." #"Pick up the bell pepper and place it in the bowl." # "Touch first the blue, then the red and finally the green block."#"Pick up the bell pepper and place it in the bowl." #
+
+checkpoint_path: "/home/irl-admin/gianluca/model_weights/xvla/pepper/2026-01-22/01-38-13/model_outputs/checkpoints/020000/pretrained_model"
+
+# X-VLA Pick Block Twice:
+# /home/irl-admin/gianluca/eval_pull_2026-01-29_09-20-21/output/xvla-old/train/pick_block_twice/2026-01-28/13-36-08/model_outputs/checkpoints/030000/pretrained_model
+
+# X-VLA Move Block:
+# /home/irl-admin/gianluca/eval_pull_2026-01-29_09-20-21/output/xvla-old/train/move_block/2026-01-28/19-17-11/model_outputs/checkpoints/030000/pretrained_model
+
+# XVLA Multi Pepper
+# /home/irl-admin/gianluca/eval_pull_2026-01-29_09-20-21/output/xvla-old/train/pepper/2026-01-29/00-13-48/model_outputs/checkpoints/020000/pretrained_model
+
+# Adapted training tested on pepper -> way faster
+# /home/irl-admin/gianluca/eval_pull_2026-01-29_09-20-21/output/xvla-old/train/pepper/2026-01-28/17-32-28/model_outputs/checkpoints/015000/pretrained_model
+
+# Old Pipeline bfloat16, no domain id -> works well
+# "/home/irl-admin/gianluca/eval_pull_2026-01-27_17-35-18/output/xvla/experiments/old_new_train_migration/old_train_pipeline/2026-01-26/01-43-54/model_outputs/checkpoints/030000/pretrained_model"
+# "/home/irl-admin/gianluca/eval_pull_2026-01-28_14-43-42/output/xvla/experiments/old_new_train_migration/old_train_pipeline/2026-01-26/01-43-54/model_outputs/checkpoints/020000/pretrained_model"
+# "/home/irl-admin/gianluca/eval_pull_2026-01-28_14-43-42/output/xvla/experiments/old_new_train_migration/old_train_pipeline/2026-01-26/01-43-54/model_outputs/checkpoints/010000/pretrained_model"
+
+
+
+# Old pipeline, bf16, no domain id, 30k steps, unfreeze VLM -> works well
+# /home/irl-admin/gianluca/eval_pull_2026-01-27_17-35-18/output/xvla-old/train/pepper/2026-01-27/03-28-37/model_outputs/checkpoints/030000/pretrained_model
+# /home/irl-admin/gianluca/eval_pull_2026-01-28_14-43-42/output/xvla-old/train/pepper/2026-01-27/03-28-37/model_outputs/checkpoints/030000/pretrained_model
+# /home/irl-admin/gianluca/eval_pull_2026-01-28_14-43-42/output/xvla-old/train/pepper/2026-01-27/03-28-37/model_outputs/checkpoints/030000/pretrained_model
+
+
+
+
+# Old Pipeline bfloat16 and domain id -> performans significantly worse in real world eval
+# "/home/irl-admin/gianluca/eval_pull_2026-01-27_17-35-18/output/xvla/experiments/old_new_train_migration/old_train_pipeline/2026-01-26/16-58-29/model_outputs/checkpoints/030000/pretrained_model"
+
+# New pipeline with bfloat16 (led to worse performance)
+# "/home/irl-admin/gianluca/eval_pull_2026-01-27_17-35-18/output/xvla/experiments/old_new_train_migration/new_train_pipeline/2026-01-24/12-34-59/model_outputs/checkpoints/030000/pretrained_model"
+
+# New pipeline with bf16, dimain_id, 15k steps ("worst performance")
+# "/home/irl-admin/gianluca/eval_pull_2026-01-27_17-35-18/output/xvla/experiments/old_new_train_migration/new_train_pipeline/2026-01-23/23-57-36/model_outputs/checkpoints/015000/pretrained_model"
+
+
+
+# === PEPPER SMALL === smaller dataset: does it suffice?
+# bf16, no domain id, 7.5k steps
+# "/home/irl-admin/gianluca/eval_pull_2026-01-27_17-35-18/output/vla/experiments/old_new_train_migration/new_train_pipeline/pepper_small/2026-01-26/22-49-11/model_outputs/checkpoints/007500/pretrained_model"
+# bf16, domain id, 7.5k steps
+# "/home/irl-adsddmin/gianluca/eval_pull_2026-01-27_17-35-18/output/xvla/experiments/old_new_train_migration/new_train_pipeline/pepper_small/2026-01-24/22-53-30/model_outputs/checkpoints/007500/pretrained_model"
+
+
+# === MOVE BLOCK ===
+# bf16, no domain id, 30k steps
+# "/home/irl-admin/gianluca/eval_pull_2026-01-27_17-35-18/output/xvla-old/train/move_block/2026-01-27/02-40-16/model_outputs/checkpoints/030000/pretrained_model"
+
+
+# "/home/irl-admin/gianluca/model_weights/xvla/pepper/2026-01-22/01-38-13/model_outputs/checkpoints/020000/pretrained_model" 
+
+
+
+
+
+# "/home/irl-admin/inference/model_weights/xvla/pepper/2026-01-22/01-38-13/model_outputs/checkpoints/020000/pretrained_model" #"/home/irl-admin/model_weights/xvla_12_07/020000" #"/home/irl-admin/model_weights/xvla_touch_blocks_12_15/last/pretrained_model"#"/home/irl-admin/model_weights/xvla_12_07/020000"
+# NOTE: only download the meta folder from the lerobot dataset to save space
+
+# task_instruction: "Pick up the bell pepper and place it in the bowl."
+# # checkpoint_path: /home/irl-admin/model_weights/2025_12_03/finetuned_40k/pretrained_model/model.safetensors  
+#checkpoint_path: /home/hk-project-p0024638/usmrd/projects/lerobot-irl-models/output/train/flower/2025-12-02/20-37-39/model_outputs/checkpoints/last/pretrained_model/model.safetensors #/home/hk-project-p0024638/usmrd/projects/lerobot-irl-models/output/train/flower/2025-12-02/02-20-53/model_outputs/checkpoints/last/pretrained_model/model.safetensors #/home/hk-project-p0024638/usmrd/projects/lerobot-irl-models/output/train/flower/2025_12_01__00_50_57/checkpoints/last/pretrained_model/model.safetensors #/home/hk-project-p0024638/usmrd/projects/lerobot-irl-models/output/flower/2025-11-29/23-39-05/checkpoints/001000/pretrained_model/model.safetensors # Path to your checkpoint file or directory
+#/home/irl-admin/model_weights/2025_12_03/from_scratch_100k/pretrained_model/model.safetensors  
+# /home/irl-admin/model_weights/2025_12_03/finetuned_40k/pretrained_model/model.safetensors  
+#/home/irl-admin/model_weights/2025_12_01__00_50_57/checkpoints/last/pretrained_model/model.safetensors 
+#/home/hk-project-p0024638/usmrd/projects/lerobot-irl-models/output/flower/2025-11-29/23-39-05/checkpoints/001000/pretrained_model/model.safetensors # Path to your checkpoint file or directory
+# dataset_path: /hkfs/work/workspace/scratch/usmrd-MemVLA/datasets/lerobot/pepper_only
+#checkpoint_path: /home/irl-admin/model_weights/2025_12_02/latest/pretrained_model/model.safetensors #/home/hk-project-p0024638/usmrd/projects/lerobot-irl-models/output/flower/2025-11-29/23-39-05/checkpoints/001000/pretrained_model/model.safetensors # Path to your checkpoint file or directory

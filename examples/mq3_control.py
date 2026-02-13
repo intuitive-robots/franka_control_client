@@ -5,20 +5,20 @@ from simpub.core import init_xr_node_manager
 from simpub.xr_device import MetaQuest3
 import pyzlc
 
-from franka_control_client.franka_robot.franka_arm import (
+from franka_control_client.franka_robot.panda_arm import (
     ControlMode,
-    RemoteFranka,
+    RemotePandaArm,
 )
-from franka_control_client.franka_robot.franka_gripper import (
-    RemoteFrankaGripper,
+from franka_control_client.franka_robot.panda_gripper import (
+    RemotePandaGripper,
 )
 
 if __name__ == "__main__":
     init_xr_node_manager("192.168.0.134")
     mq3 = MetaQuest3("IRL-MQ3-1")  # You can change the name by using simpubweb
     pyzlc.init("mq3_control_client", "127.0.0.1")
-    robot = RemoteFranka("FrankaPanda")
-    # gripper = RemoteFrankaGripper("192.168.0.", 5557)
+    robot = RemotePandaArm("FrankaPanda")
+    # gripper = RemotePandaGripper("192.168.0.", 5557)
     robot.connect()
     # gripper.start_gripper_control()
     print(robot.get_franka_arm_control_mode())

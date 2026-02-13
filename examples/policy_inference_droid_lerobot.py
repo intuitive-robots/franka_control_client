@@ -1,4 +1,3 @@
-import time
 from typing import List
 
 import pyzlc
@@ -8,6 +7,7 @@ from franka_control_client.control_pair.policy_panda_control_pair import (
     PolicyPandaControlPair,
 )
 from franka_control_client.franka_robot.panda_arm import RemotePandaArm
+from franka_control_client.franka_robot.panda_robotiq import PandaRobotiq
 from franka_control_client.policy_inference.irl_wrapper import (
     IRL_HardwareDataWrapper,
     ImageDataWrapper,
@@ -26,7 +26,7 @@ from franka_control_client.robotiq_gripper.robotiq_gripper import (
 if __name__ == "__main__":
     pyzlc.init(
         "policy_inference",
-        "192.168.0.117",
+        "192.168.0.109",
         group_name="DroidGroup",
         group_port=7730,
     )
@@ -35,22 +35,34 @@ if __name__ == "__main__":
     obs_topic = f"{policy_name}/observation"
     action_topic = f"{policy_name}/action"
 
-    panda_arm = RemotePandaArm("FrankaPanda")
-    robotiq_gripper = RemoteRobotiqGripper("FrankaPanda")
-    control_pair = PolicyPandaControlPair(panda_arm, robotiq_gripper)
+    follower = PandaRobotiq(
+        "PandaRobotiq",
+        RemotePandaArm("FrankaPanda"),
+        RemoteRobotiqGripper("FrankaPanda"),
+    )
+    control_pair = PolicyPandaControlPair(follower.panda_arm, follower.robotiq_gripper)
 
-    camera_left = ImageDataWrapper(CameraDevice("zed_left", preview=False))
+    camera_left = ImageDataWrapper(
+        CameraDevice("zed_left", preview=False), capture_interval=0.033, hw_name="zed_left"
+    )
+    camera_right = ImageDataWrapper(
+        CameraDevice("zed_right", preview=False), capture_interval=0.033, hw_name="zed_right"
+    )
+    camera_wrist = ImageDataWrapper(
+        CameraDevice("zed_wrist", preview=False), capture_interval=0.033, hw_name="zed_wrist"
+    )
 
-    data_collectors: List[IRL_HardwareDataWrapper] = [
-        camera_left,
-        PandaArmDataWrapper(panda_arm),
-        RobotiqGripperDataWrapper(robotiq_gripper),
-    ]
+    data_collectors: List[IRL_HardwareDataWrapper] = []
+    data_collectors.append(camera_left)
+    data_collectors.append(camera_right)
+    data_collectors.append(camera_wrist)
+    data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
+    data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
 
     inference_cfg = LeRobotPolicyInferenceConfig(
         policy_name=policy_name,
         task="pepper",
-        fps=30,
+        fps=10,
         obs_topic=obs_topic,
         action_topic=action_topic,
     )
@@ -59,5 +71,9 @@ if __name__ == "__main__":
         control_pair=control_pair,
         cfg=inference_cfg,
     )
-    inference_manager.run()
-    pyzlc.shutdown()
+
+    control_pair.control_rest()
+    try:
+        inference_manager.run()
+    finally:
+        pyzlc.shutdown()

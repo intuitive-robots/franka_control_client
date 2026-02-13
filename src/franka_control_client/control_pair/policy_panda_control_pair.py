@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from typing import Optional, Union
 
 import numpy as np
@@ -12,10 +13,13 @@ from ..franka_robot.panda_gripper import RemotePandaGripper
 from ..robotiq_gripper.robotiq_gripper import RemoteRobotiqGripper
 
 
-DEFAULT_CONTROL_HZ: float = 200.0
+DEFAULT_CONTROL_HZ: float = 10.0
 GRIPPER_DEADBAND: float = 1e-3
-#
-DEFAULT_POSITION: 
+GRIPPER_SPEED = 0.7
+GRIPPER_FORCE= 0.3
+ACTION_LOG_INTERVAL_S: float = 0.5
+GRIPPER_TOGGLE_WARN_WINDOW_S: float = 3.0
+GRIPPER_TOGGLE_WARN_COUNT: int = 6
 
 class PolicyPandaControlPair(ControlPair):
     """
@@ -38,6 +42,10 @@ class PolicyPandaControlPair(ControlPair):
         self._action_lock = threading.Lock() #only one of the update_action and control_step visit latest_action at the same time 
         self._latest_action: Optional[np.ndarray] = None
         self._last_gripper_cmd: Optional[float] = None
+        self._last_action_log_ts: float = 0.0
+        self._last_gripper_binary: Optional[int] = None
+        self._gripper_toggle_window_start_ts: float = time.time()
+        self._gripper_toggle_count: int = 0
 
     def update_action(self, action: np.ndarray) -> None:
         """Update the latest action used by the control loop."""
@@ -67,6 +75,7 @@ class PolicyPandaControlPair(ControlPair):
 
         joint_pos = action[:7]
         gripper_cmd = float(np.clip(action[7], 0.0, 1.0))#binary for now
+        self._log_action_debug(joint_pos, gripper_cmd)
 
         self.panda_arm.send_joint_position_command(joint_pos)
 
@@ -78,8 +87,8 @@ class PolicyPandaControlPair(ControlPair):
             ):
                 self.gripper.send_grasp_command(
                     position=gripper_cmd,
-                    speed=0.5,
-                    force=0.3,
+                    speed=GRIPPER_SPEED,
+                    force=GRIPPER_FORCE,
                     blocking=False,
                 )
                 self._last_gripper_cmd = gripper_cmd
@@ -95,6 +104,39 @@ class PolicyPandaControlPair(ControlPair):
             self.gripper.send_gripper_command(width=width, speed=0.1)
 
         pyzlc.sleep(1.0 / self.control_hz)
+
+    def _log_action_debug(self, joint_pos: np.ndarray, gripper_cmd: float) -> None:
+        now = time.time()
+        if (now - self._last_action_log_ts) >= ACTION_LOG_INTERVAL_S:
+            pyzlc.info(
+                "Policy action: "
+                f"q=[{', '.join(f'{x:.3f}' for x in joint_pos)}], "
+                f"gripper={gripper_cmd:.3f}"
+            )
+            self._last_action_log_ts = now
+
+        gripper_binary = 1 if gripper_cmd >= 0.5 else 0
+        if self._last_gripper_binary is None:
+            self._last_gripper_binary = gripper_binary
+            self._gripper_toggle_window_start_ts = now
+            self._gripper_toggle_count = 0
+            return
+
+        if gripper_binary != self._last_gripper_binary:
+            self._gripper_toggle_count += 1
+            self._last_gripper_binary = gripper_binary
+
+        window_elapsed = now - self._gripper_toggle_window_start_ts
+        if window_elapsed >= GRIPPER_TOGGLE_WARN_WINDOW_S:
+            if self._gripper_toggle_count >= GRIPPER_TOGGLE_WARN_COUNT:
+                pyzlc.warn(
+                    "Gripper action toggling frequently: "
+                    f"{self._gripper_toggle_count} toggles in "
+                    f"{window_elapsed:.2f}s (threshold={GRIPPER_TOGGLE_WARN_COUNT}/"
+                    f"{GRIPPER_TOGGLE_WARN_WINDOW_S:.1f}s)."
+                )
+            self._gripper_toggle_window_start_ts = now
+            self._gripper_toggle_count = 0
 
     def control_end(self) -> None:
         self.panda_arm.set_franka_arm_control_mode(ControlMode.IDLE)

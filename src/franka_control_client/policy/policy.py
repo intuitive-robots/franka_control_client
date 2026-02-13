@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from typing import TypedDict, Optional, Dict, Any
 import pyzlc
 
@@ -7,6 +8,9 @@ from ..core.remote_device import RemoteDevice
 from ..core.latest_msg_subscriber import LatestMsgSubscriber
 
 #build connection for inference node with policy node
+DEFAULT_INIT_ACTION = [0.0, 0.0, 0.0, -2.15, 0.0, 2.15, 0.0, 0.0]
+
+
 class PolicyActionMsg(TypedDict, total=True):
     timestamp: float
     action: list[float]
@@ -36,7 +40,13 @@ class RemotePolicy(RemoteDevice):
             obs_topic,
         )
         self.action_subscriber = LatestMsgSubscriber(
-            action_topic
+            action_topic,
+            wait_for_first_message=False,
+            initial_message=PolicyActionMsg(
+                timestamp=time.time(),
+                action=DEFAULT_INIT_ACTION,
+                shape=[len(DEFAULT_INIT_ACTION)],
+            ),
         )
 
     @property

@@ -8,7 +8,7 @@ import numpy as np
 from typing import Optional
 GRIPPER_SPEED = 0.7
 GRIPPER_FORCE= 0.3
-CONTROL_HZ: float = 1000
+CONTROL_HZ: float = 500
 GRIPPER_DEADBAND: float = 1e-3
 CONTROL_MODE: ControlMode = ControlMode.HybridJointImpedance
 

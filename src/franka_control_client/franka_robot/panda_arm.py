@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import struct
-from dataclasses import dataclass
 from enum import Enum
-from typing import TypedDict, Tuple, List
+from typing import TypedDict, Tuple, List, Optional
 import pyzlc
 import numpy as np
-import pyzlc
 
 from ..core.latest_msg_subscriber import LatestMsgSubscriber
 from ..core.exception import CommandError
@@ -15,7 +12,7 @@ from ..core.remote_device import RemoteDevice
 
 
 class ControlMode(str, Enum):
-    IDLE = "IDLE"
+    IDLE = "Idle"
     HybridJointImpedance = "HybridJointImpedance"
     # JOINT_POSITION = "JointPosition"
     # JOINT_VELOCITY = "JointVelocity"
@@ -25,7 +22,7 @@ class ControlMode(str, Enum):
     # GRAVITY_COMP = "GravityComp"
 
 
-class FrankaArmState(TypedDict):
+class PandaArmState(TypedDict):
     """
     Franka arm state structure.
     """
@@ -66,9 +63,9 @@ class CartesianVelocityCommand(TypedDict):
     vel: List[float]  # vx, vy, vz, wx, wy, wz
 
 
-class RemoteFranka(RemoteDevice):
+class RemotePandaArm(RemoteDevice):
     """
-    RemoteFranka class for controlling a Franka robot.
+    RemotePandaArm class for controlling a Franka robot.
 
     This class extends the RemoteDevice class and provides
     specific functionality for interacting with a Franka robot.
@@ -76,9 +73,11 @@ class RemoteFranka(RemoteDevice):
         robot_name (str): Name of the Franka robot.
     """
 
-    def __init__(self, robot_name: str) -> None:
+    def __init__(
+        self, robot_name: str, enable_publishers: bool = True
+    ) -> None:
         """
-        Initialize the RemoteFranka instance.
+        Initialize the RemotePandaArm instance.
 
         Args:
             robot_name (str): The name of the Franka robot.
@@ -88,7 +87,7 @@ class RemoteFranka(RemoteDevice):
         self.arm_state_sub = LatestMsgSubscriber(
             f"{robot_name}/franka_arm_state"
         )
-        # command publisher
+        self._enable_publishers = enable_publishers
         self.joint_position_publisher = pyzlc.Publisher(
             f"{robot_name}/joint_position_command"
         )
@@ -121,11 +120,11 @@ class RemoteFranka(RemoteDevice):
             pyzlc.sleep(1)
 
     @property
-    def current_state(self) -> FrankaArmState:
+    def current_state(self) -> Optional[PandaArmState]:
         """Return the latest Franka arm state."""
         return self.arm_state_sub.get_latest()
 
-    def get_franka_arm_state(self) -> FrankaArmState:
+    def get_franka_arm_state(self) -> PandaArmState:
         """Return a single state sample"""
         return pyzlc.call(f"{self._name}/get_franka_arm_state", pyzlc.empty)
 
@@ -138,7 +137,7 @@ class RemoteFranka(RemoteDevice):
     def set_franka_arm_control_mode(self, mode: ControlMode) -> None:
         """Set the control mode of the Franka arm."""
         pyzlc.call(f"{self._name}/set_franka_arm_control_mode", mode.value)
-        print(f"Set Franka arm control mode to {mode.value}")
+        pyzlc.info(f"Set Franka arm control mode to {mode.value}")
 
     def move_franka_arm_to_joint_position(
         self, joint_positions: Tuple[float, ...]
@@ -155,16 +154,13 @@ class RemoteFranka(RemoteDevice):
             raise CommandError(
                 f"Expected 7 joint values, got {len(joint_positions)}"
             )
-
-        try:
-            payload = struct.pack("!7d", *joint_positions)
-        except struct.error as exc:
-            raise CommandError(f"Failed to pack joint position data: {exc}")
         header, _ = pyzlc.call(
-            f"{self._name}/move_franka_arm_to_joint_position", payload
+            f"{self._name}/move_franka_arm_to_joint_position",
+            list(joint_positions),
+            10.0,
         )
 
-        if header is None or header != FrankaResponseCode.SUCCESS:
+        if header is None or header != FrankaResponseCode.SUCCESS.value:
             raise CommandError(
                 f"MOVE_FRANKA_ARM_TO_JOINT_POSITION failed (status={header})"
             )
@@ -191,6 +187,10 @@ class RemoteFranka(RemoteDevice):
         Send a joint position command to the Franka arm.
         Accepts tuple, list, numpy array, or torch tensor (no type checking).
         """
+        if not self._enable_publishers:
+            raise RuntimeError(
+                "Publishers disabled for this RemotePandaArm instance."
+            )
         arr = np.asarray(joint_positions, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint angles, got {arr.size}")
@@ -207,6 +207,10 @@ class RemoteFranka(RemoteDevice):
         Raises:
             CommandError: If packing or command execution fails.
         """
+        if not self._enable_publishers:
+            raise RuntimeError(
+                "Publishers disabled for this RemotePandaArm instance."
+            )
         arr = np.asarray(pose, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 pose values, got {arr.size}")
@@ -217,6 +221,10 @@ class RemoteFranka(RemoteDevice):
         Send a joint velocity command to the Franka arm.
         Accepts tuple, list, numpy array, or torch tensor (no type checking).
         """
+        if not self._enable_publishers:
+            raise RuntimeError(
+                "Publishers disabled for this RemotePandaArm instance."
+            )
         arr = np.asarray(joint_velocities, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint velocities, got {arr.size}")
@@ -231,6 +239,10 @@ class RemoteFranka(RemoteDevice):
         Raises:
             CommandError: If packing or command execution fails.
         """
+        if not self._enable_publishers:
+            raise RuntimeError(
+                "Publishers disabled for this RemotePandaArm instance."
+            )
         arr = np.asarray(cartesian_velocities, dtype=np.float64).reshape(-1)
         if arr.size != 6:
             raise ValueError(
@@ -245,6 +257,10 @@ class RemoteFranka(RemoteDevice):
         Send a joint torque command to the Franka arm.
         Accepts tuple, list, numpy array, or torch tensor (no type checking).
         """
+        if not self._enable_publishers:
+            raise RuntimeError(
+                "Publishers disabled for this RemotePandaArm instance."
+            )
         arr = np.asarray(joint_torques, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint torques, got {arr.size}")

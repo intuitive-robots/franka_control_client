@@ -7,12 +7,10 @@ the common interface for all remote devices (robots, cameras, etc.).
 
 from abc import ABC
 from dataclasses import dataclass
-from traceback import print_exc
-from typing import Final, List, Optional, Tuple
 import time
 import pyzlc
 
-from .exception import CommandError, DeviceConnectionError
+from .exception import DeviceConnectionError
 
 
 @dataclass(frozen=True)

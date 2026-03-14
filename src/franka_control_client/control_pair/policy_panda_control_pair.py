@@ -7,6 +7,7 @@ from typing import Optional, Union
 import numpy as np
 import torch
 import pyzlc
+from collections import deque
 
 from .control_pair import ControlPair
 from ..franka_robot.panda_arm import ControlMode, RemotePandaArm
@@ -14,7 +15,7 @@ from ..franka_robot.panda_gripper import RemotePandaGripper
 from ..robotiq_gripper.robotiq_gripper import RemoteRobotiqGripper
 
 
-DEFAULT_CONTROL_HZ: float = 200
+DEFAULT_CONTROL_HZ: float = 1000
 GRIPPER_DEADBAND: float = 1e-3
 GRIPPER_SPEED = 0.7
 GRIPPER_FORCE = 0.3
@@ -48,6 +49,7 @@ class PolicyPandaControlPair(ControlPair):
         self.control_hz = float(control_hz)
         self._action_lock = threading.Lock() #only one of the update_action and control_step visit latest_action at the same time 
         self._latest_action: Optional[np.ndarray] = None
+        self._latest_action_chunk: deque[np.ndarray] = deque()
         self._last_gripper_cmd: Optional[float] = None
         self._last_action_log_ts: float = 0.0
         self._last_gripper_binary: Optional[int] = None
@@ -80,16 +82,58 @@ class PolicyPandaControlPair(ControlPair):
         with self._action_lock:
             self._latest_action = arr
 
+    #using by policy side to update the latest action_chunk, and control loop will read the latest action and execute it
+    def update_action_chunk(self, action_chunk: np.ndarray) -> None:
+        """Update the latest action chunk used by the control loop."""
+        chunk = np.asarray(action_chunk, dtype=np.float64)
+        if chunk.ndim == 1:
+            chunk = chunk.reshape(1, 1, -1)
+        elif chunk.ndim == 2:
+            chunk = chunk.reshape(1, *chunk.shape)
+        elif chunk.ndim != 3:
+            raise ValueError(
+                f"Expected action chunk shape (B, T, D), (T, D), or (D,), got {chunk.shape}"
+            )
+
+        if chunk.shape[-1] < 8:
+            raise ValueError(f"Expected action size >= 8, got {chunk.shape[-1]}")
+        if chunk.shape[0] < 1 or chunk.shape[1] < 1:
+            raise ValueError(f"Action chunk must contain at least one action, got {chunk.shape}")
+
+        action_queue = deque(np.array(action, copy=True) for action in chunk[0])
+        with self._action_lock:
+            self._latest_action = action_queue[-1].copy()
+            self._latest_action_chunk = action_queue
+
+    
     def _get_latest_action(self) -> Optional[np.ndarray]:
         with self._action_lock:
             if self._latest_action is None:
                 return None
             return self._latest_action.copy()
+        
+    def _get_latest_action_from_chunk(self) -> Optional[np.ndarray]:
+        with self._action_lock:
+            if self._latest_action_chunk:
+                if len(self._latest_action_chunk) > 1:
+                    action = self._latest_action_chunk.popleft()
+                    # print("len of action chunk:", len(self._latest_action_chunk))
+                    self._latest_action = self._latest_action_chunk[-1].copy()
+                    return action.copy()
+                #keep the latest action in the chunk as the current action until the next chunk comes in, to ensure smoother control when policy inference is faster than control loop
+                # print("only one action in the chunk")
+                self._latest_action = self._latest_action_chunk[0].copy()
+                return self._latest_action.copy()
 
+            if self._latest_action is None:
+                return None
+            return self._latest_action.copy()
+    
     def reset_action(self) -> None:
         """Reset the latest action state when starting a new episode."""
         with self._action_lock:
             self._latest_action = None
+            self._latest_action_chunk.clear()
         self._last_gripper_cmd = None
         self._last_gripper_binary = None
         self._gripper_toggle_count = 0
@@ -162,7 +206,7 @@ class PolicyPandaControlPair(ControlPair):
         if self._last_joint_pos is None:
             current_joint_pos = self._get_current_joint_pos()
             if current_joint_pos is None:
-                pyzlc.warn("Current arm state not available, cannot generate waypoint command")
+                pyzlc.error("Current arm state not available, cannot generate waypoint command")
                 return goal_joint_pos
             self._last_joint_pos = current_joint_pos
 
@@ -170,7 +214,12 @@ class PolicyPandaControlPair(ControlPair):
         waypoints, _ = self._generate_waypoints_within_limits(
             self._last_joint_pos, goal_joint_pos, self.control_hz, max_vel
         )
-
+        #too jerky to actuate the entire waypoint sequence in one control step, so we send one waypoint at a time in each control step. The next waypoint will be generated in the next control step based on the latest joint position, which ensures smoother motion and better adherence to velocity limits.
+        # for i in range(len(waypoints)):
+        #     joint_cmd = (waypoints[i].numpy())
+        #     self.panda_arm.send_joint_position_command(joint_cmd)
+        #     self._last_joint_pos = np.asarray(joint_cmd, dtype=np.float32)
+        # print(f"Generated {len(waypoints)} waypoints with max velocity {max_vel:.3f} rad/s")
         joint_cmd = (
             waypoints[0].numpy() if len(waypoints) > 0 else goal_joint_pos.copy()
         )
@@ -185,7 +234,7 @@ class PolicyPandaControlPair(ControlPair):
         )
         current_joint_pos = self._get_current_joint_pos()
         if current_joint_pos is None:
-            pyzlc.warn("Unable to seed control from current arm state during startup")
+            pyzlc.error("Unable to seed control from current arm state during startup")
             return
         self._last_joint_pos = current_joint_pos.copy()
         self.panda_arm.send_joint_position_command(current_joint_pos)
@@ -205,7 +254,9 @@ class PolicyPandaControlPair(ControlPair):
             self.gripper.send_gripper_command(width=0.0, speed=0.1)
 
     def control_step(self) -> None:
-        action = self._get_latest_action()
+        # start_time = time.perf_counter()
+        # action = self._get_latest_action()
+        action = self._get_latest_action_from_chunk()
         if action is None:
             pyzlc.sleep(1.0 / self.control_hz)
             return
@@ -241,6 +292,8 @@ class PolicyPandaControlPair(ControlPair):
             else:
                 width = gripper_cmd * max_width
             self.gripper.send_gripper_command(width=width, speed=0.1)
+        # End_time = time.perf_counter()
+        # print(f"command took {End_time - start_time:.3f} seconds")
 
     def _log_action_debug(self, joint_pos: np.ndarray, gripper_cmd: float) -> None:
         now = time.time()

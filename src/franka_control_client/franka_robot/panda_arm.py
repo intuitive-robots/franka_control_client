@@ -210,7 +210,7 @@ class RemotePandaArm(RemoteDevice):
                 "Publishers disabled for this RemotePandaArm instance."
             )
         arr = np.asarray(joint_positions, dtype=np.float64).reshape(-1)
-        print(f"Sending joint position command: {arr}")
+        # print(f"Sending joint position command: {arr}")
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint angles, got {arr.size}")
         self.joint_position_publisher.publish(

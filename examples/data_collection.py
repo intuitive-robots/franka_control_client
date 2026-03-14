@@ -7,11 +7,11 @@ from franka_control_client.camera.camera import CameraDevice
 from franka_control_client.data_collection.lerobot_data_collection import (
     LeRobotDataCollection,
 )
-from franka_control_client.data_collection.wrapper import (
+from franka_control_client.data_collection.data_wrapper.wrapper import (
     HardwareDataWrapper,
     ImageDataWrapper,
 )
-from franka_control_client.data_collection.wrapper import (
+from franka_control_client.data_collection.data_wrapper.wrapper import (
     PandaArmDataWrapper,
     PandaGripperDataWrapper,
 )

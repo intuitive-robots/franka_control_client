@@ -1,20 +1,19 @@
 import pyzlc
 import queue
 import time
-from typing import Dict, Optional, List
+from typing import Dict, Optional, Sequence
 import numpy as np
 from concurrent.futures import Future
 
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
+from ..data_wrapper.lerobot_wrapper import LeRobotGelloDataWrapper
+from .abstract_data_saver import AbstractDataSaver
 
-from .data_collection_manager import DataCollectionManager, DataCollectionState
-from .data_wrapper.wrapper import HardwareDataWrapper
 
-
-class LeRobotDataCollection(DataCollectionManager):
+class LeRobotDataCollection(AbstractDataSaver):
     def __init__(
         self,
-        data_collectors: List[HardwareDataWrapper],
+        data_collectors: Sequence[LeRobotGelloDataWrapper],
         data_dir: str,
         task: str,
         fps: int = 50,
@@ -32,9 +31,9 @@ class LeRobotDataCollection(DataCollectionManager):
         )
         self.data_save_future: Optional[Future] = None
 
-    def _start_collecting(self) -> None:
+    def start_collecting(self) -> None:
         # Emit start-collection event (e.g., start control pair).
-        super()._start_collecting()
+        super().start_collecting()
         assert self.data_save_future is None
         # empty the queue
         while not self.data_save_queue.empty():
@@ -45,17 +44,13 @@ class LeRobotDataCollection(DataCollectionManager):
 
     def _save_data_task(self) -> None:
         count = 0
-        self._ui_console.log("Data saving task started.")
         try:
-            while self._state_machine.state == DataCollectionState.COLLECTING:
+            while True:
                 data = self.data_save_queue.get()
                 if data is None:
                     break
                 self.dataset.add_frame(data)
                 count += 1
-            self._ui_console.log(
-                f"Data saving task ended, collected {count} frames."
-            )
         except Exception as e:
             pyzlc.error(f"Error in data saving task: {e}")
 
@@ -74,33 +69,23 @@ class LeRobotDataCollection(DataCollectionManager):
         time.sleep(sleep_time)
         self.last_timestamp = time.perf_counter()
 
-    def _save_episode(self) -> None:
-        self._stop_collecting()
+    def save_episode(self) -> None:
+        super().save_episode()
         self.dataset.save_episode()
-        self._ui_console.log("Episode saved.")
 
-    def _discard_collecting(self) -> None:
-        self._stop_collecting()
+    def discard_collecting(self) -> None:
+        self.stop_collecting()
         for collector in self.data_collectors:
             collector.discard()
-        self._ui_console.log("Episode discarded.")
 
-    def _stop_collecting(self) -> None:
-        # Emit stop-collection event (e.g., stop control pair) first.
-        super()._stop_collecting()
+    def stop_collecting(self) -> None:
+        super().stop_collecting()
         assert self.data_save_future is not None
         self.data_save_queue.put(None)  # signal to stop saving
         self.data_save_future.result()  # wait for saving to complete
         self.data_save_future = None
 
-    def _reset_to_waiting(self) -> None:
-        super()._reset_to_waiting()
-
-    def _close(self) -> None:
-        if self._close:
-            return
-        self._close = True
-
+    def close(self) -> None:
         # Ensure the background saver thread can't hang on Queue.get() when exiting.
         if self.data_save_future is not None:
             try:
@@ -116,4 +101,4 @@ class LeRobotDataCollection(DataCollectionManager):
             self.dataset.finalize()
         except Exception as e:
             pyzlc.error(f"Error finalizing dataset: {e}")
-        super()._close()
+        super().close()

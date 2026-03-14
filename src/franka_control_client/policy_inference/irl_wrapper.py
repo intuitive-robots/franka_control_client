@@ -12,9 +12,10 @@ from ..franka_robot.panda_gripper import RemotePandaGripper
 from ..robotiq_gripper.robotiq_gripper import RemoteRobotiqGripper
 from ..gello.gello import RemoteGello
 
-class IRL_HardwareDataWrapper(abc.ABC):
 
-    def __init__(self, hw_type:str,hw_name:str) -> None:
+class IRLDataWrapper(abc.ABC):
+
+    def __init__(self, hw_type: str, hw_name: str) -> None:
         self.hw_type = hw_type
         self.hw_name = hw_name
 
@@ -37,11 +38,17 @@ class IRL_HardwareDataWrapper(abc.ABC):
         raise NotImplementedError("Subclasses must implement close method.")
 
 
-class ImageDataWrapper(IRL_HardwareDataWrapper):
-    def __init__(self, camera_device: CameraDevice,hw_name:str , hw_type:str = "camera",capture_interval:int = 0.033) -> None:
+class ImageDataWrapper(IRLDataWrapper):
+    def __init__(
+        self,
+        camera_device: CameraDevice,
+        hw_name: str,
+        hw_type: str = "camera",
+        capture_interval: int = 0.033,
+    ) -> None:
         self.camera_device = camera_device
         self.capture_interval = capture_interval
-        super().__init__(hw_type,hw_name)
+        super().__init__(hw_type, hw_name)
 
     def capture_step(self) -> Optional[np.ndarray]:
         # Implement the logic to save image data from the camera device
@@ -59,7 +66,7 @@ class ImageDataWrapper(IRL_HardwareDataWrapper):
                 f"({self.camera_device.size[0]}, {self.camera_device.size[1]}, 3), "
                 f"got {image_data.shape}"
             )
-        
+
         return image_data
 
     def discard(self) -> None:
@@ -75,10 +82,15 @@ class ImageDataWrapper(IRL_HardwareDataWrapper):
         pass
 
 
-class PandaArmDataWrapper(IRL_HardwareDataWrapper):
-    def __init__(self, arm: RemotePandaArm,hw_name:str = "FrankaPanda" , hw_type:str = "follower_arm") -> None:
+class PandaArmDataWrapper(IRLDataWrapper):
+    def __init__(
+        self,
+        arm: RemotePandaArm,
+        hw_name: str = "FrankaPanda",
+        hw_type: str = "follower_arm",
+    ) -> None:
         self.arm = arm
-        super().__init__(hw_type,hw_name)
+        super().__init__(hw_type, hw_name)
 
     def capture_step(self) -> Dict[str, np.ndarray]:
         # Implement the logic to save robot state data
@@ -107,10 +119,15 @@ class PandaArmDataWrapper(IRL_HardwareDataWrapper):
         pass
 
 
-class PandaGripperDataWrapper(IRL_HardwareDataWrapper):
-    def __init__(self, gripper: RemotePandaGripper,hw_name:str = "FrankaPanda" , hw_type:str = "follower_gripper") -> None:
+class PandaGripperDataWrapper(IRLDataWrapper):
+    def __init__(
+        self,
+        gripper: RemotePandaGripper,
+        hw_name: str = "FrankaPanda",
+        hw_type: str = "follower_gripper",
+    ) -> None:
         self.gripper = gripper
-        super().__init__(hw_type,hw_name)
+        super().__init__(hw_type, hw_name)
 
     def capture_step(self) -> Dict[str, np.ndarray]:
         state = self.gripper.current_state
@@ -134,10 +151,15 @@ class PandaGripperDataWrapper(IRL_HardwareDataWrapper):
         pass
 
 
-class RobotiqGripperDataWrapper(IRL_HardwareDataWrapper):
-    def __init__(self, gripper: RemoteRobotiqGripper,hw_name:str = "FrankaPanda" , hw_type:str = "follower_gripper") -> None:
+class RobotiqGripperDataWrapper(IRLDataWrapper):
+    def __init__(
+        self,
+        gripper: RemoteRobotiqGripper,
+        hw_name: str = "FrankaPanda",
+        hw_type: str = "follower_gripper",
+    ) -> None:
         self.gripper = gripper
-        super().__init__(hw_type,hw_name)
+        super().__init__(hw_type, hw_name)
 
     def capture_step(self) -> Dict[str, np.ndarray]:
         state = self.gripper.current_state

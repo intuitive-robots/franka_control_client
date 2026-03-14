@@ -7,7 +7,7 @@ from ..core.remote_device import RemoteDevice
 from ..core.latest_msg_subscriber import LatestMsgSubscriber
 
 
-class RobotiqGripperStateMsg(TypedDict, total=True):
+class RobotiqGripperState(TypedDict, total=True):
     commanded_position: float
     commanded_speed: float
     commanded_force: float
@@ -27,7 +27,9 @@ class RobotiqGraspCommand(TypedDict, total=True):
 class RemoteRobotiqGripper(RemoteDevice):
     """Remote client for a Robotiq gripper device."""
 
-    def __init__(self, device_name: str, enable_publishers: bool = True) -> None:
+    def __init__(
+        self, device_name: str, enable_publishers: bool = True
+    ) -> None:
         super().__init__(device_name)
         self._enable_publishers = enable_publishers
         if enable_publishers:
@@ -41,7 +43,7 @@ class RemoteRobotiqGripper(RemoteDevice):
         )
 
     @property
-    def current_state(self) -> Optional[RobotiqGripperStateMsg]:
+    def current_state(self) -> Optional[RobotiqGripperState]:
         """Return the latest Robotiq gripper state."""
         return self.state_subscriber.get_latest()
 
@@ -61,7 +63,7 @@ class RemoteRobotiqGripper(RemoteDevice):
             force (float): Desired force, scaled by config scale_alpha/scale_beta.
             blocking (bool): Wait for completion if true.
         """
-        if not self._enable_publishers:
+        if not self.command_publisher:
             raise RuntimeError(
                 "Publishers disabled for this RemoteRobotiqGripper instance."
             )
@@ -72,7 +74,6 @@ class RemoteRobotiqGripper(RemoteDevice):
                 force=force,
                 blocking=blocking,
             )
-        
         )
         # print("Published grasp command", position, speed, force, blocking)
 

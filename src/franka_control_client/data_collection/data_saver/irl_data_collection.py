@@ -1,6 +1,7 @@
 import os
 import shutil
 import time
+from queue import Full
 from concurrent.futures import ThreadPoolExecutor, wait
 from datetime import datetime
 from pathlib import Path
@@ -11,73 +12,74 @@ import numpy as np
 import pyzlc
 import torch
 
-from ..control_pair.control_pair import ControlPair
-from .data_collection_manager import DataCollectionManager, DataCollectionState
-from .irl_wrapper import IRL_HardwareDataWrapper, ImageDataWrapper
+from ...control_pair.control_pair import ControlPair
+from .abstract_data_saver import AbstractDataSaver
+from ..data_wrapper.irl_wrapper import IRLDataWrapper, ImageDataWrapper
 
 
 class FollowerData:
-        def __init__(self):
-            # self.timestamp_ms_list = []
-            self.O_T_EE_list = []
-            # self.O_T_EE_d_list = []
-            self.q_list = []
-            # self.q_d_list = []
-            self.dq_list = []
-            # self.dq_d_list = []
-            self.tau_ext_hat_filtered_list = []
-            self.gripper_state_list = []
-            self.O_F_ext_hat_K_list = []
-            self.gripper_current_list = []
+    def __init__(self):
+        # self.timestamp_ms_list = []
+        self.O_T_EE_list = []
+        # self.O_T_EE_d_list = []
+        self.q_list = []
+        # self.q_d_list = []
+        self.dq_list = []
+        # self.dq_d_list = []
+        self.tau_ext_hat_filtered_list = []
+        self.gripper_state_list = []
+        self.O_F_ext_hat_K_list = []
+        self.gripper_current_list = []
 
-        # def append(self):
-            # self.timestamp_ms_list.append(state.timestamp_ms)
-        #     # self.O_T_EE_list.append(state.O_T_EE)
-        #     # self.O_T_EE_d_list.append(state.O_T_EE_d)
-        #     self.q_list.append(state.q)
-        #     # self.q_d_list.append(state.q_d)
-        #     # self.dq_list.append(state.dq)
-        #     # self.dq_d_list.append(state.dq_d)
-        #     # self.tau_ext_hat_filtered_list.append(state.tau_ext_hat_filtered)
-        #     self.gripper_state_list[]
+    # def append(self):
+    # self.timestamp_ms_list.append(state.timestamp_ms)
+    #     # self.O_T_EE_list.append(state.O_T_EE)
+    #     # self.O_T_EE_d_list.append(state.O_T_EE_d)
+    #     self.q_list.append(state.q)
+    #     # self.q_d_list.append(state.q_d)
+    #     # self.dq_list.append(state.dq)
+    #     # self.dq_d_list.append(state.dq_d)
+    #     # self.tau_ext_hat_filtered_list.append(state.tau_ext_hat_filtered)
+    #     self.gripper_state_list[]
 
-        def save(self, path: Path):
-            
-            tensor_lists = [
-                # torch.tensor(self.timestamp_ms_list, dtype=torch.int64),
-                torch.stack(self.O_T_EE_list),
-                # torch.stack(self.O_T_EE_d_list),
-                torch.stack(self.q_list),
-                # torch.stack(self.q_d_list),
-                torch.stack(self.dq_list),
-                # torch.stack(self.dq_d_list),
-                torch.stack(self.tau_ext_hat_filtered_list),
-                torch.stack(self.gripper_state_list),
-                torch.stack(self.O_F_ext_hat_K_list ),
-                torch.stack(self.gripper_current_list)
-            ]
-            paths = [
-                # path / "timestamp_ms.pt",
-                path / "ee_pos.pt",
-                # path / "O_T_EE_d.pt",
-                path / "joint_pos.pt",
-                # path / "q_d.pt",
-                path / "joint_vel.pt",
-                # path / "dq_d.pt",
-                path / "external_joint_torque.pt",
-                path / "gripper_state.pt",
-                path / "external_wrench.pt",
-                path / "gripper_current.pt"
-            ]
+    def save(self, path: Path):
 
-            for d, p in zip(tensor_lists, paths):
+        tensor_lists = [
+            # torch.tensor(self.timestamp_ms_list, dtype=torch.int64),
+            torch.stack(self.O_T_EE_list),
+            # torch.stack(self.O_T_EE_d_list),
+            torch.stack(self.q_list),
+            # torch.stack(self.q_d_list),
+            torch.stack(self.dq_list),
+            # torch.stack(self.dq_d_list),
+            torch.stack(self.tau_ext_hat_filtered_list),
+            torch.stack(self.gripper_state_list),
+            torch.stack(self.O_F_ext_hat_K_list),
+            torch.stack(self.gripper_current_list),
+        ]
+        paths = [
+            # path / "timestamp_ms.pt",
+            path / "ee_pos.pt",
+            # path / "O_T_EE_d.pt",
+            path / "joint_pos.pt",
+            # path / "q_d.pt",
+            path / "joint_vel.pt",
+            # path / "dq_d.pt",
+            path / "external_joint_torque.pt",
+            path / "gripper_state.pt",
+            path / "external_wrench.pt",
+            path / "gripper_current.pt",
+        ]
 
-                if d.numel() == 0:
-                    print(f"Skip saving '{p}' since it is empty")
-                    continue
+        for d, p in zip(tensor_lists, paths):
 
-                torch.save(d, p)
-                print(f"Successfully saved '{p}'")
+            if d.numel() == 0:
+                print(f"Skip saving '{p}' since it is empty")
+                continue
+
+            torch.save(d, p)
+            print(f"Successfully saved '{p}'")
+
 
 class LeaderData:
     def __init__(self):
@@ -90,7 +92,7 @@ class LeaderData:
         # self.dq_d_list = []
         # self.tau_ext_hat_filtered_list = []
         self.gripper_state_list = []
-        self.gripper_command_list = []#command read from robotiq
+        self.gripper_command_list = []  # command read from robotiq
 
         # def append(self):
         #     self.timestamp_ms_list.append(state.timestamp_ms)
@@ -115,8 +117,8 @@ class LeaderData:
             # torch.stack(self.dq_d_list),
             # torch.stack(self.tau_ext_hat_filtered_list),
             torch.stack(self.gripper_state_list),
-            torch.stack(self.gripper_command_list)
-            ]
+            torch.stack(self.gripper_command_list),
+        ]
         paths = [
             # path / "timestamp_ms.pt",
             # path / "O_T_EE.pt",
@@ -127,7 +129,7 @@ class LeaderData:
             # path / "dq_d.pt",
             # path / "tau_ext_hat_filtered.pt",
             path / "gripper_state.pt",
-            path / "gripper_command.pt"
+            path / "gripper_command.pt",
         ]
 
         for d, p in zip(tensor_lists, paths):
@@ -139,22 +141,22 @@ class LeaderData:
             torch.save(d, p)
             print(f"Successfully saved '{p}'")
 
-class IRLDataCollection(DataCollectionManager):
+
+class IRLDataCollection(AbstractDataSaver):
     def __init__(
         self,
-        data_collectors: List[IRL_HardwareDataWrapper],
+        data_collectors: List[IRLDataWrapper],
         data_dir: Path,
         task: str,
         control_pair: Optional[ControlPair] = None,
-        fps: int = 50,#for general
+        fps: int = 50,  # for general
         writer_pool_max_workers: Optional[int] = None,
         writer_max_pending_writes: int = 4096,
-        
     ) -> None:
         super().__init__(data_collectors, task, fps)
-        #data_dir
+        # data_dir
         self.data_dir = Path(data_dir)
-        self.data_dir.mkdir(exist_ok=True,parents=True)
+        self.data_dir.mkdir(exist_ok=True, parents=True)
         self.control_pair = control_pair
         if self.control_pair is not None:
             self.register_start_collecting_event(
@@ -163,7 +165,7 @@ class IRLDataCollection(DataCollectionManager):
             self.register_stop_collecting_event(
                 self.control_pair.stop_control_pair
             )
-        #writer_pool preparation for cams
+        # writer_pool preparation for cams
         self._max_pending_writes = int(writer_max_pending_writes)
         if writer_pool_max_workers is None:
             max_workers = max(2, min(8, (os.cpu_count() or 4)))
@@ -174,11 +176,11 @@ class IRLDataCollection(DataCollectionManager):
         #
         self.camera_dirs: List[Path] = []
         self.camera_names: List[str] = []
-        self.camera_streams:List[ImageDataWrapper] = []
+        self.camera_streams: List[ImageDataWrapper] = []
         self.camera_timestamps: List[list[float]] = []
         self.timestamps = []
         self.cur_timestep = 0
-        self.capture_interval = 1.0/fps # in second
+        self.capture_interval = 1.0 / fps  # in second
         for hw in data_collectors:
             if hw.hw_type == "leader_robot":
                 self.leader_robot = hw
@@ -190,14 +192,14 @@ class IRLDataCollection(DataCollectionManager):
                 self.camera_names.append(hw.hw_name)
                 self.camera_streams.append(hw)
         self.camera_frame_idx = [0] * len(self.camera_streams)
-        self.camera_last_capture_times: List[float] = [0.0] * len(self.camera_streams)  # Track last capture time for each camera
+        self.camera_last_capture_times: List[float] = [0.0] * len(
+            self.camera_streams
+        )  # Track last capture time for each camera
         self._last_robot_time: Optional[float] = None
-        
 
-
-    def _start_collecting(self) -> None:
+    def start_collecting(self) -> None:
         # Emit start-collection event (e.g., start control pair).
-        super()._start_collecting()
+        super().start_collecting()
         self._create_new_recording_dir()
         self._create_empty_data()
         self.timestamps = []
@@ -206,10 +208,10 @@ class IRLDataCollection(DataCollectionManager):
         self.camera_last_capture_times = [0.0] * len(self.camera_streams)
         self.last_gripper = 0.0018
 
-    def _collect_step(self) -> None:
+    def collect_step(self) -> None:
         # print("debug:time start collect")
         to_tensor = lambda x: torch.tensor(x, dtype=torch.float64)
-        start_time=time.perf_counter()
+        start_time = time.perf_counter()
         # cur_time = time.time()
         # print("debug:capture_inter:",self.capture_interval)
         # print("cur_time:",cur_time)
@@ -225,33 +227,53 @@ class IRLDataCollection(DataCollectionManager):
         #     self.follower_robot_data.q_list.append(to_tensor(follower_arm_state["q"]))
         #     self.follower_robot_data.gripper_state_list.append(to_tensor(follower_gripper_state["position"]))
         #     self.cur_timestep += 1
-            # end_time = time.time()
-        
+        # end_time = time.time()
+
         self.timestamps.append(start_time)
-        leader_state = self.leader_robot.capture_step() #gello
+        leader_state = self.leader_robot.capture_step()  # gello
         follower_arm_state = self.follower_arm.capture_step()
         follower_gripper_state = self.follower_gripper.capture_step()
-        #robotiq sometimes can not get state in time, so use last time to pad
+        # robotiq sometimes can not get state in time, so use last time to pad
         if follower_gripper_state["position"] == 0.0:
             follower_gripper_state["position"] = self.last_gripper
         else:
             self.last_gripper = follower_gripper_state["position"]
-        #todo:using smarter way to wrapper
-        #todo:maybe change gripper command to record robotiq command
-        #leader
-        self.leader_robot_data.q_list.append(to_tensor(leader_state["gello_arm_state"]["joint_state"]))
-        self.leader_robot_data.gripper_state_list.append(to_tensor(leader_state["gello_gripper_state"]["gripper"]))
-        self.leader_robot_data.gripper_command_list.append(to_tensor(follower_gripper_state["commanded_position"]))
-        #follower arm
-        self.follower_robot_data.q_list.append(to_tensor(follower_arm_state["q"]))
-        self.follower_robot_data.O_T_EE_list.append(to_tensor(follower_arm_state["O_T_EE"]))
-        self.follower_robot_data.dq_list.append(to_tensor(follower_arm_state["dq"]))
-        self.follower_robot_data.tau_ext_hat_filtered_list.append(to_tensor(follower_arm_state["tau_ext_hat_filtered"]))
-        self.follower_robot_data.O_F_ext_hat_K_list.append(to_tensor(follower_arm_state["O_F_ext_hat_K"]))
-                #follower gripper
-        self.follower_robot_data.gripper_state_list.append(to_tensor(follower_gripper_state["position"]))
-        self.follower_robot_data.gripper_current_list.append(to_tensor(follower_gripper_state["current"]))
-        #cameras
+        # todo:using smarter way to wrapper
+        # todo:maybe change gripper command to record robotiq command
+        # leader
+        self.leader_robot_data.q_list.append(
+            to_tensor(leader_state["gello_arm_state"]["joint_state"])
+        )
+        self.leader_robot_data.gripper_state_list.append(
+            to_tensor(leader_state["gello_gripper_state"]["gripper"])
+        )
+        self.leader_robot_data.gripper_command_list.append(
+            to_tensor(follower_gripper_state["commanded_position"])
+        )
+        # follower arm
+        self.follower_robot_data.q_list.append(
+            to_tensor(follower_arm_state["q"])
+        )
+        self.follower_robot_data.O_T_EE_list.append(
+            to_tensor(follower_arm_state["O_T_EE"])
+        )
+        self.follower_robot_data.dq_list.append(
+            to_tensor(follower_arm_state["dq"])
+        )
+        self.follower_robot_data.tau_ext_hat_filtered_list.append(
+            to_tensor(follower_arm_state["tau_ext_hat_filtered"])
+        )
+        self.follower_robot_data.O_F_ext_hat_K_list.append(
+            to_tensor(follower_arm_state["O_F_ext_hat_K"])
+        )
+        # follower gripper
+        self.follower_robot_data.gripper_state_list.append(
+            to_tensor(follower_gripper_state["position"])
+        )
+        self.follower_robot_data.gripper_current_list.append(
+            to_tensor(follower_gripper_state["current"])
+        )
+        # cameras
         self._capture_camera_frames()
         self.cur_timestep += 1
         # print("1 step of collect_step",end_time-cur_time)
@@ -260,50 +282,54 @@ class IRLDataCollection(DataCollectionManager):
         if self._last_robot_time is None:
             self._last_robot_time = start_time
         elapsed = time.perf_counter() - start_time
-        sleep_time = max(0.0, (1.0 / self.fps) - elapsed)-0.0015 #adjust a little
+        sleep_time = (
+            max(0.0, (1.0 / self.fps) - elapsed) - 0.0015
+        )  # adjust a little
         if sleep_time > 0.0:
             time.sleep(sleep_time)
         self._last_robot_time = time.perf_counter()
 
     def _save_data_task(self) -> None:
-        self._ui_console.log("Data saving task started.")
         self.__flush_writes()
 
         timestamps_path = self.record_dir / "timestamps.pt"
-        torch.save(torch.tensor(self.timestamps, dtype=torch.float64), timestamps_path)
+        torch.save(
+            torch.tensor(self.timestamps, dtype=torch.float64), timestamps_path
+        )
         print(f"Successfully saved '{timestamps_path}'")
         self.leader_robot_data.save(self.leader_robot_dir)
         self.follower_robot_data.save(self.follower_robot_dir)
-
 
         self.__report_camera_rates()
 
         # determine average frame rate from timestamps
         if len(self.timestamps) > 1:
-            print(f"Robot states frame rate: {len(self.timestamps) / (self.timestamps[-1] - self.timestamps[0]):.2f} Hz")
+            print(
+                f"Robot states frame rate: {len(self.timestamps) / (self.timestamps[-1] - self.timestamps[0]):.2f} Hz"
+            )
         else:
             print("Robot states frame rate: only one sample captured")
 
-    def _save_episode(self) -> None:
+    def save_episode(self) -> None:
         self._save_data_task()
-        self._stop_collecting()
-        self._ui_console.log("Episode saved.")
+        self.stop_collecting()
 
-    def _discard_collecting(self) -> None:
-        self._stop_collecting()
+    def discard_collecting(self) -> None:
+        self.stop_collecting()
         # Make sure all pending camera writes are finished before cleanup.
         self.__flush_writes()
-        shutil.rmtree(self.record_dir)#clean the camera framse which already saved
-
-        for collector in self.data_collectors:
-            collector.discard()
-        self._ui_console.log("Episode discarded.")
+        shutil.rmtree(
+            self.record_dir
+        )  # clean the camera framse which already saved
+        super().discard_collecting()
 
     def __report_camera_rates(self) -> None:
         """Report average frame rate for each camera based on captured timestamps."""
         for name, timestamps in zip(self.camera_names, self.camera_timestamps):
             if len(timestamps) <= 1:
-                print(f"Camera '{name}' frame rate: insufficient samples ({len(timestamps)})")
+                print(
+                    f"Camera '{name}' frame rate: insufficient samples ({len(timestamps)})"
+                )
                 continue
 
             span = timestamps[-1] - timestamps[0]
@@ -314,43 +340,16 @@ class IRLDataCollection(DataCollectionManager):
             fps = len(timestamps) / span
             print(f"Camera '{name}' frame rate: {fps:.2f} Hz")
 
-    def _stop_collecting(self) -> None:
+    def stop_collecting(self) -> None:
         # Emit stop-collection event (e.g., stop control pair) first.
-        super()._stop_collecting()
-   
-        # self.data_save_future = None
-    def _reset_arm(self) -> None:
-        """Reset the robot arm to home/teleoperation.
-        
-        Called only when in WAITING state (control pair is not running).
-        """
-        if self.control_pair is None:
-            self._ui_console.log("No control pair configured for reset.")
-            return
-        self._ui_console.log("Resetting robot arm position...")
-        try:
-            # Reset the arm to home position
-            self.control_pair.control_reset()
-            time.sleep(3)  # Wait for the arm to reach the home position
-            self._ui_console.log("Robot arm reset to home position.")
-        except Exception as exc:
-            self._ui_console.log(f"Failed to reset arm: {exc}")
-
-
-    def _reset_to_waiting(self) -> None:
-        super()._reset_to_waiting()
-
-    def _close(self) -> None:
-        if self._close:
-            return
-        self._close = True
-
-        super()._close()
+        super().stop_collecting()
 
     def _create_new_recording_dir(self):
-        self.record_dir = self.data_dir / datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
+        self.record_dir = self.data_dir / datetime.now().strftime(
+            "%Y_%m_%d-%H_%M_%S"
+        )
         self.record_dir.mkdir()
-        
+
         self.leader_robot_dir = self.record_dir / self.leader_robot.hw_name
         self.leader_robot_dir.mkdir()
 
@@ -370,11 +369,15 @@ class IRLDataCollection(DataCollectionManager):
         self.leader_robot_data = LeaderData()
         self.follower_robot_data = FollowerData()
         self.camera_timestamps = [[] for _ in self.camera_streams]
-        self.camera_frame_idx = [0] * len(self.camera_streams)  # Reset frame index for all cameras
-        self.camera_last_capture_times = [time.time()] * len(self.camera_streams)  # Initialize capture times
+        self.camera_frame_idx = [0] * len(
+            self.camera_streams
+        )  # Reset frame index for all cameras
+        self.camera_last_capture_times = [time.time()] * len(
+            self.camera_streams
+        )  # Initialize capture times
 
     def _capture_camera_frames(self) -> None:
-        if self.camera_streams==[] :
+        if self.camera_streams == []:
             pyzlc.info("no camera in stream")
             return
         cur_time = time.perf_counter()
@@ -391,10 +394,10 @@ class IRLDataCollection(DataCollectionManager):
             self.camera_timestamps[idx].append(time.perf_counter())
             if frame is None:
                 continue
-            
+
             # Update last capture time for this camera
             self.camera_last_capture_times[idx] = cur_time
-            
+
             frame_idx = self.camera_frame_idx[idx]
             self.camera_frame_idx[idx] += 1
 
@@ -420,8 +423,6 @@ class IRLDataCollection(DataCollectionManager):
                 )
                 continue
 
-
- 
             # self.camera_metadata_list[idx].append(frame.metadata.to_dict())
 
     def _submit_frame_write(
@@ -439,14 +440,20 @@ class IRLDataCollection(DataCollectionManager):
 
         future = self._writer_pool.submit(
             # self.__write_frame, frame_path, metadata_path, image_bgr, metadata, cam_name, step
-            self.__write_frame, frame_path, image_bgr, cam_name, step
+            self.__write_frame,
+            frame_path,
+            image_bgr,
+            cam_name,
+            step,
         )
         self._writer_futures.append(future)
 
     def __prune_completed_writes(self) -> None:
         if not self._writer_futures:
             return
-        self._writer_futures = [f for f in self._writer_futures if not f.done()]
+        self._writer_futures = [
+            f for f in self._writer_futures if not f.done()
+        ]
 
     def __flush_writes(self) -> None:
         if not self._writer_futures:
@@ -473,4 +480,6 @@ class IRLDataCollection(DataCollectionManager):
             cv2.imwrite(str(frame_path), image_bgr)
             # metadata.save_to_file(str(metadata_path))
         except Exception as exc:
-            print(f"Failed to write frame {frame_path} (cam {cam_name}, step {step}): {exc}")
+            print(
+                f"Failed to write frame {frame_path} (cam {cam_name}, step {step}): {exc}"
+            )

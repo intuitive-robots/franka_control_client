@@ -1,23 +1,18 @@
 from __future__ import annotations
 
-from enum import Enum
-from typing import TypedDict, Tuple, List, Optional
+from typing import TypedDict, List, Optional
 import pyzlc
-import numpy as np
-
 from ..core.latest_msg_subscriber import LatestMsgSubscriber
-from ..core.exception import CommandError
-from ..core.message import FrankaResponseCode
 from ..core.remote_device import RemoteDevice
+
 
 class GelloState(TypedDict):
     """
     Gello state structure.
     """
 
-    gello_arm_state: List[float]
-    gello_gripper_state: List[float]
-   
+    gello_arm_state: Optional[List[float]]
+    gello_gripper_state: Optional[List[float]]
 
 
 class RemoteGello(RemoteDevice):
@@ -30,7 +25,9 @@ class RemoteGello(RemoteDevice):
         robot_name (str): Name of the Gello robot.
     """
 
-    def __init__(self, robot_name: str, enable_publishers: bool = False) -> None:
+    def __init__(
+        self, robot_name: str, enable_publishers: bool = False
+    ) -> None:
         """
         Initialize the RemoteGello instance.
 
@@ -47,7 +44,7 @@ class RemoteGello(RemoteDevice):
         )
         self._enable_publishers = enable_publishers
         # command publishers (optional for read-only clients)
-        #for remote gello no need to pulish anything,just keep the socket
+        # for remote gello no need to pulish anything,just keep the socket
         if enable_publishers:
             self.arm_state_pub = pyzlc.Publisher(
                 f"{robot_name}/gello_arm_state"

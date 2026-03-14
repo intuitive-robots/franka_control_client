@@ -7,7 +7,7 @@ from ..core.remote_device import RemoteDevice
 from ..core.latest_msg_subscriber import LatestMsgSubscriber
 
 
-class GripperStateMsg(TypedDict, total=True):
+class PandaGripperState(TypedDict, total=True):
     width: float
     max_width: float
     is_grasped: bool
@@ -33,12 +33,12 @@ class RemotePandaGripper(RemoteDevice):
         )
 
     @property
-    def current_state(self) -> Optional[GripperStateMsg]:
+    def current_state(self) -> Optional[PandaGripperState]:
         """Return the latest gripper state."""
         msg = self.state_subscriber.last_message
         if msg is None:
             return None
-        return GripperStateMsg(
+        return PandaGripperState(
             width=msg["width"],
             max_width=msg["max_width"],
             is_grasped=msg["is_grasped"],

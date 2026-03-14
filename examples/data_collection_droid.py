@@ -15,28 +15,24 @@ from franka_control_client.camera.camera import CameraDevice
 from franka_control_client.data_collection.lerobot_data_collection import (
     LeRobotDataCollection,
 )
-from franka_control_client.data_collection.wrapper import (
+from franka_control_client.data_collection.data_wrapper.wrapper import (
     HardwareDataWrapper,
     ImageDataWrapper,
 )
-from franka_control_client.data_collection.wrapper import (
+from franka_control_client.data_collection.data_wrapper.wrapper import (
     PandaArmDataWrapper,
     RobotiqGripperDataWrapper,
-    GelloDataWrapper
+    GelloDataWrapper,
 )
 from franka_control_client.franka_robot.franka_panda import (
     RemotePandaArm,
 )
 
-from franka_control_client.gello.gello import(
-    RemoteGello
-)
+from franka_control_client.gello.gello import RemoteGello
 from franka_control_client.robotiq_gripper.robotiq_gripper import (
-    RemoteRobotiqGripper
+    RemoteRobotiqGripper,
 )
-from franka_control_client.franka_robot.panda_robotiq import (
-    PandaRobotiq
-)
+from franka_control_client.franka_robot.panda_robotiq import PandaRobotiq
 from franka_control_client.control_pair.gello_panda_control_pair import (
     GelloPandControlPair,
 )
@@ -46,7 +42,7 @@ if __name__ == "__main__":
         "data_collection",
         "192.168.0.117",
         group_name="DroidGroup",
-        group_port=7730
+        group_port=7730,
     )
     leader = RemoteGello("gello")
     follower = PandaRobotiq(
@@ -67,7 +63,9 @@ if __name__ == "__main__":
     data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
     name = time.strftime("%Y%m%d_%H%M%S", time.localtime())
     data_collection_manager = LeRobotDataCollection(
-        data_collectors, f"/home/irl-admin/Franka_Control_Feb/dataset/{name}", task="pepper"
+        data_collectors,
+        f"/home/irl-admin/Franka_Control_Feb/dataset/{name}",
+        task="pepper",
     )
     data_collection_manager.register_start_collecting_event(
         control_pair.start_control_pair

@@ -55,8 +55,8 @@ class CartesianPoseCommand(TypedDict):
     Cartesian pose command structure.
     """
 
-    pos: List[float]  # x, y, z and quaternion x, y, z, w
-    rot: List[float]  # Optional rotation matrix (9 values) if needed
+    pos: List[float]  # x, y, z
+    rot: List[float]  # roll, pitch, yaw (radians)
     pos_vel: List[float]  # Optional Cartesian velocity (vx, vy, vz) if needed
     rot_vel: List[float]  # Optional rotational velocity (wx, wy, wz
 

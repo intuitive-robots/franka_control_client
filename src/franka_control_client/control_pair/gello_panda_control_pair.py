@@ -6,11 +6,13 @@ from ..franka_robot.panda_robotiq import PandaRobotiq
 from ..gello.gello import RemoteGello
 import numpy as np
 from typing import Optional
+
 GRIPPER_SPEED = 0.7
-GRIPPER_FORCE= 0.3
+GRIPPER_FORCE = 0.3
 CONTROL_HZ: float = 500
 GRIPPER_DEADBAND: float = 1e-3
 CONTROL_MODE: ControlMode = ControlMode.HybridJointImpedance
+
 
 class GelloPandControlPair(ControlPair):
     def __init__(self, leader: RemoteGello, follower: PandaRobotiq) -> None:
@@ -18,15 +20,15 @@ class GelloPandControlPair(ControlPair):
         self.leader = leader
         self.follower = follower
         self._last_gripper_cmd: Optional[float] = None
-    
-    def control_reset(self)-> None:
+
+    def control_reset(self) -> None:
         leader_arm_state = self.leader.current_state["gello_arm_state"]
         if leader_arm_state is None:
-            pyzlc.error(
-                "No Gello arm state available for align."
-            )
+            pyzlc.error("No Gello arm state available for align.")
             return
-        arm_state = np.asarray(leader_arm_state["joint_state"], dtype=np.float64).reshape(-1)
+        arm_state = np.asarray(
+            leader_arm_state["joint_state"], dtype=np.float64
+        ).reshape(-1)
         self.follower.panda_arm.move_franka_arm_to_joint_position(arm_state)
         # self.follower.panda_arm.set_franka_arm_control_mode(CONTROL_MODE)
         leader_gripper_state = self.leader.current_state["gello_gripper_state"]
@@ -39,19 +41,20 @@ class GelloPandControlPair(ControlPair):
             return
         gripper_cmd = float(np.clip(gripper_value[0], 0.0, 1.0))
         self.follower.robotiq_gripper.send_grasp_command(
-                position=gripper_cmd,
-                speed=GRIPPER_SPEED,
-                force=GRIPPER_FORCE,
-                blocking=True,
-            )
-
+            position=gripper_cmd,
+            speed=GRIPPER_SPEED,
+            force=GRIPPER_FORCE,
+            blocking=True,
+        )
 
     def control_step(self) -> None:
         leader_arm_state = self.leader.current_state["gello_arm_state"]
         if leader_arm_state is None:
             return
         self.follower.panda_arm.send_joint_position_command(
-            np.asarray(leader_arm_state["joint_state"], dtype=np.float64).reshape(-1)
+            np.asarray(
+                leader_arm_state["joint_state"], dtype=np.float64
+            ).reshape(-1)
         )
         leader_gripper_state = self.leader.current_state["gello_gripper_state"]
         if leader_gripper_state is None:
@@ -64,8 +67,7 @@ class GelloPandControlPair(ControlPair):
         gripper_cmd = float(np.clip(gripper_value[0], 0.0, 1.0))
         if (
             self._last_gripper_cmd is None
-            or abs(gripper_cmd - self._last_gripper_cmd)
-            > GRIPPER_DEADBAND
+            or abs(gripper_cmd - self._last_gripper_cmd) > GRIPPER_DEADBAND
         ):
             self.follower.robotiq_gripper.send_grasp_command(
                 position=gripper_cmd,
@@ -74,7 +76,9 @@ class GelloPandControlPair(ControlPair):
                 blocking=False,
             )
             self._last_gripper_cmd = gripper_cmd
-        pyzlc.sleep(1/CONTROL_HZ) #todo:need to be smarter to control frequency 
+        pyzlc.sleep(
+            1 / CONTROL_HZ
+        )  # todo:need to be smarter to control frequency
 
     def control_end(self) -> None:
         self.follower.panda_arm.set_franka_arm_control_mode(ControlMode.IDLE)
@@ -82,9 +86,9 @@ class GelloPandControlPair(ControlPair):
             position=0.0,
             speed=GRIPPER_SPEED,
             force=GRIPPER_FORCE,
-            blocking=True
-            )
-        
+            blocking=True,
+        )
+
     def _control_task(self) -> None:
         try:
             # pyzlc.info("Resetting...")

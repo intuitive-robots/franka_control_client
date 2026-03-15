@@ -11,8 +11,8 @@ class GelloState(TypedDict):
     Gello state structure.
     """
 
-    gello_arm_state: Optional[List[float]]
-    gello_gripper_state: Optional[List[float]]
+    gello_arm_state: List[float]
+    gello_gripper_state: List[float]
 
 
 class RemoteGello(RemoteDevice):
@@ -71,7 +71,11 @@ class RemoteGello(RemoteDevice):
     @property
     def current_state(self) -> Optional[GelloState]:
         """Return the latest Gello state."""
+        arm_state = self.arm_state_sub.last_message
+        gripper_state = self.gripper_state_sub.last_message
+        if arm_state is None or gripper_state is None:
+            return None
         return {
-            "gello_arm_state": self.arm_state_sub.get_latest(),
-            "gello_gripper_state": self.gripper_state_sub.get_latest(),
+            "gello_arm_state": arm_state,
+            "gello_gripper_state": gripper_state,
         }

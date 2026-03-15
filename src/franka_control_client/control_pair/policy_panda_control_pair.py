@@ -25,7 +25,7 @@ GRIPPER_TOGGLE_WARN_COUNT: int = 6
 DEFAULT_POSITION = (0.0, 0.0, 0.0, -2.15, 0.0, 2.15, 0.0)
 
 # Calculate velocity limits using the standard approach from training
-VELOCITY_LIMITS = np.array([[-4 * np.pi / 2, 4 * np.pi / 2]] * 7).T / 32
+VELOCITY_LIMITS = np.array([[-4 * np.pi / 2, 4 * np.pi / 2]] * 7).T / 32 #32
 VELOCITY_LIMITS_NORM = np.linalg.norm(VELOCITY_LIMITS)
 
 class PolicyPandaControlPair(ControlPair):
@@ -340,7 +340,10 @@ class PolicyPandaControlPair(ControlPair):
                 # end_time = time.perf_counter()
                 # print(f"Control step took {end_time - start:.3f} seconds")
                 if time.perf_counter() - start < (1.0 / self.control_hz):
-                    pyzlc.sleep((1.0 / self.control_hz) - (time.perf_counter() - start))
+                    t = (1.0 / self.control_hz) - (time.perf_counter() - start)
+                    if t > 0.0005:
+                        pyzlc.sleep(t)
+                    
                
             self.control_end()
         except Exception as e:

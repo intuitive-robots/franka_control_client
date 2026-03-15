@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 import cv2
+import lerobot
 import numpy as np
 import pyzlc
 import torch
@@ -13,7 +14,7 @@ from lerobot.configs.train import TrainPipelineConfig
 from lerobot.configs.types import FeatureType, PolicyFeature
 from lerobot.policies.factory import make_policy, make_pre_post_processors
 from lerobot.utils.utils import get_safe_torch_device
-
+print(lerobot.__file__)
 from .policy_inference_manager import PolicyInferenceManager
 from .irl_wrapper import (
     IRL_HardwareDataWrapper,
@@ -29,7 +30,7 @@ try:
     from utils.eval_utils import load_dataset_meta
 except ImportError:
     load_dataset_meta = None
-
+# change denoising step in train_config
 
 @dataclass
 class LeRobotPolicyInferenceConfig:

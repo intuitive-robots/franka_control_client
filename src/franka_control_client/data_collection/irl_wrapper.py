@@ -1,12 +1,8 @@
 import abc
-import time
 from typing import Dict, Optional
-
-import cv2
 import numpy as np
 
 from ..camera.camera import CameraDevice
-from ..core.latest_msg_subscriber import LatestMsgSubscriber
 from ..franka_robot.panda_arm import RemotePandaArm
 from ..franka_robot.panda_gripper import RemotePandaGripper
 from ..robotiq_gripper.robotiq_gripper import RemoteRobotiqGripper
@@ -14,7 +10,7 @@ from ..gello.gello import RemoteGello
 from ..vr.meta_quest3 import MQ3Controller
 
 
-class IRL_HardwareDataWrapper(abc.ABC):
+class IRLDataWrapper(abc.ABC):
 
     def __init__(self, hw_type: str, hw_name: str) -> None:
         self.hw_type = hw_type
@@ -39,13 +35,13 @@ class IRL_HardwareDataWrapper(abc.ABC):
         raise NotImplementedError("Subclasses must implement close method.")
 
 
-class ImageDataWrapper(IRL_HardwareDataWrapper):
+class ImageDataWrapper(IRLDataWrapper):
     def __init__(
         self,
         camera_device: CameraDevice,
         hw_name: str,
         hw_type: str = "camera",
-        capture_interval: int = 0.033,
+        capture_interval: float = 0.033,
     ) -> None:
         self.camera_device = camera_device
         self.capture_interval = capture_interval
@@ -83,7 +79,7 @@ class ImageDataWrapper(IRL_HardwareDataWrapper):
         pass
 
 
-class PandaArmDataWrapper(IRL_HardwareDataWrapper):
+class PandaArmDataWrapper(IRLDataWrapper):
     def __init__(
         self,
         arm: RemotePandaArm,
@@ -120,7 +116,7 @@ class PandaArmDataWrapper(IRL_HardwareDataWrapper):
         pass
 
 
-class PandaGripperDataWrapper(IRL_HardwareDataWrapper):
+class PandaGripperDataWrapper(IRLDataWrapper):
     def __init__(
         self,
         gripper: RemotePandaGripper,
@@ -152,7 +148,7 @@ class PandaGripperDataWrapper(IRL_HardwareDataWrapper):
         pass
 
 
-class RobotiqGripperDataWrapper(IRL_HardwareDataWrapper):
+class RobotiqGripperDataWrapper(IRLDataWrapper):
     def __init__(
         self,
         gripper: RemoteRobotiqGripper,
@@ -193,7 +189,7 @@ class RobotiqGripperDataWrapper(IRL_HardwareDataWrapper):
         return getattr(self.gripper, name)
 
 
-class GelloDataWrapper(IRL_HardwareDataWrapper):
+class GelloDataWrapper(IRLDataWrapper):
     def __init__(
         self,
         robot: RemoteGello,
@@ -238,7 +234,7 @@ class GelloDataWrapper(IRL_HardwareDataWrapper):
         pass
 
 
-class MQ3DataWrapper(IRL_HardwareDataWrapper):
+class MQ3DataWrapper(IRLDataWrapper):
     def __init__(
         self,
         robot: MQ3Controller,

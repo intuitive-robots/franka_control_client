@@ -52,8 +52,12 @@ class CartesianPolicyPandaControlPair(ControlPair):
         self._action_lock = (
             threading.Lock()
         )  # only one of the update_action and control_step visit latest_action at the same time
-        self._command_lock = threading.Lock()  # ensure thread-safe command sending
-        self._lastest_command = None  # store the latest command for debugging or visualization
+        self._command_lock = (
+            threading.Lock()
+        )  # ensure thread-safe command sending
+        self._lastest_command = (
+            None  # store the latest command for debugging or visualization
+        )
         self._latest_action: Optional[np.ndarray] = None
         self._latest_action_chunk: deque[np.ndarray] = deque()
         self._last_gripper_cmd: Optional[float] = None
@@ -72,30 +76,32 @@ class CartesianPolicyPandaControlPair(ControlPair):
     def get_lastest_command(self) -> Optional[np.ndarray]:
         with self._command_lock:
             if self._lastest_command is not None:
-                return np.append(self._lastest_command.copy(), self._last_gripper_cmd)
+                return np.append(
+                    self._lastest_command.copy(), self._last_gripper_cmd
+                )
             return None
 
     def clear_lastest_command(self) -> None:
         with self._command_lock:
             self._lastest_command = None
 
-    def _get_current_cartesian_pose(self) -> Optional[np.ndarray]:
-        current_state = self.panda_arm.current_state
-        if current_state is None or "EE_pos" not in current_state:
-            return None
-        cartesian_pos = np.asarray(
-            current_state["EE_pos"], dtype=np.float32
-        ).reshape(-1)
-        cartesian_rot = np.asarray(
-            current_state["EE_quat"], dtype=np.float32
-        ).reshape(-1)
-        cartesian_pose = np.concatenate([cartesian_pos, cartesian_rot])
-        if cartesian_pose.size != 7:
-            pyzlc.error(
-                f"Unexpected current arm state size during control init: {cartesian_pose.size}"
-            )
-            return None
-        return cartesian_pose
+    # def _get_current_cartesian_pose(self) -> Optional[np.ndarray]:
+    #     current_state = self.panda_arm.current_state
+    #     if current_state is None or "EE_pos" not in current_state:
+    #         return None
+    #     cartesian_pos = np.asarray(
+    #         current_state["EE_pos"], dtype=np.float32
+    #     ).reshape(-1)
+    #     cartesian_rot = np.asarray(
+    #         current_state["EE_quat"], dtype=np.float32
+    #     ).reshape(-1)
+    #     cartesian_pose = np.concatenate([cartesian_pos, cartesian_rot])
+    #     if cartesian_pose.size != 7:
+    #         pyzlc.error(
+    #             f"Unexpected current arm state size during control init: {cartesian_pose.size}"
+    #         )
+    #         return None
+    #     return cartesian_pose
 
     # using by policy side to update the latest action, and control loop will read the latest action and execute it
     def update_action(self, action: np.ndarray) -> None:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TypedDict, Sequence, List, Optional
+from typing import TypedDict, Iterable, List, Optional
 import pyzlc
 import numpy as np
 
@@ -14,13 +14,7 @@ from ..core.remote_device import RemoteDevice
 class ControlMode(str, Enum):
     IDLE = "Idle"
     HybridJointImpedance = "HybridJointImpedance"
-    OSC = "OSC"
     CartesianImpedance = "CartesianImpedance"
-    # JOINT_POSITION = "JointPosition"
-    # JOINT_VELOCITY = "JointVelocity"
-    # CARTESIAN_VELOCITY = "CartesianVelocity"
-    # JOINT_TORQUE = "JointTorque"
-    # GRAVITY_COMP = "GravityComp"
 
 
 class PandaArmState(TypedDict):
@@ -89,7 +83,7 @@ class RemotePandaArm(RemoteDevice):
             robot_name (str): The name of the Franka robot.
         """
         super().__init__(robot_name)
-        self.default_pose: Sequence[float] = (-1,)
+        self.default_pose: Iterable[float] = (-1,)
         self.arm_state_sub = LatestMsgSubscriber(
             f"{robot_name}/franka_arm_state"
         )
@@ -156,7 +150,7 @@ class RemotePandaArm(RemoteDevice):
         pyzlc.info(f"Set Franka arm control mode to {mode.value}")
 
     def move_franka_arm_to_joint_position(
-        self, joint_positions: Sequence[float]
+        self, joint_positions: Iterable[float]
     ) -> None:
         """
         Move the Franka arm to the specified joint position.
@@ -166,23 +160,23 @@ class RemotePandaArm(RemoteDevice):
         Raises:
             CommandError: If packing or response fails.
         """
-        if len(joint_positions) != 7:
+        joint_pos_array = np.asarray(joint_positions).flatten()
+        if len(joint_pos_array) != 7:
             raise CommandError(
-                f"Expected 7 joint values, got {len(joint_positions)}"
+                f"Expected 7 joint values, got {len(joint_pos_array)}"
             )
         header, _ = pyzlc.call(
             f"{self._name}/move_franka_arm_to_joint_position",
-            list(joint_positions),
+            joint_pos_array.tolist(),
             10.0,
         )
-
         if header is None or header != FrankaResponseCode.SUCCESS.value:
             raise CommandError(
                 f"MOVE_FRANKA_ARM_TO_JOINT_POSITION failed (status={header})"
             )
 
     def move_franka_arm_to_cartesian_position(
-        self, pose_matrix: Sequence[float]
+        self, pose_matrix: Iterable[float]
     ) -> None:
         """
         Move the Franka arm to the specified Cartesian pose.
@@ -192,14 +186,15 @@ class RemotePandaArm(RemoteDevice):
         Raises:
             CommandError: If packing or command execution fails.
         """
-        if len(pose_matrix) != 16:
+        pose_matrix_array = np.asarray(pose_matrix).flatten()
+        if len(pose_matrix_array) != 16:
             raise CommandError(
-                f"Expected 16 pose values, got {len(pose_matrix)}"
+                f"Expected 16 pose values, got {len(pose_matrix_array)}"
             )
         raise NotImplementedError
 
     def send_joint_position_command(
-        self, joint_positions: Sequence[float]
+        self, joint_positions: Iterable[float]
     ) -> None:
         """
         Send a joint position command to the Franka arm.
@@ -218,7 +213,7 @@ class RemotePandaArm(RemoteDevice):
         )
 
     def send_cartesian_pose_command(
-        self, pos: Sequence[float], rot: Sequence[float]
+        self, pos: Iterable[float], rot: Iterable[float]
     ) -> None:
         """
         Send a Cartesian pose command to the Franka arm.
@@ -249,7 +244,7 @@ class RemotePandaArm(RemoteDevice):
         )
 
     def send_joint_velocity_command(
-        self, joint_velocities: Sequence[float]
+        self, joint_velocities: Iterable[float]
     ) -> None:
         """
         Send a joint velocity command to the Franka arm.
@@ -265,12 +260,12 @@ class RemotePandaArm(RemoteDevice):
         raise NotImplementedError
 
     def send_cartesian_velocity_command(
-        self, cartesian_velocities: Sequence[float]
+        self, cartesian_velocities: Iterable[float]
     ) -> None:
         raise NotImplementedError
 
     def send_joint_torque_command(
-        self, joint_torques: Sequence[float]
+        self, joint_torques: Iterable[float]
     ) -> None:
         """
         Send a joint torque command to the Franka arm.

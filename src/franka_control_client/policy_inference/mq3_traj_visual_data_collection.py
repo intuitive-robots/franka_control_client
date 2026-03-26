@@ -14,7 +14,7 @@ from ..control_pair.pil_panda_control_pair import PILMode, PILPandaControlPair
 from ..data_collection.utils import NonBlockingKeyPress
 from .policy_inference_manager import PolicyInferenceState
 
-from ..policy_inference.irl_wrapper import IRL_HardwareDataWrapper
+from ..data_collection.irl_wrapper import IRLDataWrapper
 
 from ..data_collection.pil_irl_vr_data_collection import PILIRLDataCollection
 
@@ -28,7 +28,7 @@ from ..data_collection.data_collection_manager import DataCollectionState
 class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
     def __init__(
         self,
-        data_collectors: List[IRL_HardwareDataWrapper],
+        data_collectors: List[IRLDataWrapper],
         control_pair: PILPandaControlPair,
         task: str,
         cfg: LeRobotPolicyInferenceConfig,
@@ -54,7 +54,6 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         # self.data_collection_thread = threading.Thread(target=self.run_data_collection, daemon=True)
         # self.data_collection_thread.start()
         self.control_pair.register_history(self._data_colection)
-
 
     def _collect_step(self) -> None:
         if self.control_pair.current_state == PILMode.INTERRUPT:
@@ -88,7 +87,11 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
                     self.history_way_points.append(
                         {
                             "pos": pos.tolist(),
-                            "color": [0.0, 0.0, 1.0, 1.0] if float(source) > 0.5 else [0.0, 1.0, 0.0, 1.0]
+                            "color": (
+                                [0.0, 0.0, 1.0, 1.0]
+                                if float(source) > 0.5
+                                else [0.0, 1.0, 0.0, 1.0]
+                            ),
                         }
                     )
             if len(self.history_way_points) != 0:

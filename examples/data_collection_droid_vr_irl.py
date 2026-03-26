@@ -15,7 +15,7 @@ from franka_control_client.data_collection.irl_vr_data_collection import (
     IRLDataCollection,
 )
 from franka_control_client.data_collection.irl_wrapper import (
-    IRL_HardwareDataWrapper,
+    IRLDataWrapper,
     ImageDataWrapper,
 )
 from franka_control_client.data_collection.irl_wrapper import (
@@ -51,11 +51,23 @@ if __name__ == "__main__":
     leader = MQ3Controller("IRL-MQ3-2", "192.168.0.117", follower.panda_arm)
     leader.mq3.wait_for_connection()
     control_pair = MQ3PandaControlPair(leader, follower)
-    #for now capture_interval is not using only using the global frequency fps
-    camera_left = ImageDataWrapper(CameraDevice("zed_left", preview=False),capture_interval=0.033,hw_name="zed_left")
-    camera_right = ImageDataWrapper(CameraDevice("zed_right", preview=False),capture_interval=0.033,hw_name="zed_right")
-    camera_wrist = ImageDataWrapper(CameraDevice("zed_wrist", preview=False),capture_interval=0.033,hw_name="zed_wrist")
-    data_collectors: List[IRL_HardwareDataWrapper] = []
+    # for now capture_interval is not using only using the global frequency fps
+    camera_left = ImageDataWrapper(
+        CameraDevice("zed_left", preview=False),
+        capture_interval=0.033,
+        hw_name="zed_left",
+    )
+    camera_right = ImageDataWrapper(
+        CameraDevice("zed_right", preview=False),
+        capture_interval=0.033,
+        hw_name="zed_right",
+    )
+    camera_wrist = ImageDataWrapper(
+        CameraDevice("zed_wrist", preview=False),
+        capture_interval=0.033,
+        hw_name="zed_wrist",
+    )
+    data_collectors: List[IRLDataWrapper] = []
     data_collectors.append(camera_left)
     data_collectors.append(camera_right)
     data_collectors.append(camera_wrist)
@@ -65,11 +77,11 @@ if __name__ == "__main__":
     # name = time.strftim  e("%Y%m%d_%H%M%S", time.localtime())
     task = "pick_up_banana"
     data_collection_manager = IRLDataCollection(
-        data_collectors, 
-        f"/home/irl-admin/xinkai/data_collection/{task}", 
-        task, 
+        data_collectors,
+        f"/home/irl-admin/xinkai/data_collection/{task}",
+        task,
         fps=40,
-        control_pair=control_pair
+        control_pair=control_pair,
     )
     control_pair.control_reset()
     data_collection_manager.run()

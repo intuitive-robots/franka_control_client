@@ -11,11 +11,11 @@ from franka_control_client.control_pair.pil_panda_control_pair import (
 )
 from franka_control_client.franka_robot.panda_arm import RemotePandaArm
 from franka_control_client.franka_robot.panda_robotiq import PandaRobotiq
-from franka_control_client.policy_inference.irl_wrapper import (
-    IRL_HardwareDataWrapper,
+from franka_control_client.data_collection.irl_wrapper import (
+    IRLDataWrapper,
     ImageDataWrapper,
     PandaArmDataWrapper,
-    RobotiqGripperDataWrapper
+    RobotiqGripperDataWrapper,
 )
 from franka_control_client.data_collection.irl_wrapper import MQ3DataWrapper
 
@@ -29,7 +29,9 @@ from franka_control_client.robotiq_gripper.robotiq_gripper import (
     RemoteRobotiqGripper,
 )
 from franka_control_client.vr.meta_quest3 import MQ3Controller
-from franka_control_client.control_pair.mq3_panda_control_pair import MQ3PandaControlPair
+from franka_control_client.control_pair.mq3_panda_control_pair import (
+    MQ3PandaControlPair,
+)
 
 
 if __name__ == "__main__":
@@ -78,7 +80,7 @@ if __name__ == "__main__":
         hw_name="zed_wrist",
     )
 
-    data_collectors: List[IRL_HardwareDataWrapper] = []
+    data_collectors: List[IRLDataWrapper] = []
     data_collectors.append(MQ3DataWrapper(leader))
     data_collectors.append(camera_left)
     data_collectors.append(camera_right)

@@ -14,8 +14,9 @@ import torch
 
 from ..control_pair.control_pair import ControlPair
 from .data_collection_manager import DataCollectionManager, DataCollectionState
-from .irl_wrapper import IRL_HardwareDataWrapper, ImageDataWrapper
+from .irl_wrapper import IRLDataWrapper, ImageDataWrapper
 from .utils import NonBlockingKeyPress
+
 
 class FollowerData:
     def __init__(self):
@@ -196,7 +197,7 @@ class LeaderData:
 class PILIRLDataCollection(DataCollectionManager):
     def __init__(
         self,
-        data_collectors: List[IRL_HardwareDataWrapper],
+        data_collectors: List[IRLDataWrapper],
         data_dir: Path,
         task: str,
         control_pair: Optional[ControlPair] = None,
@@ -311,7 +312,7 @@ class PILIRLDataCollection(DataCollectionManager):
             leader_state["EE_pos"] = policy_control_signal[:3]
             leader_state["EE_quat"] = policy_control_signal[3:7]
             # leader_state["gello_arm_state"]["joint_state"] = policy_control_signal.get("joint_state", leader_state["gello_arm_state"]["joint_state"])
-            leader_state["gripper_width"] = policy_control_signal[-1] # * 0.08
+            leader_state["gripper_width"] = policy_control_signal[-1]  # * 0.08
             self.leader_robot_data.source.append(
                 0.0
             )  # Mark this data point as coming from policy control

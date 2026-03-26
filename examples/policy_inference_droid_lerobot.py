@@ -8,8 +8,8 @@ from franka_control_client.control_pair.policy_panda_control_pair import (
 )
 from franka_control_client.franka_robot.panda_arm import RemotePandaArm
 from franka_control_client.franka_robot.panda_robotiq import PandaRobotiq
-from franka_control_client.policy_inference.irl_wrapper import (
-    IRL_HardwareDataWrapper,
+from franka_control_client.data_collection.irl_wrapper import (
+    IRLDataWrapper,
     ImageDataWrapper,
     PandaArmDataWrapper,
     RobotiqGripperDataWrapper,
@@ -32,8 +32,10 @@ if __name__ == "__main__":
     )
 
     # Checkpoint path from eval_config.yaml
-    checkpoint_path = "/home/irl-admin/chekpoints/4th_March_folding/pretrained_model"
-    task = "fold the scarf on the table." #"Pick up the bell pepper and place it in the bowl."
+    checkpoint_path = (
+        "/home/irl-admin/chekpoints/4th_March_folding/pretrained_model"
+    )
+    task = "fold the scarf on the table."  # "Pick up the bell pepper and place it in the bowl."
     dataset_path = "/home/irl-admin/chekpoints/4th_March_folding"
 
     follower = PandaRobotiq(
@@ -41,20 +43,28 @@ if __name__ == "__main__":
         RemotePandaArm("FrankaPanda"),
         RemoteRobotiqGripper("FrankaPanda"),
     )
-    control_pair = PolicyPandaControlPair(follower.panda_arm, follower.robotiq_gripper)
+    control_pair = PolicyPandaControlPair(
+        follower.panda_arm, follower.robotiq_gripper
+    )
 
     # Camera capture interval matches inference frequency (30 Hz = 0.033s)
     camera_left = ImageDataWrapper(
-        CameraDevice("zed_left", preview=False), capture_interval=0.033, hw_name="zed_left"
+        CameraDevice("zed_left", preview=False),
+        capture_interval=0.033,
+        hw_name="zed_left",
     )
     camera_right = ImageDataWrapper(
-        CameraDevice("zed_right", preview=False), capture_interval=0.033, hw_name="zed_right"
+        CameraDevice("zed_right", preview=False),
+        capture_interval=0.033,
+        hw_name="zed_right",
     )
     camera_wrist = ImageDataWrapper(
-        CameraDevice("zed_wrist", preview=False), capture_interval=0.033, hw_name="zed_wrist"
+        CameraDevice("zed_wrist", preview=False),
+        capture_interval=0.033,
+        hw_name="zed_wrist",
     )
 
-    data_collectors: List[IRL_HardwareDataWrapper] = []
+    data_collectors: List[IRLDataWrapper] = []
     data_collectors.append(camera_left)
     data_collectors.append(camera_right)
     data_collectors.append(camera_wrist)
@@ -74,7 +84,7 @@ if __name__ == "__main__":
         control_pair=control_pair,
         cfg=inference_cfg,
     )
-    
+
     try:
         inference_manager.run()
     finally:

@@ -15,7 +15,7 @@ from franka_control_client.data_collection.irl_data_collection import (
     IRLDataCollection,
 )
 from franka_control_client.data_collection.irl_wrapper import (
-    IRL_HardwareDataWrapper,
+    IRLDataWrapper,
     ImageDataWrapper,
 )
 from franka_control_client.data_collection.irl_wrapper import (
@@ -33,7 +33,7 @@ from franka_control_client.robotiq_gripper.robotiq_gripper import (
 )
 from franka_control_client.franka_robot.panda_robotiq import PandaRobotiq
 from franka_control_client.control_pair.gello_panda_control_pair import (
-    GelloPandControlPair,
+    GelloPandaControlPair,
 )
 
 if __name__ == "__main__":
@@ -49,12 +49,24 @@ if __name__ == "__main__":
         RemotePandaArm("FrankaPanda"),
         RemoteRobotiqGripper("FrankaPanda"),
     )
-    control_pair = GelloPandControlPair(leader, follower)
-    #for now capture_interval is not using only using the global frequency fps
-    camera_left = ImageDataWrapper(CameraDevice("zed_left", preview=False),capture_interval=0.033,hw_name="zed_left")
-    camera_right = ImageDataWrapper(CameraDevice("zed_right", preview=False),capture_interval=0.033,hw_name="zed_right")
-    camera_wrist = ImageDataWrapper(CameraDevice("zed_wrist", preview=False),capture_interval=0.033,hw_name="zed_wrist")
-    data_collectors: List[IRL_HardwareDataWrapper] = []
+    control_pair = GelloPandaControlPair(leader, follower)
+    # for now capture_interval is not using only using the global frequency fps
+    camera_left = ImageDataWrapper(
+        CameraDevice("zed_left", preview=False),
+        capture_interval=0.033,
+        hw_name="zed_left",
+    )
+    camera_right = ImageDataWrapper(
+        CameraDevice("zed_right", preview=False),
+        capture_interval=0.033,
+        hw_name="zed_right",
+    )
+    camera_wrist = ImageDataWrapper(
+        CameraDevice("zed_wrist", preview=False),
+        capture_interval=0.033,
+        hw_name="zed_wrist",
+    )
+    data_collectors: List[IRLDataWrapper] = []
     data_collectors.append(camera_left)
     data_collectors.append(camera_right)
     data_collectors.append(camera_wrist)
@@ -64,11 +76,11 @@ if __name__ == "__main__":
     # name = time.strftim  e("%Y%m%d_%H%M%S", time.localtime())
     task = "new_scarf_40hz"
     data_collection_manager = IRLDataCollection(
-        data_collectors, 
-        f"/home/irl-admin/new_data_collection/{task}", 
-        task, 
+        data_collectors,
+        f"/home/irl-admin/new_data_collection/{task}",
+        task,
         fps=40,
-        control_pair=control_pair
+        control_pair=control_pair,
     )
     control_pair.control_reset()
     data_collection_manager.run()

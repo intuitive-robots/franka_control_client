@@ -51,6 +51,7 @@ if __name__ == "__main__":
     )
     control_pair = GelloPandControlPair(leader, follower)
     #camera frequency controlled individually
+    #cams 25hz
     camera_left = ImageDataWrapper(CameraDevice("zed_left", preview=False),capture_interval=0.04,hw_name="zed_left")
     camera_right = ImageDataWrapper(CameraDevice("zed_right", preview=False),capture_interval=0.04,hw_name="zed_right")
     camera_wrist = ImageDataWrapper(CameraDevice("zed_wrist", preview=False),capture_interval=0.04,hw_name="zed_wrist")
@@ -62,12 +63,12 @@ if __name__ == "__main__":
     data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
     data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
     # name = time.strftim  e("%Y%m%d_%H%M%S", time.localtime())
-    task = "test_proprio_40hz_cam_40hz"
+    task = "new_scarf_100hz_cam_25hz"
     data_collection_manager = IRLDataCollection(
         data_collectors, 
         f"/home/irl-admin/new_data_collection/{task}", 
         task, 
-        fps=40,
+        fps=100,
         control_pair=control_pair
     )
     control_pair.control_reset()

@@ -260,7 +260,7 @@ class IRLDataCollection(DataCollectionManager):
         if self._last_robot_time is None:
             self._last_robot_time = start_time
         elapsed = time.perf_counter() - start_time
-        sleep_time = max(0.0, (1.0 / self.fps) - elapsed)-0.0005 #adjust a little
+        sleep_time = max(0.0, (1.0 / self.fps) - elapsed)-0.0003 #adjust a little
         if sleep_time > 0.0:
             time.sleep(sleep_time)
         self._last_robot_time = time.perf_counter()
@@ -384,7 +384,7 @@ class IRLDataCollection(DataCollectionManager):
             # print("debug:capture begin time", begin_time,stream.hw_name)
 
             #### To open the different frequency of cams
-            if stream.capture_interval > 0 and (cur_time - self.camera_last_capture_times[idx]) < (stream.capture_interval-0.0043):
+            if stream.capture_interval > 0 and (cur_time - self.camera_last_capture_times[idx]) < (stream.capture_interval-0.004):
                 continue
             # print("debug:get camera")
             camera_dir = self.camera_dirs[idx]

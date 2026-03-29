@@ -332,6 +332,9 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         return observation
 
     def _build_state_vector(self) -> np.ndarray:
+        assert (
+            self.arm_wrapper is not None and self.gripper_wrapper is not None
+        ), "Arm and gripper wrappers must be set to build state vector."  # for mypy
         arm_state = self.arm_wrapper.capture_step()
         q = None
         if isinstance(arm_state, dict):

@@ -16,7 +16,7 @@ from ..franka_robot.panda_gripper import RemotePandaGripper
 from ..robotiq_gripper.robotiq_gripper import RemoteRobotiqGripper
 
 
-DEFAULT_CONTROL_HZ: float = 500
+DEFAULT_CONTROL_HZ: float = 200
 GRIPPER_DEADBAND: float = 1e-3
 GRIPPER_SPEED = 0.7
 GRIPPER_FORCE = 0.3
@@ -26,7 +26,7 @@ GRIPPER_TOGGLE_WARN_COUNT: int = 6
 DEFAULT_POSITION = (0.0, 0.0, 0.0, -2.15, 0.0, 2.15, 0.0)
 
 # Calculate velocity limits using the standard approach from training
-VELOCITY_LIMITS = np.array([[-4 * np.pi / 2, 4 * np.pi / 2]] * 7).T / 32
+VELOCITY_LIMITS = np.array([[-4 * np.pi / 2, 4 * np.pi / 2]] * 7).T / 16
 VELOCITY_LIMITS_NORM = np.linalg.norm(VELOCITY_LIMITS)
 
 
@@ -262,10 +262,17 @@ class CartesianPolicyPandaControlPair(ControlPair):
         # The next waypoint will be generated in the next control step based on the latest cartesian position,
         # which ensures smoother motion and better adherence to velocity limits.
         # for i in range(len(waypoints)):
-        #     cartesian_cmd = (waypoints[i].numpy())
-        #     self.panda_arm.send_cartesian_position_command(cartesian_cmd)
+        #     # cartesian_cmd = (waypoints[i].numpy())
+        #     cartesian_cmd = (
+        #         waypoints[i].numpy()
+        #         if len(waypoints) > 0
+        #         else cartesian_waypoints.copy()
+        #     )
+        #     self.panda_arm.send_cartesian_pose_command(cartesian_cmd[:3], cartesian_cmd[3:7])
         #     self._last_cartesian_pos = np.asarray(cartesian_cmd, dtype=np.float32)
+        #     pyzlc.sleep(0.05)
         # print(f"Generated {len(waypoints)} waypoints with max velocity {max_vel:.3f} rad/s")
+        ###
         cartesian_cmd = (
             waypoints[0].numpy()
             if len(waypoints) > 0
@@ -274,6 +281,7 @@ class CartesianPolicyPandaControlPair(ControlPair):
         self.panda_arm.send_cartesian_pose_command(
             cartesian_cmd[:3], cartesian_cmd[3:7]
         )
+        ###
         # print(f"Sent cartesian command: {cartesian_cmd}")
         self._last_cartesian_pos = np.asarray(cartesian_cmd, dtype=np.float32)
         with self._command_lock:
@@ -322,7 +330,7 @@ class CartesianPolicyPandaControlPair(ControlPair):
 
         # Gripper command
         gripper_cmd = float(action[-1])
-        gripper_cmd = 1 if gripper_cmd >= 0.5 else 0
+        gripper_cmd = 1 if gripper_cmd >= 0.3 else 0
         action[-1] = gripper_cmd
 
         if isinstance(self.gripper, RemoteRobotiqGripper):

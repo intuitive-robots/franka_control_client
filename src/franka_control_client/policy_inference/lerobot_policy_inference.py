@@ -439,8 +439,8 @@ class LeRobotPolicyInference(PolicyInferenceManager):
             post_action_chunk[:, chunk_idx, :] = processed_action
 
         post_action_chunk = post_action_chunk.float().cpu().numpy()
-        for idx in range(len(post_action_chunk)):
-            pyzlc.info(f"Postprocessed action chunk for batch {idx}: {post_action_chunk[idx]}")
+        # for idx in range(len(post_action_chunk)):
+        #     pyzlc.info(f"Postprocessed action chunk for batch {idx}: {post_action_chunk[idx]}")
         try:
             #single_action
             # self.control_pair.update_action(action_vec)

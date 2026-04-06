@@ -4,7 +4,7 @@ import pyzlc
 
 from franka_control_client.camera.camera import CameraDevice
 from franka_control_client.control_pair.cartesian_policy_panda_control_pair import (
-    CartesianPolicyPandaControlPair,
+    PolicyPandaRobotiqDeltaCartesianControlPair,
 )
 from franka_control_client.control_pair.pil_panda_control_pair import (
     PILPandaControlPair,
@@ -52,7 +52,7 @@ if __name__ == "__main__":
         RemotePandaArm("FrankaPanda"),
         RemoteRobotiqGripper("FrankaPanda"),
     )
-    control_pair = CartesianPolicyPandaControlPair(
+    control_pair = PolicyPandaRobotiqDeltaCartesianControlPair(
         follower.panda_arm, follower.robotiq_gripper, 50
     )
 

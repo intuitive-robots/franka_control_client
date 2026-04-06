@@ -12,30 +12,22 @@ class ActionChunkingBuffer:
         self._buffer = np.zeros((chunk_size, action_dim), dtype=np.float32)
 
     def add_new_action_chunk(self, new_action_chunk: np.ndarray):
-        if new_action_chunk.shape != self._buffer.shape:
+        if new_action_chunk.shape != (self._chunk_size, self._buffer.shape[1]):
             raise ValueError(
-                f"New action chunk shape {new_action_chunk.shape} does not match buffer shape {self._buffer.shape}."
+                f"New action chunk shape {new_action_chunk.shape} does not match buffer shape {self._buffer[0].shape if self._buffer else 'None'}."
             )
         with self._lock:
             if self._last_action_time is None:
                 self._buffer = new_action_chunk.copy()
             else:
-                current_index = self._get_current_action_chunk_int()
-                self._fuse_action_chunks(new_action_chunk, current_index)
+                self._fuse_action_chunks(new_action_chunk)
             self._last_action_time = time.perf_counter()
 
-    def _fuse_action_chunks(
-        self, action_chunks: np.ndarray, current_index: int
-    ) -> None:
-        if current_index >= self._chunk_size:
-            self._buffer = action_chunks.copy()
-        elif current_index <= 0:
-            self._buffer = (action_chunks.copy() + self._buffer) * 0.5
-        else:
-            self._buffer[:current_index] = (
-                action_chunks[:current_index] + self._buffer[-current_index:]
-            ) * 0.5
-            self._buffer[current_index:] = action_chunks[current_index:].copy()
+    def _fuse_action_chunks(self, action_chunks: np.ndarray) -> None:
+        new_buffer = np.array(action_chunks, copy=True)
+        for idx in range(len(self._buffer)):
+            new_buffer[idx] = (action_chunks[idx] + self._buffer[idx]) * 0.5
+        self._buffer = new_buffer
 
     def _get_current_action_chunk_int(self) -> int:
         return (
@@ -49,5 +41,19 @@ class ActionChunkingBuffer:
 
     def get_action(self) -> np.ndarray:
         with self._lock:
+            return np.array(self._buffer, copy=True)
+
+    def apply_action(self) -> np.ndarray:
+        with self._lock:
             current_index = self._get_current_action_chunk_int()
-            return self._buffer[min(current_index, self._chunk_size - 1)]
+            action = np.array(
+                self._buffer[min(current_index, self._chunk_size - 1)],
+                copy=True,
+            )
+            self._buffer = np.array(self._buffer[current_index:], copy=True)
+            return action
+
+    def clear(self) -> None:
+        with self._lock:
+            self._buffer = np.zeros_like(self._buffer)
+            self._last_action_time = None

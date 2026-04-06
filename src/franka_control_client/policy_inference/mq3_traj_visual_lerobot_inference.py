@@ -8,100 +8,110 @@ import threading
 from digital_twin.models import RobotModelId
 from digital_twin.simulation.mirror import RobotMirror
 from simpub.core import XRTrajectory
+from simpub.core.xrcavns import TrajectoryWaypointDict
+from enum import Enum
 
-from franka_control_client.control_pair.cartesian_policy_panda_control_pair import (
-    CartesianPolicyPandaControlPair,
+from ..franka_robot.panda_robotiq import PandaRobotiq
+from ..control_pair.cartesian_policy_panda_control_pair import (
+    PolicyPandaRobotiqDeltaCartesianControlPair,
 )
-
-from ..control_pair.pil_panda_control_pair import PILPandaControlPair
-
 from ..data_collection.irl_wrapper import IRLDataWrapper
-
 from .lerobot_policy_inference import (
     LeRobotPolicyInference,
     LeRobotPolicyInferenceConfig,
 )
 
 
-class MQ3TrajVisualLeRobotInference(LeRobotPolicyInference):
+class WayPointColor(Enum):
+    RED = [1.0, 0.0, 0.0, 1.0]
+    GREEN = [0.0, 1.0, 0.0, 1.0]
+    BLUE = [0.0, 0.0, 1.0, 1.0]
+    YELLOW = [1.0, 1.0, 0.0, 1.0]
+    CYAN = [0.0, 1.0, 1.0, 1.0]
+    MAGENTA = [1.0, 0.0, 1.0, 1.0]
+
+
+class PILDigitalTwin:
+
     def __init__(
-        self,
-        data_collectors: List[IRLDataWrapper],
-        control_pair: PILPandaControlPair,
-        cfg: LeRobotPolicyInferenceConfig,
-    ) -> None:
-        super().__init__(data_collectors, control_pair, cfg)
+        self, control_pair: PolicyPandaRobotiqDeltaCartesianControlPair
+    ):
         self.mirror = RobotMirror.from_model_id(
             RobotModelId.FRANKA_PANDA_ROBOTIQ
         )
-        self.last_chunk_traj: Optional[XRTrajectory] = None
-        self.history_way_points = []
+        self.control_pair = control_pair
+        self.panda_arm = control_pair.panda_arm
+        self.lastest_action: Optional[XRTrajectory] = None
         self.history_traj: Optional[XRTrajectory] = None
-        self.reset_history_event = threading.Event()
         self.running = True
         self.visualize_thread = threading.Thread(
             target=self._visualize_loop, daemon=True
         )
         self.visualize_thread.start()
 
+    def apply_arm_state(self, joint_positions: np.ndarray):
+        self.mirror.apply_arm_state(joint_positions)
+
+    def update_action(self, action: np.ndarray):
+        way_points: List[TrajectoryWaypointDict] = [
+            {
+                "pos": action[:3].tolist(),
+                "color": WayPointColor.RED.value,
+            }
+        ]
+        if self.lastest_action is None:
+            self.lastest_action = self.mirror._cavns.create_trajectory(
+                name="latest_action_traj", waypoints=way_points
+            )
+        else:
+            self.lastest_action.update(waypoints=way_points)
+
+        if self.history_traj is None:
+            self.history_traj = self.mirror._cavns.create_trajectory(
+                name="history_traj", waypoints=way_points
+            )
+        else:
+            self.history_traj.update(waypoints=way_points)
+
+    def add_traj_point(self, pos: np.ndarray, color: WayPointColor):
+        way_point: TrajectoryWaypointDict = {
+            "pos": pos[:3].tolist(),
+            "color": color.value,
+        }
+        if self.history_traj is None:
+            self.history_traj = self.mirror._cavns.create_trajectory(
+                name="history_traj", waypoints=[way_point]
+            )
+        else:
+            current_waypoints = self.history_traj.get_waypoints()
+            current_waypoints.append(way_point)
+            self.history_traj.update(waypoints=current_waypoints)
+
     def _visualize_loop(self) -> None:
         while self.running:
-            if self.arm_wrapper is None:
-                pyzlc.sleep(0.1)
+            arm_state = self.panda_arm.current_state
+            if arm_state is None:
                 continue
-            arm_state = self.arm_wrapper.arm.current_state
-            if arm_state is not None:
-                self.mirror.apply_arm_state(np.array(arm_state["q"]))
-            if hasattr(
-                self.control_pair.current_control_pair, "get_lastest_command"
-            ):
-                lastest_action = (
-                    self.control_pair.current_control_pair.get_lastest_command()
-                )
-                if self.reset_history_event.is_set():
-                    self.history_way_points = []
-                    self.history_traj = None
-                    self.reset_history_event.clear()
-                if lastest_action is not None:
-                    self.history_way_points.append(
-                        {
-                            "pos": lastest_action[:3].tolist(),
-                            "color": [1.0, 0.0, 0.0, 1.0],
-                        }
-                    )
-                    if self.history_traj is None:
-                        self.history_traj = (
-                            self.mirror._cavns.create_trajectory(
-                                name="history_traj",
-                                waypoints=self.history_way_points,
-                            )
-                        )
-                    else:
-                        self.history_traj.update(
-                            waypoints=self.history_way_points
-                        )
-            # elif hasattr(self.control_pair.current_control_pair, "leader"):
-            else:
-                # print("Using leader control signal for visualization")
-                control_signal = (
-                    self.control_pair.current_control_pair.leader.current_control_signal
-                )
-                if control_signal is None:
-                    continue
-                # print(f"Current control signal: {control_signal}")
-                self.history_way_points.append(
-                    {
-                        "pos": control_signal["pos"],
-                        "color": [0.0, 0.0, 1.0, 1.0],
-                    }
-                )
-                if self.history_traj is None:
-                    self.history_traj = self.mirror._cavns.create_trajectory(
-                        name="history_traj", waypoints=self.history_way_points
-                    )
-                else:
-                    self.history_traj.update(waypoints=self.history_way_points)
+            self.apply_arm_state(np.array(arm_state["q"]))
+            self.add_traj_point(
+                np.array(arm_state["EE_pos"]), WayPointColor.BLUE
+            )
             time.sleep(0.05)
+
+
+class MQ3TrajVisualLeRobotInference(LeRobotPolicyInference):
+    def __init__(
+        self,
+        data_collectors: List[IRLDataWrapper],
+        control_pair: PolicyPandaRobotiqDeltaCartesianControlPair,
+        cfg: LeRobotPolicyInferenceConfig,
+    ) -> None:
+        super().__init__(data_collectors, control_pair, cfg)
+        self.last_chunk_traj: Optional[XRTrajectory] = None
+        self.history_way_points = []
+        self.history_traj: Optional[XRTrajectory] = None
+        self.reset_history_event = threading.Event()
+        self.running = True
 
     def _infer_step(self) -> None:
         # if self.last_timestamp is None:
@@ -147,33 +157,18 @@ class MQ3TrajVisualLeRobotInference(LeRobotPolicyInference):
             )
 
         batch_size, chunk_size, action_dim = action_chunk.shape
-        action_dim_expected = 8  # 7 joints + 1 gripper
+        action_dim_expected = 7  # 3 position + 3 orientation + 1 gripper
         post_action_chunk = torch.zeros(
             (batch_size, chunk_size, action_dim_expected), dtype=torch.float32
         )
         for chunk_idx in range(chunk_size):
             single_action = action_chunk[:, chunk_idx, :]
-            single_action = single_action[:, :8]
+            single_action = single_action[:, :7]
             processed_action = self.postprocessor(single_action)
             # pyzlc.info(f"Processed action chunk {chunk_idx}: {processed_action.float().cpu().numpy()}")
             post_action_chunk[:, chunk_idx, :] = processed_action
 
         post_action_chunk = post_action_chunk.float().cpu().numpy()
-        way_points = []
-        for idx in range(len(post_action_chunk[0])):
-            # pyzlc.info(f"Postprocessed action chunk for batch {idx}: {post_action_chunk[0][idx]}")
-            way_points.append(
-                {
-                    "pos": post_action_chunk[0][idx][:3].tolist(),
-                    "color": [0.0, 1.0, 0.0, 1.0],
-                }
-            )
-        if self.last_chunk_traj is None:
-            self.last_chunk_traj = self.mirror._cavns.create_trajectory(
-                name="ee_trajectory", waypoints=way_points
-            )
-        else:
-            self.last_chunk_traj.update(waypoints=way_points)
         try:
             # single_action
             # self.control_pair.update_action(action_vec)
@@ -192,11 +187,9 @@ class MQ3TrajVisualLeRobotInference(LeRobotPolicyInference):
 
     def _close(self):
         self.running = False
-        if self.visualize_thread.is_alive():
-            self.visualize_thread.join(timeout=1.0)
         return super()._close()
 
     def _reset_arm(self):
         self.reset_history_event.set()
-        self.control_pair.clear_lastest_command()
+        self.control_pair.reset_action()
         return super()._reset_arm()

@@ -1,4 +1,5 @@
 import traceback
+import pyzlc
 
 from .control_pair import ControlPair
 from ..franka_robot.panda_arm import ControlMode
@@ -61,6 +62,7 @@ class MQ3PandaControlPair(ControlPair):
             self.follower.panda_arm.set_franka_arm_control_mode(ControlMode.CartesianImpedance)
             while self.is_running:
                 self.control_step()
+                pyzlc.sleep(1.0 / CONTROL_HZ)
             self.control_end()
         except Exception as e:
             print(f"Control task encountered an error: {e}")

@@ -416,7 +416,7 @@ class IRLDataCollection(DataCollectionManager):
             self.camera_frame_idx[idx] += 1
 
             image_rgb = frame
-            image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+            # image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
             frame_path = camera_dir / f"{frame_idx:06d}.png"
             # metadata_path = camera_dir / f"{frame_idx:06d}.json"
 
@@ -424,7 +424,7 @@ class IRLDataCollection(DataCollectionManager):
                 self._submit_frame_write(
                     frame_path,
                     # metadata_path,
-                    image_bgr,
+                    image_rgb,
                     # frame.metadata,
                     self.camera_names[idx],
                     self.cur_timestep,

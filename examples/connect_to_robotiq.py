@@ -9,7 +9,7 @@ from franka_control_client.robotiq_gripper.robotiq_gripper import (
 
 if __name__ == "__main__":
     # Update these to match your ZeroLanCom node and IP.
-    pyzlc.init("robotiq_control_client", "192.168.0.117", group_name="RobotControlGroup")
+    pyzlc.init("robotiq_control_client", "141.3.53.25", group_name="robot_lab_robotiq_202", group_port=7725)
     gripper = RemoteRobotiqGripper("FrankaPanda")
     gripper.connect()
 

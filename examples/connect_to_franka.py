@@ -8,9 +8,9 @@ from franka_control_client.franka_robot.panda_arm import (
 if __name__ == "__main__":
     pyzlc.init(
         "policy_inference",
-        "192.168.1.1",
-        group_name="DroidGroup",
-        group_port=7730,
+        "141.3.53.25",
+        group_name="robot_lab_robotiq_202",
+        group_port=7725,
     )
     robot = RemotePandaArm("FrankaPanda")
     robot.connect()

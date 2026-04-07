@@ -122,6 +122,11 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
         # End_time = time.perf_counter()
         # print(f"command took {End_time - start_time:.3f} seconds")
 
+    def control_reset(self) -> None:
+        self.panda_arm.set_franka_arm_control_mode(ControlMode.CartesianImpedance)
+        current_pose = self._get_current_cartesian_pose()
+        self.panda_arm.send_cartesian_pose_command(current_pose[:3], current_pose[3:])
+
     def control_end(self) -> None:
         self.panda_arm.set_franka_arm_control_mode(ControlMode.IDLE)
 

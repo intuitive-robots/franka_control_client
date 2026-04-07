@@ -22,81 +22,81 @@ from .lerobot_policy_inference import (
 )
 
 
-# class WayPointColor(Enum):
-#     RED = [1.0, 0.0, 0.0, 1.0]
-#     GREEN = [0.0, 1.0, 0.0, 1.0]
-#     BLUE = [0.0, 0.0, 1.0, 1.0]
-#     YELLOW = [1.0, 1.0, 0.0, 1.0]
-#     CYAN = [0.0, 1.0, 1.0, 1.0]
-#     MAGENTA = [1.0, 0.0, 1.0, 1.0]
+class WayPointColor(Enum):
+    RED = [1.0, 0.0, 0.0, 1.0]
+    GREEN = [0.0, 1.0, 0.0, 1.0]
+    BLUE = [0.0, 0.0, 1.0, 1.0]
+    YELLOW = [1.0, 1.0, 0.0, 1.0]
+    CYAN = [0.0, 1.0, 1.0, 1.0]
+    MAGENTA = [1.0, 0.0, 1.0, 1.0]
 
 
-# class PILDigitalTwin:
+class PILDigitalTwin:
 
-#     def __init__(
-#         self, control_pair: PolicyPandaRobotiqDeltaCartesianControlPair
-#     ):
-#         self.mirror = RobotMirror.from_model_id(
-#             RobotModelId.FRANKA_PANDA_ROBOTIQ
-#         )
-#         self.control_pair = control_pair
-#         self.panda_arm = control_pair.panda_arm
-#         self.lastest_action: Optional[XRTrajectory] = None
-#         self.history_traj: Optional[XRTrajectory] = None
-#         self.running = True
-#         self.visualize_thread = threading.Thread(
-#             target=self._visualize_loop, daemon=True
-#         )
-#         self.visualize_thread.start()
+    def __init__(
+        self, control_pair: PolicyPandaRobotiqDeltaCartesianControlPair
+    ):
+        self.mirror = RobotMirror.from_model_id(
+            RobotModelId.FRANKA_PANDA_ROBOTIQ
+        )
+        self.control_pair = control_pair
+        self.panda_arm = control_pair.panda_arm
+        self.lastest_action: Optional[XRTrajectory] = None
+        self.history_traj: Optional[XRTrajectory] = None
+        self.running = True
+        self.visualize_thread = threading.Thread(
+            target=self._visualize_loop, daemon=True
+        )
+        self.visualize_thread.start()
 
-#     def apply_arm_state(self, joint_positions: np.ndarray):
-#         self.mirror.apply_arm_state(joint_positions)
+    def apply_arm_state(self, joint_positions: np.ndarray):
+        self.mirror.apply_arm_state(joint_positions)
 
-#     def update_action(self, action: np.ndarray):
-#         way_points: List[TrajectoryWaypointDict] = [
-#             {
-#                 "pos": action[:3].tolist(),
-#                 "color": WayPointColor.RED.value,
-#             }
-#         ]
-#         if self.lastest_action is None:
-#             self.lastest_action = self.mirror._cavns.create_trajectory(
-#                 name="latest_action_traj", waypoints=way_points
-#             )
-#         else:
-#             self.lastest_action.update(waypoints=way_points)
+    def update_action(self, action: np.ndarray):
+        way_points: List[TrajectoryWaypointDict] = [
+            {
+                "pos": action[:3].tolist(),
+                "color": WayPointColor.RED.value,
+            }
+        ]
+        if self.lastest_action is None:
+            self.lastest_action = self.mirror._cavns.create_trajectory(
+                name="latest_action_traj", waypoints=way_points
+            )
+        else:
+            self.lastest_action.update(waypoints=way_points)
 
-#         if self.history_traj is None:
-#             self.history_traj = self.mirror._cavns.create_trajectory(
-#                 name="history_traj", waypoints=way_points
-#             )
-#         else:
-#             self.history_traj.update(waypoints=way_points)
+        if self.history_traj is None:
+            self.history_traj = self.mirror._cavns.create_trajectory(
+                name="history_traj", waypoints=way_points
+            )
+        else:
+            self.history_traj.update(waypoints=way_points)
 
-#     def add_traj_point(self, pos: np.ndarray, color: WayPointColor):
-#         way_point: TrajectoryWaypointDict = {
-#             "pos": pos[:3].tolist(),
-#             "color": color.value,
-#         }
-#         if self.history_traj is None:
-#             self.history_traj = self.mirror._cavns.create_trajectory(
-#                 name="history_traj", waypoints=[way_point]
-#             )
-#         else:
-#             current_waypoints = self.history_traj.get_waypoints()
-#             current_waypoints.append(way_point)
-#             self.history_traj.update(waypoints=current_waypoints)
+    def add_traj_point(self, pos: np.ndarray, color: WayPointColor):
+        way_point: TrajectoryWaypointDict = {
+            "pos": pos[:3].tolist(),
+            "color": color.value,
+        }
+        if self.history_traj is None:
+            self.history_traj = self.mirror._cavns.create_trajectory(
+                name="history_traj", waypoints=[way_point]
+            )
+        else:
+            current_waypoints = self.history_traj.get_waypoints()
+            current_waypoints.append(way_point)
+            self.history_traj.update(waypoints=current_waypoints)
 
-#     def _visualize_loop(self) -> None:
-#         while self.running:
-#             arm_state = self.panda_arm.current_state
-#             if arm_state is None:
-#                 continue
-#             self.apply_arm_state(np.array(arm_state["q"]))
-#             self.add_traj_point(
-#                 np.array(arm_state["EE_pos"]), WayPointColor.BLUE
-#             )
-#             time.sleep(0.05)
+    def _visualize_loop(self) -> None:
+        while self.running:
+            arm_state = self.panda_arm.current_state
+            if arm_state is None:
+                continue
+            self.apply_arm_state(np.array(arm_state["q"]))
+            self.add_traj_point(
+                np.array(arm_state["EE_pos"]), WayPointColor.BLUE
+            )
+            time.sleep(0.05)
 
 
 class MQ3TrajVisualLeRobotInference(LeRobotPolicyInference):

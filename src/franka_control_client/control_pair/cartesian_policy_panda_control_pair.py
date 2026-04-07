@@ -52,7 +52,7 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
             robot_arm=panda_arm,
             action_dt=1.0 / self.control_hz,
             chunk_size=10,
-            action_dim=8,
+            action_dim=7,
         )
 
         # Velocity limiting state

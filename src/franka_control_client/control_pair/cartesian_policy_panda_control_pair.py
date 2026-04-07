@@ -11,7 +11,7 @@ import pyzlc
 from ..control_pair.policy_panda_control_pair import PolicyPandaControlPair
 from ..franka_robot.panda_arm import ControlMode, RemotePandaArm
 from ..robotiq_gripper.robotiq_gripper import RemoteRobotiqGripper
-from .action_chunking_buffer import ActionChunkingBuffer
+from .action_chunking_buffer import DeltaActionChunkingBuffer
 
 DEFAULT_CONTROL_HZ: float = 500
 GRIPPER_DEADBAND: float = 1e-3
@@ -48,8 +48,11 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
         # self._action_lock = (
         #     threading.Lock()
         # )  # only one of the update_action and control_step visit latest_action at the same time
-        self.action_buffer = ActionChunkingBuffer(
-            action_dt=1.0 / self.control_hz, chunk_size=10, action_dim=8
+        self.action_buffer = DeltaActionChunkingBuffer(
+            robot_arm=panda_arm,
+            action_dt=1.0 / self.control_hz,
+            chunk_size=10,
+            action_dim=8,
         )
         self.panda_arm = panda_arm
         self.gripper = gripper
@@ -105,14 +108,7 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
 
     def control_step(self) -> None:
         action = self.action_buffer.apply_action()
-        current_cartesian_pose = self._get_current_cartesian_pose()
-        target_cartesian_orientation = R.from_quat(
-            current_cartesian_pose[3:]
-        ) + R.from_euler(action[3:6])
-        self.panda_arm.send_cartesian_pose_command(
-            current_cartesian_pose[:3] + action[:3],
-            target_cartesian_orientation.as_quat(),
-        )
+        self.panda_arm.send_cartesian_pose_command(action[:3], action[3:7])
 
         # Gripper command
         gripper_cmd = float(action[-1])

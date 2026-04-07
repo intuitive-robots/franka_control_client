@@ -46,11 +46,9 @@ class ActionChunkingBuffer:
     def apply_action(self) -> np.ndarray:
         with self._lock:
             current_index = self._get_current_action_chunk_int()
-            action = np.array(
-                self._buffer[min(current_index, self._chunk_size - 1)],
-                copy=True,
-            )
-            self._buffer = np.array(self._buffer[current_index:], copy=True)
+            clamped_index = min(current_index, len(self._buffer) - 1)
+            action = np.array(self._buffer[clamped_index], copy=True)
+            self._buffer = np.array(self._buffer[clamped_index:], copy=True)
             return action
 
     def clear(self) -> None:

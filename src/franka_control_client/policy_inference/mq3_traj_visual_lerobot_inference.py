@@ -5,8 +5,8 @@ import pyzlc
 import numpy as np
 import threading
 
-from digital_twin.models import RobotModelId
-from digital_twin.simulation.mirror import RobotMirror
+# from digital_twin.models import RobotModelId
+# from digital_twin.simulation.mirror import RobotMirror
 from simpub.core import XRTrajectory
 from simpub.core.xrcavns import TrajectoryWaypointDict
 from enum import Enum
@@ -143,7 +143,16 @@ class MQ3TrajVisualLeRobotInference(LeRobotPolicyInference):
             # action_vec = action[0] if action.ndim == 2 else action
 
             ###action chunk
-            action_chunk = self.policy.predict_action_chunk(observation)
+            # Populate observation queues and stack images (mirroring select_action preprocessing)
+            from lerobot.utils.constants import ACTION, OBS_IMAGES
+            from lerobot.policies.utils import populate_queues
+            obs = dict(observation)
+            if ACTION in obs:
+                obs.pop(ACTION)
+            if self.policy.config.image_features:
+                obs[OBS_IMAGES] = torch.stack([obs[key] for key in self.policy.config.image_features], dim=-4)
+            self.policy._queues = populate_queues(self.policy._queues, obs)
+            action_chunk = self.policy.predict_action_chunk(obs)
 
         if action_chunk.ndim == 2:
             action_chunk = action_chunk.unsqueeze(1)
@@ -153,23 +162,18 @@ class MQ3TrajVisualLeRobotInference(LeRobotPolicyInference):
             )
 
         batch_size, chunk_size, action_dim = action_chunk.shape
-        action_dim_expected = 7  # 3 position + 3 orientation + 1 gripper
         post_action_chunk = torch.zeros(
-            (batch_size, chunk_size, action_dim_expected), dtype=torch.float32
+            (batch_size, chunk_size, action_dim), dtype=torch.float32
         )
         for chunk_idx in range(chunk_size):
             single_action = action_chunk[:, chunk_idx, :]
-            single_action = single_action[:, :7]
             processed_action = self.postprocessor(single_action)
-            # pyzlc.info(f"Processed action chunk {chunk_idx}: {processed_action.float().cpu().numpy()}")
             post_action_chunk[:, chunk_idx, :] = processed_action
 
-        post_action_chunk = post_action_chunk.float().cpu().numpy()
+        # Remove batch dim: (1, T, D) -> (T, D) for the action buffer
+        post_action_chunk = post_action_chunk[0].float().cpu().numpy()
 
         try:
-            # single_action
-            # self.control_pair.update_action(action_vec)
-            # action chunk
             self.control_pair.update_action_chunk(post_action_chunk)
         except Exception as exc:
             pyzlc.error(f"Failed to apply policy action: {exc}")

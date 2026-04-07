@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import threading
 import time
 import traceback
 from typing import Optional
@@ -42,19 +41,10 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
         gripper: RemoteRobotiqGripper,
         control_hz: float = DEFAULT_CONTROL_HZ,
     ) -> None:
-        # self.panda_arm = panda_arm
-        # self.gripper = gripper
-        # self.control_hz = float(control_hz)
-        # self._action_lock = (
-        #     threading.Lock()
-        # )  # only one of the update_action and control_step visit latest_action at the same time
+        super().__init__(panda_arm, gripper, control_hz)
         self.action_buffer = ActionChunkingBuffer(
-            action_dt=1.0 / self.control_hz, chunk_size=10, action_dim=8
+            action_dt=1.0 / control_hz, chunk_size=10, action_dim=8
         )
-        self.panda_arm = panda_arm
-        self.gripper = gripper
-        self.control_hz = float(control_hz)
-        self._action_lock = threading.Lock()
 
         # Velocity limiting state
         self._last_joint_pos: Optional[np.ndarray] = None
@@ -94,7 +84,7 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
         """Reset the latest action state when starting a new episode."""
         with self._action_lock:
             self._latest_action = None
-            self._latest_action_chunk.clear()
+            self.action_buffer.clear()
         self.clear_lastest_command()
         self._last_gripper_cmd = None
         self._last_gripper_binary = None
@@ -108,7 +98,7 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
         current_cartesian_pose = self._get_current_cartesian_pose()
         target_cartesian_orientation = R.from_quat(
             current_cartesian_pose[3:]
-        ) + R.from_euler(action[3:6])
+        ) * R.from_euler("xyz", action[3:6])
         self.panda_arm.send_cartesian_pose_command(
             current_cartesian_pose[:3] + action[:3],
             target_cartesian_orientation.as_quat(),

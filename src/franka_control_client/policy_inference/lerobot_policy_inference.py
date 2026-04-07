@@ -12,7 +12,7 @@ import torch
 from lerobot.configs.train import TrainPipelineConfig
 from lerobot.configs.types import FeatureType, PolicyFeature
 from lerobot.policies.factory import make_policy, make_pre_post_processors
-from lerobot.utils.utils import get_safe_torch_device
+from lerobot.utils.device_utils import get_safe_torch_device
 
 from .policy_inference_manager import PolicyInferenceManager
 from ..data_collection.irl_wrapper import (
@@ -258,7 +258,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
     def _image_to_tensor(self, image: np.ndarray) -> torch.Tensor:
         """Match real_robot_sim image tensor construction."""
         rgb = torch.from_numpy(image.copy()).float().permute(2, 0, 1) / 255.0
-        return rgb.unsqueeze(0).unsqueeze(0)
+        return rgb.unsqueeze(0)
 
     def _build_observation(self) -> Dict[str, Any]:
         """Build observation dict from hardware data."""
@@ -323,6 +323,8 @@ class LeRobotPolicyInference(PolicyInferenceManager):
                 raise ValueError(
                     f"Expected HWC image with 3 channels for {obs_key}, got shape {rgb.shape}"
                 )
+            if obs_key in self._expected_image_shapes:
+                rgb = self._resize_image(rgb, self._expected_image_shapes[obs_key])
             observation[obs_key] = self._image_to_tensor(
                 np.ascontiguousarray(rgb)
             )

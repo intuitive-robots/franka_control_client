@@ -366,7 +366,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
                     gripper_val = float(gripper_arr[0])
         if gripper_val is None:
             raise ValueError("Gripper state missing value.")
-        print(f"Captured state vector: q={q}, gripper={gripper_val}")
+        # print(f"Captured state vector: q={q}, gripper={gripper_val}")
         return np.concatenate([q, np.asarray([gripper_val], dtype=np.float32)])
 
     def _build_images(self) -> Dict[str, Any]:

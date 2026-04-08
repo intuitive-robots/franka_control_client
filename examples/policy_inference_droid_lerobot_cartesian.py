@@ -64,7 +64,7 @@ if __name__ == "__main__":
     inference_cfg = LeRobotPolicyInferenceConfig(
         checkpoint_path=checkpoint_path,
         task=task,
-        fps=5,
+        fps=10,
         device="cuda",
         dataset_path=dataset_path,
     )

@@ -54,7 +54,7 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
             robot_arm=panda_arm,
             action_dt=action_chunk_dt,
             chunk_size=action_chunk_size,
-            action_dim=7,
+            action_dim=8,
         )
 
         # Velocity limiting state
@@ -109,6 +109,7 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
         if action is None:
             return
         self.panda_arm.send_cartesian_pose_command(action[:3], action[3:7])
+        print(f"Applied orientation: {action[3:7]}")
         # Gripper command
         gripper_cmd = float(action[-1])
         gripper_cmd = 1 if gripper_cmd >= 0.5 else 0

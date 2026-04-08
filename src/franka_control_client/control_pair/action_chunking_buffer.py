@@ -24,10 +24,10 @@ class DeltaActionChunkingBuffer:
         self._buffer = np.zeros((chunk_size, action_dim), dtype=np.float32)
 
     def add_new_action_chunk(self, new_action_chunk: np.ndarray):
-        print(new_action_chunk)
-        if new_action_chunk.shape != (self._chunk_size, self._buffer.shape[1]):
+        # print(new_action_chunk)
+        if new_action_chunk.shape[0] != self._chunk_size:
             raise ValueError(
-                f"New action chunk shape {new_action_chunk.shape} does not match buffer shape {self._buffer[0].shape if self._buffer else 'None'}."
+                f"New action chunk has {new_action_chunk.shape[0]} steps, expected {self._chunk_size}."
             )
         absolute_chunk = self.delta2absolute(new_action_chunk)
         with self._lock:
@@ -36,6 +36,7 @@ class DeltaActionChunkingBuffer:
             else:
                 self._fuse_action_chunks(absolute_chunk)
             self._last_action_time = time.perf_counter()
+
 
     def _fuse_action_chunks(self, absolute_chunks: np.ndarray) -> None:
         self._buffer = np.array(absolute_chunks, copy=True)
@@ -79,14 +80,17 @@ class DeltaActionChunkingBuffer:
         if current_ee_quat is None:
             raise ValueError("Current end-effector rotation is not available.")
         current_ee_quat = np.array(current_ee_quat)
-        action = np.zeros_like(delta_action_chunks)
-        for i in range(len(delta_action_chunks)):
+        n_steps = len(delta_action_chunks)
+        # Output: pos(3) + quat(4) + gripper(1) = 8
+        action = np.zeros((n_steps, 8), dtype=np.float32)
+        for i in range(n_steps):
             action[i][:3] = current_ee_pos + delta_action_chunks[i][:3]
             current_ee_pos = action[i][:3]
             action[i][3:7] = (
                 R.from_quat(current_ee_quat)
                 * R.from_euler("xyz", delta_action_chunks[i][3:6], False)
             ).as_quat()
+            print(f"added orientation: {action[i][3:7]}")
             current_ee_quat = action[i][3:7]
-            action[i][7:] = delta_action_chunks[i][6]
+            action[i][7] = delta_action_chunks[i][6]
         return action

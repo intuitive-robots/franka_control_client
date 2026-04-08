@@ -56,14 +56,13 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         self.control_pair.register_history(self._data_colection)
 
     def _collect_step(self) -> None:
+        # only collect data when in interrupt mode
         if self.control_pair.current_state == PILMode.INTERRUPT:
-            self._data_colection._collect_step()
-        elif self.control_pair.current_state == PILMode.POLICY:
-            # During policy control, we can also collect data but mark it differently
             self._data_colection._collect_step(
                 self.control_pair.get_lastest_command()
             )
-        elif self.control_pair.current_state == PILMode.REPLAY:
+        elif self.control_pair.current_state == PILMode.REPLAY or \
+            self.control_pair.current_state == PILMode.POLICY:
             return
 
     def _visualize_step(self) -> None:

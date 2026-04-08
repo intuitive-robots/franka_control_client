@@ -103,6 +103,40 @@ class FollowerData:
             print(f"Successfully saved '{p}'")
 
 
+class PolicyState:
+    def __init__(self):
+        self.EE_pos = []
+        self.EE_quat = []
+        self.gripper_width = []
+
+    def pop(self):
+        if len(self.EE_pos) == 0:
+            return
+        self.EE_pos.pop()
+        self.EE_quat.pop()
+        self.gripper_width.pop()
+
+    def save(self, path: Path):
+        tensor_lists = [
+            torch.stack(self.EE_pos),
+            torch.stack(self.EE_quat),
+            torch.stack(self.gripper_width),
+        ]
+        paths = [
+            path / "EE_pos.pt",
+            path / "EE_quat.pt",
+            path / "gripper_width.pt",
+        ]
+
+        for d, p in zip(tensor_lists, paths):
+            if d.numel() == 0:
+                print(f"Skip saving '{p}' since it is empty")
+                continue
+
+            torch.save(d, p)
+            print(f"Successfully saved '{p}'")
+
+
 class LeaderData:
     def __init__(self):
         # self.timestamp_ms_list = []
@@ -260,6 +294,7 @@ class PILIRLDataCollection(DataCollectionManager):
     def pop(self):
         with self.data_lock:
             self.follower_robot_data.pop()
+            self.policy_state_data.pop()
             return self.leader_robot_data.pop()
 
     def _start_collecting(self) -> None:
@@ -309,17 +344,18 @@ class PILIRLDataCollection(DataCollectionManager):
         if policy_control_signal is not None:
             # If we're in policy control, we can override the leader state with the policy control signal for certain fields.
             # This allows us to capture what the policy is commanding while still recording the actual state of the leader robot.
-            leader_state["EE_pos"] = policy_control_signal[:3]
-            leader_state["EE_quat"] = policy_control_signal[3:7]
-            # leader_state["gello_arm_state"]["joint_state"] = policy_control_signal.get("joint_state", leader_state["gello_arm_state"]["joint_state"])
-            leader_state["gripper_width"] = policy_control_signal[-1]  # * 0.08
-            self.leader_robot_data.source.append(
-                0.0
-            )  # Mark this data point as coming from policy control
+            self.policy_state_data.EE_pos.append(to_tensor(policy_control_signal[:3]))
+            self.policy_state_data.EE_quat.append(to_tensor(policy_control_signal[3:7]))
+            self.policy_state_data.gripper_width.append(to_tensor(policy_control_signal[-1]))
         else:
-            self.leader_robot_data.source.append(
-                1.0
-            )  # Mark this data point as coming from human control
+            # If no policy control signal, save None/zero values
+            self.policy_state_data.EE_pos.append(to_tensor(np.zeros(3)))
+            self.policy_state_data.EE_quat.append(to_tensor(np.zeros(4)))
+            self.policy_state_data.gripper_width.append(to_tensor(0.0))
+        
+        self.leader_robot_data.source.append(
+            1.0
+        )  # Mark this data point as coming from human control
         self.leader_robot_data.EE_pos.append(to_tensor(leader_state["EE_pos"]))
         self.leader_robot_data.EE_quat.append(
             to_tensor(leader_state["EE_quat"])
@@ -385,6 +421,7 @@ class PILIRLDataCollection(DataCollectionManager):
         print(f"Successfully saved '{timestamps_path}'")
         self.leader_robot_data.save(self.leader_robot_dir)
         self.follower_robot_data.save(self.follower_robot_dir)
+        self.policy_state_data.save(self.policy_state_dir)
 
         self.__report_camera_rates()
 
@@ -475,6 +512,9 @@ class PILIRLDataCollection(DataCollectionManager):
         self.follower_robot_dir = self.record_dir / self.follower_arm.hw_name
         self.follower_robot_dir.mkdir()
 
+        self.policy_state_dir = self.record_dir / "policy_state"
+        self.policy_state_dir.mkdir()
+
         self.sensors_dir = self.record_dir / "sensors"
         self.sensors_dir.mkdir()
 
@@ -487,6 +527,7 @@ class PILIRLDataCollection(DataCollectionManager):
     def _create_empty_data(self):
         self.leader_robot_data = LeaderData()
         self.follower_robot_data = FollowerData()
+        self.policy_state_data = PolicyState()
         self.camera_timestamps = [[] for _ in self.camera_streams]
         self.camera_frame_idx = [0] * len(
             self.camera_streams

@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     # Checkpoint path from eval_config.yaml
     checkpoint_path = (
-        "/home/jjiang/model/2026-04-07/15-06-46_beso/checkpoints/010000/pretrained_model" #/home/irl-admin/xinkai/xvla_checkpoints/100000/pretrained_model"
+        "/home/jjiang/model/15-25-13_beso/checkpoints/010000/pretrained_model" #/home/irl-admin/xinkai/xvla_checkpoints/100000/pretrained_model"
     )
     task = "Pick up banana."  # "Pick up the bell pepper and place it in the bowl."
     dataset_path = "/home/jjiang/jing/dataset/lerobot/pick_up_banana_20hz_gripper_0_5_to_1_delta_cartesian_euler"
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     inference_cfg = LeRobotPolicyInferenceConfig(
         checkpoint_path=checkpoint_path,
         task=task,
-        fps=1,
+        fps=5,
         device="cuda",
         dataset_path=dataset_path,
     )

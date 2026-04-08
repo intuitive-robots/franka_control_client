@@ -36,10 +36,10 @@ if __name__ == "__main__":
 
     # Checkpoint path from eval_config.yaml
     checkpoint_path = (
-        "/home/jjiang/model/2026-04-06/19-20-48_beso/checkpoints/010000/pretrained_model" #/home/irl-admin/xinkai/xvla_checkpoints/100000/pretrained_model"
+        "/home/jjiang/model/2026-04-07/15-06-46_beso/checkpoints/010000/pretrained_model" #/home/irl-admin/xinkai/xvla_checkpoints/100000/pretrained_model"
     )
     task = "Pick up banana."  # "Pick up the bell pepper and place it in the bowl."
-    dataset_path = "/home/jjiang/jing/dataset/lerobot/pick_up_banana_20hz_delta_cartesian_gripper_0_5_to_1"
+    dataset_path = "/home/jjiang/jing/dataset/lerobot/pick_up_banana_20hz_gripper_0_5_to_1_delta_cartesian_euler"
 
     follower = PandaRobotiq(
         "PandaRobotiq",
@@ -47,7 +47,7 @@ if __name__ == "__main__":
         RemoteRobotiqGripper("FrankaPanda"),
     )
     control_pair = PolicyPandaRobotiqDeltaCartesianControlPair(
-        follower.panda_arm, follower.robotiq_gripper, 50
+        follower.panda_arm, follower.robotiq_gripper, 100, 10, 0.5
     )
 
     # Camera capture interval matches inference frequency (30 Hz = 0.033s)

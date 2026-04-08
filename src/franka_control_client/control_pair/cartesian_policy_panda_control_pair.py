@@ -40,6 +40,8 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
         panda_arm: RemotePandaArm,
         gripper: RemoteRobotiqGripper,
         control_hz: float = DEFAULT_CONTROL_HZ,
+        action_chunk_size: int = 10,
+        action_chunk_dt: float = 0.05,
     ) -> None:
         super().__init__(panda_arm, gripper, control_hz)
         # self.panda_arm = panda_arm
@@ -50,8 +52,8 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
         # )  # only one of the update_action and control_step visit latest_action at the same time
         self.action_buffer = DeltaActionChunkingBuffer(
             robot_arm=panda_arm,
-            action_dt=1.0 / self.control_hz,
-            chunk_size=10,
+            action_dt=action_chunk_dt,
+            chunk_size=action_chunk_size,
             action_dim=7,
         )
 
@@ -104,8 +106,9 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
 
     def control_step(self) -> None:
         action = self.action_buffer.apply_action()
+        if action is None:
+            return
         self.panda_arm.send_cartesian_pose_command(action[:3], action[3:7])
-
         # Gripper command
         gripper_cmd = float(action[-1])
         gripper_cmd = 1 if gripper_cmd >= 0.5 else 0

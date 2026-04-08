@@ -338,16 +338,18 @@ class LeRobotPolicyInference(PolicyInferenceManager):
             self.arm_wrapper is not None and self.gripper_wrapper is not None
         ), "Arm and gripper wrappers must be set to build state vector."  # for mypy
         arm_state = self.arm_wrapper.capture_step()
-        q = None
-        if isinstance(arm_state, dict):
-            if "q" in arm_state:
-                q = np.asarray(arm_state["q"], dtype=np.float32).reshape(-1)
-            elif "joint_state" in arm_state:
-                q = np.asarray(
-                    arm_state["joint_state"], dtype=np.float32
-                ).reshape(-1)
-        if q is None or q.size != 7:
-            raise ValueError("Arm state missing valid joint positions.")
+        q = np.asarray(arm_state[0], dtype=np.float32).reshape(-1)
+        rot = np.asarray(arm_state[1], dtype=np.float32).reshape(-1)
+        q = np.concatenate([q, rot], dtype=np.float32)
+        # if isinstance(arm_state, dict):
+        #     if "q" in arm_state:
+        #         q = np.asarray(arm_state["q"], dtype=np.float32).reshape(-1)
+        #     elif "joint_state" in arm_state:
+        #         q = np.asarray(
+        #             arm_state["joint_state"], dtype=np.float32
+        #         ).reshape(-1)
+        # if q is None or q.size != 7:
+        #     raise ValueError("Arm state missing valid joint positions.")
 
         grip_state = self.gripper_wrapper.capture_step()
         gripper_val = None
@@ -364,7 +366,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
                     gripper_val = float(gripper_arr[0])
         if gripper_val is None:
             raise ValueError("Gripper state missing value.")
-
+        print(f"Captured state vector: q={q}, gripper={gripper_val}")
         return np.concatenate([q, np.asarray([gripper_val], dtype=np.float32)])
 
     def _build_images(self) -> Dict[str, Any]:

@@ -15,8 +15,7 @@ from ..franka_robot.panda_gripper import RemotePandaGripper
 from ..robotiq_gripper.robotiq_gripper import RemoteRobotiqGripper
 
 
-DEFAULT_CONTROL_HZ: float = 1000
-GRIPPER_DEADBAND: float = 1e-3
+DEFAULT_CONTROL_HZ: float = 300
 GRIPPER_SPEED = 0.7
 GRIPPER_FORCE = 0.3
 ACTION_LOG_INTERVAL_S: float = 0.5
@@ -25,7 +24,7 @@ GRIPPER_TOGGLE_WARN_COUNT: int = 6
 DEFAULT_POSITION = (0.0, 0.0, 0.0, -2.15, 0.0, 2.15, 0.0)
 
 # Calculate velocity limits using the standard approach from training
-VELOCITY_LIMITS = np.array([[-4 * np.pi / 2, 4 * np.pi / 2]] * 7).T / 32 #32
+VELOCITY_LIMITS = np.array([[-4 * np.pi / 2, 4 * np.pi / 2]] * 7).T / 16 #32
 VELOCITY_LIMITS_NORM = np.linalg.norm(VELOCITY_LIMITS)
 
 class PolicyPandaControlPair(ControlPair):
@@ -215,16 +214,18 @@ class PolicyPandaControlPair(ControlPair):
             self._last_joint_pos, goal_joint_pos, self.control_hz, max_vel
         )
         #too jerky to actuate the entire waypoint sequence in one control step, so we send one waypoint at a time in each control step. The next waypoint will be generated in the next control step based on the latest joint position, which ensures smoother motion and better adherence to velocity limits.
-        # for i in range(len(waypoints)):
-        #     joint_cmd = (waypoints[i].numpy())
-        #     self.panda_arm.send_joint_position_command(joint_cmd)
-        #     self._last_joint_pos = np.asarray(joint_cmd, dtype=np.float32)
-        # print(f"Generated {len(waypoints)} waypoints with max velocity {max_vel:.3f} rad/s")
-        joint_cmd = (
-            waypoints[0].numpy() if len(waypoints) > 0 else goal_joint_pos.copy()
-        )
-        self.panda_arm.send_joint_position_command(joint_cmd)
-        self._last_joint_pos = np.asarray(joint_cmd, dtype=np.float32)
+        for i in range(len(waypoints)):
+            joint_cmd = (waypoints[i].numpy())
+            self.panda_arm.send_joint_position_command(joint_cmd)
+            self._last_joint_pos = np.asarray(joint_cmd, dtype=np.float32)
+        print(f"Generated {len(waypoints)} waypoints with max velocity {max_vel:.3f} rad/s")
+        ### one step only
+        # joint_cmd = (
+        #     waypoints[0].numpy() if len(waypoints) > 0 else goal_joint_pos.copy()
+        # )
+        # self.panda_arm.send_joint_position_command(joint_cmd)
+        # self._last_joint_pos = np.asarray(joint_cmd, dtype=np.float32)
+        ###
         return self._last_joint_pos.copy()
 
 

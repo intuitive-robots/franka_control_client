@@ -336,10 +336,12 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         alias_groups: list[list[str]] = [
             ["right_cam", "zed_right", "right"],
             ["wrist_cam", "zed_wrist", "wrist"],
+            ["left_cam", "zed_left", "left"],
         ]
         preferred_by_key = {
             "observation.images.image": alias_groups[0],
             "observation.images.image2": alias_groups[1],
+            "observation.images.image3": alias_groups[2],
         }
 
         mapped: Dict[str, Any] = {}

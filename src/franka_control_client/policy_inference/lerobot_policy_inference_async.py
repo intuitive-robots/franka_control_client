@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import deque
 import json
 import time
 from dataclasses import dataclass
@@ -21,7 +20,7 @@ from lerobot.policies.xvla.modeling_xvla_asyncmulti_v2 import (
 )
 
 from ..control_pair.policy_panda_control_pair_chunk import PolicyPandaControlPair
-from .irl_wrapper import (
+from .irl_wrapper_async import (
     IRL_HardwareDataWrapper,
     ImageDataWrapper,
     PandaArmDataWrapper,
@@ -44,6 +43,9 @@ class LeRobotPolicyInferenceConfig:
     dataset_path: Optional[str] = None
     stats_path: Optional[str] = None
     save_startup_images: bool = False
+    observation_history_lengths: Optional[Dict[str, int]] = None
+    observation_buffer_capacities: Optional[Dict[str, int]] = None
+    pad_history_with_oldest: bool = True
 
 
 def _parse_torch_dtype(dtype_name: Optional[str]) -> Optional[torch.dtype]:
@@ -113,13 +115,16 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         self.policy = self._load_policy()
         self._model_float_dtype = self._get_model_float_dtype()
         self._action_mean, self._action_std = self._load_action_mean_std()
-        self._expected_state_dim = self._get_expected_state_dim()
+        (
+            self._expected_state_dim,
+            self._expected_state_history_length,
+        ) = self._get_expected_state_spec()
         self._expected_image_keys = self._get_expected_image_keys()
         self._n_obs_steps = int(getattr(self.policy.config, "n_obs_steps", 1))
         self._n_action_steps = int(getattr(self.policy.config, "n_action_steps", 1))
-        self._image_histories: dict[str, deque[torch.Tensor]] = {
-            key: deque(maxlen=self._n_obs_steps) for key in self._expected_image_keys
-        }
+        self._state_history_length = self._resolve_state_history_length()
+        self._image_history_lengths = self._resolve_image_history_lengths()
+        self._configure_observation_buffers()
 
         tokenizer_name = getattr(self.policy.config, "tokenizer_name", None) or "facebook/bart-large"
         self._tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, use_fast=True)
@@ -132,6 +137,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         self._startup_images_saved = False
         self._action_observation_log_path = Path("action_observation.txt")
         self._episode_action_observation_log_lines: list[str] = []
+        self._last_buffer_debug_print_ts: float = 0.0
 
     def _resolve_checkpoint_path(self, checkpoint_path: str) -> Path:
         candidate = Path(checkpoint_path).expanduser()
@@ -260,17 +266,19 @@ class LeRobotPolicyInference(PolicyInferenceManager):
 
         return state_dict[mean_key].float(), state_dict[std_key].float()
 
-    def _get_expected_state_dim(self) -> Optional[int]:
+    def _get_expected_state_spec(self) -> tuple[Optional[int], int]:
         state_feature = getattr(self.policy.config, "input_features", {}).get("observation.state")
         if state_feature is None:
-            return None
+            return None, 1
         try:
             shape = tuple(state_feature.shape)
         except Exception:
-            return None
+            return None, 1
         if not shape:
-            return None
-        return int(shape[-1])
+            return None, 1
+        if len(shape) == 1:
+            return int(shape[-1]), 1
+        return int(shape[-1]), int(shape[0])
 
     def _get_expected_image_keys(self) -> list[str]:
         image_keys: list[str] = []
@@ -282,6 +290,61 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         if image_keys:
             return image_keys
         return ["observation.images.image", "observation.images.image2"]
+
+    def _resolve_state_history_length(self) -> int:
+        config_lengths = self.cfg.observation_history_lengths or {}
+        if "observation.state" in config_lengths:
+            return max(1, int(config_lengths["observation.state"]))
+        if "state" in config_lengths:
+            return max(1, int(config_lengths["state"]))
+        return max(1, self._expected_state_history_length)
+
+    def _resolve_image_history_lengths(self) -> Dict[str, int]:
+        config_lengths = self.cfg.observation_history_lengths or {}
+        if "camera" in config_lengths:
+            default_history = max(1, int(config_lengths["camera"]))
+        else:
+            default_history = max(1, self._n_obs_steps)
+
+        resolved: Dict[str, int] = {}
+        for cam in self.cameras:
+            resolved[cam.hw_name] = max(
+                1, int(config_lengths.get(cam.hw_name, default_history))
+            )
+        return resolved
+
+    def _configure_observation_buffers(self) -> None:
+        configured_capacities = self.cfg.observation_buffer_capacities or {}
+
+        state_capacity = max(
+            self._state_history_length,
+            int(
+                configured_capacities.get(
+                    "observation.state",
+                    configured_capacities.get("state", 1),
+                )
+            ),
+        )
+        self.arm_wrapper.set_buffer_capacity(
+            max(self.arm_wrapper.buffer_capacity, state_capacity)
+        )
+        self.gripper_wrapper.set_buffer_capacity(
+            max(self.gripper_wrapper.buffer_capacity, state_capacity)
+        )
+
+        if "camera" in configured_capacities:
+            default_image_capacity = max(1, int(configured_capacities["camera"]))
+        else:
+            default_image_capacity = max(
+                [1, *self._image_history_lengths.values()]
+            )
+
+        for cam in self.cameras:
+            requested_capacity = max(
+                self._image_history_lengths.get(cam.hw_name, 1),
+                int(configured_capacities.get(cam.hw_name, default_image_capacity)),
+            )
+            cam.set_buffer_capacity(max(cam.buffer_capacity, requested_capacity))
 
     def _decode_image(self, img: Any) -> np.ndarray:
         if isinstance(img, np.ndarray):
@@ -324,13 +387,22 @@ class LeRobotPolicyInference(PolicyInferenceManager):
             if torch.is_tensor(value) and torch.is_floating_point(value):
                 obs[key] = value.to(device=self._device, dtype=self._model_float_dtype)
 
-    def _stack_image_history(self, obs_key: str, image: np.ndarray) -> torch.Tensor:
-        history = self._image_histories[obs_key]
-        frame = self._prepare_xvla_image(image)
-        history.append(frame)
-        while len(history) < self._n_obs_steps:
-            history.appendleft(frame)
-        return torch.stack(list(history), dim=0).unsqueeze(0).to(self._device)
+    def _images_to_tensor(self, images: List[np.ndarray]) -> torch.Tensor:
+        stacked = torch.stack(
+            [self._prepare_xvla_image(image) for image in images],
+            dim=0,
+        )
+        return stacked.unsqueeze(0).to(self._device)
+
+    def _get_recent_samples(
+        self, wrapper: IRL_HardwareDataWrapper, count: int
+    ) -> List[Any]:
+        if wrapper.buffered_length == 0:
+            wrapper.update_buffer()
+        return wrapper.get_recent(
+            count,
+            pad_with_oldest=self.cfg.pad_history_with_oldest,
+        )
 
     def _map_images_to_observation_keys(self, images: Dict[str, Any]) -> Dict[str, Any]:
         alias_groups: list[list[str]] = [
@@ -373,50 +445,64 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         return mapped
 
     def _build_state_vector(self) -> np.ndarray:
-        arm_state = self.arm_wrapper.capture_step()
-        q = None
-        if isinstance(arm_state, dict):
-            if "q" in arm_state:
-                q = np.asarray(arm_state["q"], dtype=np.float32).reshape(-1)
-            elif "joint_state" in arm_state:
-                q = np.asarray(arm_state["joint_state"], dtype=np.float32).reshape(-1)
-        if q is None or q.size != 7:
-            raise ValueError("Arm state missing valid joint positions.")
-
-        grip_state = self.gripper_wrapper.capture_step()
-        gripper_val = None
-        if isinstance(grip_state, dict):
-            if "width" in grip_state:
-                gripper_val = float(grip_state["width"])
-            elif "position" in grip_state:
-                gripper_val = float(grip_state["position"])
-            elif "gripper" in grip_state:
-                gripper_arr = np.asarray(grip_state["gripper"], dtype=np.float32).reshape(-1)
-                if gripper_arr.size > 0:
-                    gripper_val = float(gripper_arr[0])
-        if gripper_val is None:
-            raise ValueError("Gripper state missing value.")
-
-        state = np.concatenate([q, np.asarray([gripper_val], dtype=np.float32)])
-        if self._expected_state_dim is None:
-            return state
-        if state.shape[-1] == self._expected_state_dim:
-            return state
-        if state.shape[-1] > self._expected_state_dim:
-            pyzlc.error(
-                f"State dim {state.shape[-1]} larger than expected {self._expected_state_dim}; truncating."
-            )
-            return state[: self._expected_state_dim]
-
-        pad = self._expected_state_dim - state.shape[-1]
-        pyzlc.error(
-            f"State dim {state.shape[-1]} smaller than expected {self._expected_state_dim}; padding zeros."
+        arm_states = self._get_recent_samples(self.arm_wrapper, self._state_history_length)
+        grip_states = self._get_recent_samples(
+            self.gripper_wrapper, self._state_history_length
         )
-        return np.pad(state, (0, pad), mode="constant")
+
+        state_history: list[np.ndarray] = []
+        for arm_state, grip_state in zip(arm_states, grip_states):
+            q = None
+            if isinstance(arm_state, dict):
+                if "q" in arm_state:
+                    q = np.asarray(arm_state["q"], dtype=np.float32).reshape(-1)
+                elif "joint_state" in arm_state:
+                    q = np.asarray(arm_state["joint_state"], dtype=np.float32).reshape(-1)
+            if q is None or q.size != 7:
+                raise ValueError("Arm state missing valid joint positions.")
+
+            gripper_val = None
+            if isinstance(grip_state, dict):
+                if "width" in grip_state:
+                    gripper_val = float(grip_state["width"])
+                elif "position" in grip_state:
+                    gripper_val = float(grip_state["position"])
+                elif "gripper" in grip_state:
+                    gripper_arr = np.asarray(grip_state["gripper"], dtype=np.float32).reshape(-1)
+                    if gripper_arr.size > 0:
+                        gripper_val = float(gripper_arr[0])
+            if gripper_val is None:
+                raise ValueError("Gripper state missing value.")
+
+            state_history.append(
+                np.concatenate([q, np.asarray([gripper_val], dtype=np.float32)])
+            )
+
+        state = np.stack(state_history, axis=0)
+        if self._expected_state_dim is not None and state.shape[-1] != self._expected_state_dim:
+            if state.shape[-1] > self._expected_state_dim:
+                pyzlc.error(
+                    f"State dim {state.shape[-1]} larger than expected {self._expected_state_dim}; truncating."
+                )
+                state = state[..., : self._expected_state_dim]
+            else:
+                pad = self._expected_state_dim - state.shape[-1]
+                pyzlc.error(
+                    f"State dim {state.shape[-1]} smaller than expected {self._expected_state_dim}; padding zeros."
+                )
+                state = np.pad(state, ((0, 0), (0, pad)), mode="constant")
+
+        if self._state_history_length == 1 and self._expected_state_history_length <= 1:
+            return state[0]
+        return state
 
     def _build_force_torque_vector(self) -> Optional[np.ndarray]:
-        arm_state = self.arm_wrapper.capture_step()
-        grip_state = self.gripper_wrapper.capture_step()
+        arm_samples = self._get_recent_samples(self.arm_wrapper, 1)
+        grip_samples = self._get_recent_samples(self.gripper_wrapper, 1)
+        if not arm_samples or not grip_samples:
+            return None
+        arm_state = arm_samples[-1]
+        grip_state = grip_samples[-1]
         if not isinstance(arm_state, dict) or not isinstance(grip_state, dict):
             return None
 
@@ -439,23 +525,35 @@ class LeRobotPolicyInference(PolicyInferenceManager):
     def _build_images(self) -> Dict[str, Any]:
         images: Dict[str, Any] = {}
         for cam in self.cameras:
-            frame = cam.capture_step()
-            if frame is None:
+            frames = self._get_recent_samples(
+                cam, self._image_history_lengths.get(cam.hw_name, 1)
+            )
+            if not frames:
                 continue
-            if isinstance(frame, np.ndarray):
-                h, w, c = frame.shape
-                images[cam.hw_name] = {
-                    "height": int(h),
-                    "width": int(w),
-                    "channels": int(c),
-                    "rgb_data": frame.tobytes(),
-                }
-            else:
-                images[cam.hw_name] = frame
+            images[cam.hw_name] = []
+            for frame in frames:
+                if isinstance(frame, np.ndarray):
+                    h, w, c = frame.shape
+                    images[cam.hw_name].append(
+                        {
+                            "height": int(h),
+                            "width": int(w),
+                            "channels": int(c),
+                            "rgb_data": frame.tobytes(),
+                        }
+                    )
+                else:
+                    images[cam.hw_name].append(frame)
         return images
 
     def _build_observation(self) -> Dict[str, Any]:
-        state = torch.from_numpy(self._build_state_vector()).unsqueeze(0).to(self._device)
+        state_vec = self._build_state_vector()
+        state = torch.from_numpy(state_vec)
+        if state.ndim == 1:
+            state = state.unsqueeze(0)
+        else:
+            state = state.unsqueeze(0)
+        state = state.to(self._device)
         images = self._build_images()
         if not isinstance(images, dict) or not images:
             raise ValueError("No camera frames available for inference.")
@@ -474,10 +572,16 @@ class LeRobotPolicyInference(PolicyInferenceManager):
 
         mapped_images = self._map_images_to_observation_keys(images)
         for obs_key, cam_img in mapped_images.items():
-            rgb = self._decode_image(cam_img)
-            if rgb.ndim != 3 or rgb.shape[2] != 3:
-                raise ValueError(f"Expected HWC image with 3 channels for {obs_key}, got {rgb.shape}")
-            observation[obs_key] = self._stack_image_history(obs_key, rgb)
+            frame_history = cam_img if isinstance(cam_img, list) else [cam_img]
+            rgb_history = []
+            for frame in frame_history:
+                rgb = self._decode_image(frame)
+                if rgb.ndim != 3 or rgb.shape[2] != 3:
+                    raise ValueError(
+                        f"Expected HWC image with 3 channels for {obs_key}, got {rgb.shape}"
+                    )
+                rgb_history.append(rgb)
+            observation[obs_key] = self._images_to_tensor(rgb_history)
 
         self._cast_obs_floats_inplace(observation)
         return observation
@@ -487,7 +591,12 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         #     action_chunk = self.policy.predict_action_chunk(observation)
         # else:
         #     action_chunk = self.policy.select_action(observation)
+        # curr_time = time.perf_counter()
         action_chunk = self.policy.select_action(observation)
+        # end_time = time.perf_counter()
+        # elapsed = end_time - curr_time
+        # print(f"select action step took {elapsed:.3f} seconds")
+        
         if action_chunk.ndim == 1:
             action_chunk = action_chunk.unsqueeze(0).unsqueeze(0)
         elif action_chunk.ndim == 2:
@@ -530,7 +639,9 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         for obs_key in sorted(mapped_images.keys()):
             debug_name = obs_key.replace("observation.images.", "", 1)
             try:
-                rgb = self._decode_image(mapped_images[obs_key])
+                frame_data = mapped_images[obs_key]
+                frame = frame_data[-1] if isinstance(frame_data, list) else frame_data
+                rgb = self._decode_image(frame)
             except Exception as exc:
                 pyzlc.error(f"Startup image check failed for {obs_key}: {exc}")
                 continue
@@ -557,10 +668,22 @@ class LeRobotPolicyInference(PolicyInferenceManager):
             for line in lines:
                 log_file.write(f"{line}\n")
 
+    def _print_buffer_lengths(self, prefix: str) -> None:
+        details = [
+            (
+                f"{collector.hw_name} ({collector.hw_type}): "
+                f"{collector.buffered_length}/{collector.buffer_capacity}"
+            )
+            for collector in self.data_collectors
+        ]
+        print(f"{prefix} | " + " | ".join(details), flush=True)
+
     def _start_infering(self) -> None:
         self.control_pair.reset_action()
-        for history in self._image_histories.values():
-            history.clear()
+        for collector in self.data_collectors:
+            collector.start_buffering(clear_existing=True)
+        self._print_buffer_lengths("Buffer lengths after start_buffering")
+        self._last_buffer_debug_print_ts = time.perf_counter()
         if hasattr(self.policy, "reset"):
             self.policy.reset()
         self._check_startup_image()
@@ -575,6 +698,9 @@ class LeRobotPolicyInference(PolicyInferenceManager):
 
     def _infer_step(self) -> None:
         start_time = time.perf_counter()
+        # if start_time - self._last_buffer_debug_print_ts >= 1.0:
+        #     self._print_buffer_lengths("Buffer lengths")
+        #     self._last_buffer_debug_print_ts = start_time
 
         try:
             observation = self._build_observation()
@@ -611,6 +737,8 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         self._ui_console.log("Episode discarded.")
 
     def _stop_infering(self) -> None:
+        for collector in self.data_collectors:
+            collector.stop_buffering()
         super()._stop_infering()
 
     def _reset_arm(self) -> None:

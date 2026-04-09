@@ -8,13 +8,13 @@ from franka_control_client.control_pair.policy_panda_control_pair_chunk import (
 )
 from franka_control_client.franka_robot.panda_arm import RemotePandaArm
 from franka_control_client.franka_robot.panda_robotiq import PandaRobotiq
-from franka_control_client.policy_inference.irl_wrapper import (
+from franka_control_client.policy_inference.irl_wrapper_async import (
     IRL_HardwareDataWrapper,
     ImageDataWrapper,
     PandaArmDataWrapper,
     RobotiqGripperDataWrapper,
 )
-from franka_control_client.policy_inference.lerobot_policy_inference import (
+from franka_control_client.policy_inference.lerobot_policy_inference_async import (
     LeRobotPolicyInference,
     LeRobotPolicyInferenceConfig,
 )
@@ -39,6 +39,14 @@ if __name__ == "__main__":
     task = "fold the scarf on the table." #"Pick up the bell pepper and place it in the bowl."
     # dataset_path = "/home/irl-admin/new_data_collection/lerobot_meta/new_scarf_40hz"
     dataset_path = "/home/irl-admin/new_data_collection/lerobot_meta/scarf_25hz_100hz_ft"
+    observation_history_lengths = {
+        "state": 1,
+        "camera": 6,
+    }
+    observation_buffer_capacities = {
+        "state": 8,
+        "camera": 8,
+    }
 
     follower = PandaRobotiq(
         "PandaRobotiq",
@@ -48,9 +56,9 @@ if __name__ == "__main__":
     control_pair = PolicyPandaControlPair(follower.panda_arm, follower.robotiq_gripper)
 
     # Camera capture interval matches inference frequency (30 Hz = 0.033s)
-    camera_left = ImageDataWrapper(
-        CameraDevice("zed_left", preview=False), capture_interval=0.025, hw_name="zed_left"
-    )
+    # camera_left = ImageDataWrapper(
+    #     CameraDevice("zed_left", preview=False), capture_interval=0.025, hw_name="zed_left"
+    # )
     camera_right = ImageDataWrapper(
         CameraDevice("zed_right", preview=False), capture_interval=0.025, hw_name="zed_right"
     )
@@ -59,7 +67,7 @@ if __name__ == "__main__":
     )
 
     data_collectors: List[IRL_HardwareDataWrapper] = []
-    data_collectors.append(camera_left)
+    # data_collectors.append(camera_left)
     data_collectors.append(camera_right)
     data_collectors.append(camera_wrist)
     data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
@@ -68,10 +76,13 @@ if __name__ == "__main__":
     inference_cfg = LeRobotPolicyInferenceConfig(
         checkpoint_path=checkpoint_path,
         task=task,
-        fps=100,
+        fps=400,
         device="cuda",
         policy_dtype="bfloat16",
         dataset_path=dataset_path,
+        observation_history_lengths=observation_history_lengths,
+        observation_buffer_capacities=observation_buffer_capacities,
+        pad_history_with_oldest=True,
     )
     inference_manager = LeRobotPolicyInference(
         data_collectors=data_collectors,

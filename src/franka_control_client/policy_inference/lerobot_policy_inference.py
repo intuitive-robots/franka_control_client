@@ -263,6 +263,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
     def _build_observation(self) -> Dict[str, Any]:
         """Build observation dict from hardware data."""
         state_vec = self._build_state_vector()
+        # print(f"fed-in state vector: {state_vec}")
         images = self._build_images()
 
         state = np.asarray(state_vec, dtype=np.float32)
@@ -348,8 +349,8 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         #         q = np.asarray(
         #             arm_state["joint_state"], dtype=np.float32
         #         ).reshape(-1)
-        # if q is None or q.size != 7:
-        #     raise ValueError("Arm state missing valid joint positions.")
+        #         if q is None or q.size != 7:
+        #             raise ValueError("Arm state missing valid joint positions.")
 
         grip_state = self.gripper_wrapper.capture_step()
         gripper_val = None
@@ -376,6 +377,9 @@ class LeRobotPolicyInference(PolicyInferenceManager):
             if frame is None:
                 continue
             if isinstance(frame, np.ndarray):
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                # cv2.imshow(f"fed-in image - {cam.hw_name}", frame)
+                # cv2.waitKey(1)
                 h, w, c = frame.shape
                 images[cam.hw_name] = {
                     "height": int(h),

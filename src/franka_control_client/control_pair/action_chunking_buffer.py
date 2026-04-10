@@ -90,7 +90,7 @@ class DeltaActionChunkingBuffer:
                 R.from_quat(current_ee_quat)
                 * R.from_euler("xyz", delta_action_chunks[i][3:6], False)
             ).as_quat()
-            print(f"added orientation: {action[i][3:7]}")
+            print(f"added action: {action[i][:7]}")
             current_ee_quat = action[i][3:7]
             action[i][7] = delta_action_chunks[i][6]
         return action

@@ -12,7 +12,8 @@ import torch
 from lerobot.configs.train import TrainPipelineConfig
 from lerobot.configs.types import FeatureType, PolicyFeature
 from lerobot.policies.factory import make_policy, make_pre_post_processors
-from lerobot.utils.device_utils import get_safe_torch_device
+from lerobot.utils.utils import get_safe_torch_device
+
 
 from .policy_inference_manager import PolicyInferenceManager
 from ..data_collection.irl_wrapper import (

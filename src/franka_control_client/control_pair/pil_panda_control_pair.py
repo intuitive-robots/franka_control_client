@@ -25,7 +25,7 @@ from ..franka_robot.panda_arm import ControlMode, RemotePandaArm
 from ..franka_robot.panda_gripper import RemotePandaGripper
 from ..robotiq_gripper.robotiq_gripper import RemoteRobotiqGripper
 from .cartesian_policy_panda_control_pair import (
-    CartesianPolicyPandaControlPair,
+    PolicyPandaRobotiqDeltaCartesianControlPair,
 )
 
 DEFAULT_CONTROL_HZ: float = 1000
@@ -48,7 +48,7 @@ class PILMode(enum.Enum):
     REPLAY = "replay"
 
 
-class PILPandaControlPair(CartesianPolicyPandaControlPair):
+class PILPandaControlPair(PolicyPandaRobotiqDeltaCartesianControlPair):
     """
     Apply policy actions to a Panda arm with a gripper.
 

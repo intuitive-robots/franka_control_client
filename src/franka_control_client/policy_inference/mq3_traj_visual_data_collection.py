@@ -6,8 +6,8 @@ import pyzlc
 import numpy as np
 import threading
 
-from digital_twin.models import RobotModelId
-from digital_twin.simulation.mirror import RobotMirror
+# from digital_twin.models import RobotModelId
+# from digital_twin.simulation.mirror import RobotMirror
 from simpub.core import XRTrajectory
 
 from ..control_pair.pil_panda_control_pair import PILMode, PILPandaControlPair
@@ -35,9 +35,9 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
     ) -> None:
         super().__init__(data_collectors, control_pair, cfg)
         self.control_pair: PILPandaControlPair = control_pair
-        self.mirror = RobotMirror.from_model_id(
-            RobotModelId.FRANKA_PANDA_ROBOTIQ
-        )
+        # self.mirror = RobotMirror.from_model_id(
+        #     RobotModelId.FRANKA_PANDA_ROBOTIQ
+        # )
         self.last_chunk_traj: Optional[XRTrajectory] = None
         self.history_way_points = []
         self.history_traj: Optional[XRTrajectory] = None

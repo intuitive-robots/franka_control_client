@@ -3,9 +3,9 @@ from typing import List
 import pyzlc
 
 from franka_control_client.camera.camera import CameraDevice
-from franka_control_client.control_pair.cartesian_policy_panda_control_pair import (
-    CartesianPolicyPandaControlPair,
-)
+# from franka_control_client.control_pair.cartesian_policy_panda_control_pair import (
+#     CartesianPolicyPandaControlPair,
+# )
 from franka_control_client.control_pair.pil_panda_control_pair import (
     PILPandaControlPair,
 )
@@ -29,29 +29,27 @@ from franka_control_client.robotiq_gripper.robotiq_gripper import (
     RemoteRobotiqGripper,
 )
 from franka_control_client.vr.meta_quest3 import MQ3Controller
-from franka_control_client.control_pair.mq3_panda_control_pair import (
-    MQ3PandaControlPair,
-)
+# from franka_control_client.control_pair.mq3_panda_control_pair import (
+#     MQ3PandaControlPair,
+# )
 
 
 if __name__ == "__main__":
     pyzlc.init(
-        "policy_inference",
-        "192.168.1.1",
-        group_name="DroidGroup",
-        group_port=7730,
+        "data_collection",
+        "141.3.53.25",
+        group="224.0.0.1",
+        group_name="robot_lab_robotiq_202",
+        group_port=7725,
+        
     )
-
     # Checkpoint path from eval_config.yaml
     checkpoint_path = (
-        "/home/irl-admin/chekpoints/4th_March_folding/pretrained_model"
-    )
-    checkpoint_path = (
-        "/home/irl-admin/xinkai/xvla_checkpoints/100000/pretrained_model"
+        "/home/jjiang/ahmad/pretrained_model"
     )
     task = "pick_up_cylinder_on_the_top_of_cube"  # "Pick up the bell pepper and place it in the bowl."
     dataset_path = "/home/irl-admin/chekpoints/4th_March_folding"
-    dataset_path = "/home/irl-admin/xinkai/lerobot_format/pick_up_cylinder_on_the_top_of_cube"
+    dataset_path = "/home/jjiang/ahmad/pick_up_cylinder_on_the_top_of_cube"
     follower = PandaRobotiq(
         "PandaRobotiq",
         RemotePandaArm("FrankaPanda"),
@@ -62,29 +60,13 @@ if __name__ == "__main__":
     control_pair = PILPandaControlPair(
         follower.panda_arm, follower.robotiq_gripper, leader, 50
     )
-
-    # Camera capture interval matches inference frequency (30 Hz = 0.033s)
-    camera_left = ImageDataWrapper(
-        CameraDevice("zed_left", preview=False),
-        capture_interval=0.033,
-        hw_name="zed_left",
-    )
-    camera_right = ImageDataWrapper(
-        CameraDevice("zed_right", preview=False),
-        capture_interval=0.033,
-        hw_name="zed_right",
-    )
-    camera_wrist = ImageDataWrapper(
-        CameraDevice("zed_wrist", preview=False),
-        capture_interval=0.033,
-        hw_name="zed_wrist",
-    )
+    static_cam = ImageDataWrapper(CameraDevice("static_cam", preview=True), hw_name="static_cam")
+    wrist_cam = ImageDataWrapper(CameraDevice("wrist_cam", preview=True), hw_name="wrist_cam")
 
     data_collectors: List[IRLDataWrapper] = []
     data_collectors.append(MQ3DataWrapper(leader))
-    data_collectors.append(camera_left)
-    data_collectors.append(camera_right)
-    data_collectors.append(camera_wrist)
+    data_collectors.append(static_cam)
+    data_collectors.append(wrist_cam)
     data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
     data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
 

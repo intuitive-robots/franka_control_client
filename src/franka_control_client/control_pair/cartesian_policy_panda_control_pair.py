@@ -109,7 +109,7 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
         if action is None:
             return
         self.panda_arm.send_cartesian_pose_command(action[:3], action[3:7])
-        print(f"Applied command: {action[:7]}")
+        # print(f"Applied command: {action[:7]}")
         # Gripper command
         gripper_cmd = float(action[-1])
         gripper_cmd = 1 if gripper_cmd >= 0.5 else 0

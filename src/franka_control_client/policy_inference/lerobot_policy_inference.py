@@ -12,7 +12,7 @@ import torch
 from lerobot.configs.train import TrainPipelineConfig
 from lerobot.configs.types import FeatureType, PolicyFeature
 from lerobot.policies.factory import make_policy, make_pre_post_processors
-from lerobot.utils.device_utils import get_safe_torch_device
+# from lerobot.utils.device_utils import get_safe_torch_device
 
 from .policy_inference_manager import PolicyInferenceManager
 from ..data_collection.irl_wrapper import (
@@ -156,7 +156,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         """Load policy, preprocessor, and postprocessor."""
         ds_meta = self._load_dataset_meta()
         pyzlc.info(f"Loaded dataset meta: {ds_meta}")
-        device = get_safe_torch_device(self.train_cfg.policy.device, log=True)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu") #get_safe_torch_device(self.train_cfg.policy.device, log=True)
 
         policy = make_policy(
             cfg=self.train_cfg.policy,
@@ -351,7 +351,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         #         ).reshape(-1)
         #         if q is None or q.size != 7:
         #             raise ValueError("Arm state missing valid joint positions.")
-
+        print(f"fed in arm state: q={q}")
         grip_state = self.gripper_wrapper.capture_step()
         gripper_val = None
         if isinstance(grip_state, dict):
@@ -378,6 +378,8 @@ class LeRobotPolicyInference(PolicyInferenceManager):
                 continue
             if isinstance(frame, np.ndarray):
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                #resize the image like dataset converter does, to match the policy's expected input shape
+                frame = cv2.resize(frame, (256, 256), interpolation=cv2.INTER_AREA)
                 # cv2.imshow(f"fed-in image - {cam.hw_name}", frame)
                 # cv2.waitKey(1)
                 h, w, c = frame.shape

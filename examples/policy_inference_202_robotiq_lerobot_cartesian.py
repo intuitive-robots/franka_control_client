@@ -36,9 +36,9 @@ if __name__ == "__main__":
 
     # Checkpoint path from eval_config.yaml
     checkpoint_path = (
-        "/home/jjiang/jing/model/15-25-13_beso/checkpoints/010000/pretrained_model" 
+        "/home/jjiang/jing/model/2026-04-09/pickupbanana_ac10_data40/checkpoints/010000/pretrained_model" 
     )
-    task = "folding." 
+    task = "pick_up_banana"  # Task name for inference, should match the one used during training
     dataset_path = "/home/jjiang/jing/dataset/lerobot/pick_up_banana_20hz_gripper_0_5_to_1_delta_cartesian_euler" 
 
     follower = PandaRobotiq(

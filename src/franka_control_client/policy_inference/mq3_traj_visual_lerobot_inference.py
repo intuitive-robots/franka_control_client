@@ -130,51 +130,22 @@ class MQ3TrajVisualLeRobotInference(LeRobotPolicyInference):
                 f"Preprocessor failed. image_shapes={image_shapes}, state_shape={tuple(observation['observation.state'].shape)}"
             ) from exc
 
-        # Evaluate policy and postprocess each action in the predicted chunk.
+        # Evaluate policy and postprocess one selected action.
         with torch.inference_mode():
-            ###single action
-            #       action = self.policy.select_action(observation)
-            # action = action[:, :8]
+            action = self.policy.select_action(observation)
 
-            # # Postprocess action
-            # action = self.postprocessor(action).float().cpu().numpy()
-            # # print("post action:",action)
-
-            # action_vec = action[0] if action.ndim == 2 else action
-
-            ###action chunk
-            # Populate observation queues and stack images (mirroring select_action preprocessing)
-            from lerobot.utils.constants import ACTION, OBS_IMAGES
-            from lerobot.policies.utils import populate_queues
-            obs = dict(observation)
-            if ACTION in obs:
-                obs.pop(ACTION)
-            if self.policy.config.image_features:
-                obs[OBS_IMAGES] = torch.stack([obs[key] for key in self.policy.config.image_features], dim=-4)
-            self.policy._queues = populate_queues(self.policy._queues, obs)
-            action_chunk = self.policy.predict_action_chunk(obs)
-
-        if action_chunk.ndim == 2:
-            action_chunk = action_chunk.unsqueeze(1)
-        elif action_chunk.ndim != 3:
+        if action.ndim == 1:
+            action = action.unsqueeze(0)
+        elif action.ndim != 2:
             raise RuntimeError(
-                f"Expected action_chunk to have shape (B, T, D) or (B, D), got {tuple(action_chunk.shape)}"
+                f"Expected action to have shape (B, D) or (D,), got {tuple(action.shape)}"
             )
 
-        batch_size, chunk_size, action_dim = action_chunk.shape
-        post_action_chunk = torch.zeros(
-            (batch_size, chunk_size, action_dim), dtype=torch.float32
-        )
-        for chunk_idx in range(chunk_size):
-            single_action = action_chunk[:, chunk_idx, :]
-            processed_action = self.postprocessor(single_action)
-            post_action_chunk[:, chunk_idx, :] = processed_action
-
-        # Remove batch dim: (1, T, D) -> (T, D) for the action buffer
-        post_action_chunk = post_action_chunk[0].float().cpu().numpy()
+        processed_action = self.postprocessor(action)
+        action_vec = processed_action[0].float().cpu().numpy()
 
         try:
-            self.control_pair.update_action_chunk(post_action_chunk)
+            self.control_pair.update_action(action_vec)
         except Exception as exc:
             pyzlc.error(f"Failed to apply policy action: {exc}")
         end_time = time.perf_counter()

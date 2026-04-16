@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import importlib.util
+import sys
 import time
+import types
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -11,7 +14,33 @@ import pyzlc
 import torch
 from lerobot.configs.train import TrainPipelineConfig
 from lerobot.configs.types import FeatureType, PolicyFeature
+
+
+def _install_lerobot_groot_import_shim() -> None:
+    """Avoid importing optional GR00T model code during factory import."""
+
+    package_name = "lerobot.policies.groot"
+    if package_name in sys.modules:
+        return
+
+    spec = importlib.util.find_spec("lerobot")
+    if spec is None or not spec.submodule_search_locations:
+        return
+
+    lerobot_root = Path(next(iter(spec.submodule_search_locations)))
+    groot_dir = lerobot_root / "policies" / "groot"
+    if not groot_dir.is_dir():
+        return
+
+    groot_pkg = types.ModuleType(package_name)
+    groot_pkg.__file__ = str(groot_dir / "__init__.py")
+    groot_pkg.__path__ = [str(groot_dir)]
+    sys.modules[package_name] = groot_pkg
+
+
+_install_lerobot_groot_import_shim()
 from lerobot.policies.factory import make_policy, make_pre_post_processors
+from lerobot.policies.pretrained import PreTrainedPolicy
 # from lerobot.utils.device_utils import get_safe_torch_device
 
 from .policy_inference_manager import PolicyInferenceManager
@@ -29,6 +58,55 @@ try:
     from utils.eval_utils import load_dataset_meta
 except ImportError:
     load_dataset_meta = None
+
+
+def _install_lerobot_safetensor_load_fallback() -> None:
+    """Fallback to plain state-dict loading for shared-tensor safetensor checkpoints."""
+
+    original_loader = PreTrainedPolicy._load_as_safetensor.__func__
+    if getattr(original_loader, "__name__", "") == "_patched_load_as_safetensor":
+        return
+
+    @classmethod
+    def _patched_load_as_safetensor(
+        cls, model: PreTrainedPolicy, model_file: str, map_location: str, strict: bool
+    ):
+        try:
+            return original_loader(cls, model, model_file, map_location, strict)
+        except RuntimeError as exc:
+            error_text = str(exc)
+            if (
+                "Refusing to save/load the model" not in error_text
+                or "shared_tensors" not in error_text
+            ):
+                raise
+
+            pyzlc.warning(
+                "safetensors direct load failed because the checkpoint contains shared tensors; "
+                "falling back to state_dict loading."
+            )
+
+            from safetensors.torch import load_file
+            from lerobot.policies.utils import log_model_loading_keys
+
+            try:
+                state_dict = load_file(model_file, device=map_location)
+            except TypeError:
+                state_dict = load_file(model_file)
+
+            missing_keys, unexpected_keys = model.load_state_dict(
+                state_dict, strict=strict
+            )
+            log_model_loading_keys(missing_keys, unexpected_keys)
+
+            if map_location != "cpu":
+                model.to(map_location)
+            return model
+
+    PreTrainedPolicy._load_as_safetensor = _patched_load_as_safetensor
+
+
+_install_lerobot_safetensor_load_fallback()
 
 
 @dataclass
@@ -331,6 +409,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
             )
 
         observation["task"] = self.task
+        # print(f"Built observation with state shape {observation['observation.state'].shape} , images {[f'{k}: {v.shape}' for k, v in observation.items() if str(k).startswith('observation.images.')]} and task {observation['task']}")
 
         return observation
 

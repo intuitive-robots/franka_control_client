@@ -338,6 +338,17 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         rgb = torch.from_numpy(image.copy()).float().permute(2, 0, 1) / 255.0
         return rgb.unsqueeze(0)
 
+    def _make_blank_image(
+        self, obs_key: str, fallback_shape: tuple[int, int, int] = (3, 0, 0)
+    ) -> np.ndarray:
+        """Create a blank RGB image matching the expected policy input shape."""
+        c, h, w = self._expected_image_shapes.get(obs_key, fallback_shape)
+        if c != 3:
+            raise ValueError(
+                f"Blank image generation expects 3 channels for {obs_key}, got {(c, h, w)}"
+            )
+        return np.zeros((h, w, c), dtype=np.uint8)
+
     def _build_observation(self) -> Dict[str, Any]:
         """Build observation dict from hardware data."""
         state_vec = self._build_state_vector()
@@ -375,6 +386,12 @@ class LeRobotPolicyInference(PolicyInferenceManager):
                 "observation.images.image": right_img,
                 "observation.images.image2": wrist_img,
             }
+            for missing_key in expected_image_keys:
+                if missing_key not in mapped:
+                    # pyzlc.info(
+                    #     f"Missing camera input for {missing_key}; using blank image."
+                    # )
+                    mapped[missing_key] = self._make_blank_image(missing_key)
         elif not expected_image_keys:
             mapped = {f"observation.images.{k}": v for k, v in images.items()}
         else:
@@ -386,6 +403,17 @@ class LeRobotPolicyInference(PolicyInferenceManager):
                     key: images[key.replace("observation.images.", "", 1)]
                     for key in expected_image_keys
                 }
+            elif set(image_namespaced).issubset(set(expected_image_keys)):
+                mapped = {
+                    f"observation.images.{key}": value
+                    for key, value in images.items()
+                }
+                for missing_key in expected_image_keys:
+                    if missing_key not in mapped:
+                        # pyzlc.info(
+                        #     f"Missing camera input for {missing_key}; using blank image."
+                        # )
+                        mapped[missing_key] = self._make_blank_image(missing_key)
             elif len(images) == len(expected_image_keys):
                 mapped = dict(zip(expected_image_keys, images.values()))
             elif len(images) == 1 and len(expected_image_keys) == 1:
@@ -421,6 +449,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         q = np.asarray(arm_state[0], dtype=np.float32).reshape(-1)
         rot = np.asarray(arm_state[1], dtype=np.float32).reshape(-1)
         q = np.concatenate([q, rot], dtype=np.float32)
+
         # if isinstance(arm_state, dict):
         #     if "q" in arm_state:
         #         q = np.asarray(arm_state["q"], dtype=np.float32).reshape(-1)
@@ -528,6 +557,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
     def _start_infering(self) -> None:
         # Reset action state for new episode
         self.control_pair.reset_action()
+        self.policy.reset()
         # debug
         # self._check_startup_image()
         # self.last_timestamp = None

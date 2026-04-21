@@ -78,6 +78,11 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
             )[0]
         elif arr.size >= 8:
             absolute_action = arr[:8].astype(np.float32, copy=False)
+
+            #for delta position and absolute rotation action space, the input action is [delta_x, delta_y, delta_z, abs_qx, abs_qy, abs_qz, abs_qw, gripper]
+            # absolute_action = self.action_buffer.delta2absolute(
+            #     arr[:8].reshape(1, -1)
+            #     )[0]
         else:
             raise ValueError(
                 f"Expected delta-cartesian action size 7 or absolute action size >= 8, got {arr.size}"
@@ -119,7 +124,9 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
         if action is None:
             return
         self.panda_arm.send_cartesian_pose_command(action[:3], action[3:7])
-        # print(f"Applied command: {action[:7]}")
+        
+        print(f"Applied command: {action}")
+        
         # Gripper command
         gripper_cmd = float(action[-1])
         gripper_cmd = 1 if gripper_cmd >= 0.5 else 0

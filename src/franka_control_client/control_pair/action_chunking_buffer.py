@@ -30,6 +30,7 @@ class DeltaActionChunkingBuffer:
                 f"New action chunk has {new_action_chunk.shape[0]} steps, expected {self._chunk_size}."
             )
         absolute_chunk = self.delta2absolute(new_action_chunk)
+        print(f"added new action chunk: {absolute_chunk}")
         with self._lock:
             if self._last_action_time is None:
                 self._buffer = absolute_chunk
@@ -80,17 +81,25 @@ class DeltaActionChunkingBuffer:
         if current_ee_quat is None:
             raise ValueError("Current end-effector rotation is not available.")
         current_ee_quat = np.array(current_ee_quat)
+        print(f"Current EE pose {current_ee_pos}, {current_ee_quat}")
         n_steps = len(delta_action_chunks)
         # Output: pos(3) + quat(4) + gripper(1) = 8
         action = np.zeros((n_steps, 8), dtype=np.float32)
         for i in range(n_steps):
             action[i][:3] = current_ee_pos + delta_action_chunks[i][:3]
             current_ee_pos = action[i][:3]
-            action[i][3:7] = (
-                R.from_quat(current_ee_quat)
-                * R.from_euler("xyz", delta_action_chunks[i][3:6], False)
-            ).as_quat()
-            print(f"added action: {action[i][:7]}")
+
+            # delta position and delta rotation action space
+            # action[i][3:7] = (
+            #     R.from_quat(current_ee_quat)
+            #     * R.from_euler("xyz", delta_action_chunks[i][3:6], False)
+            # ).as_quat()
+            # print(f"added action: {action[i][:7]}")
+            
+            # delta position and absolute quat rotation action space
+            action[i][3:7] = delta_action_chunks[i][3:7]
+
             current_ee_quat = action[i][3:7]
-            action[i][7] = delta_action_chunks[i][6]
+            action[i][7] = delta_action_chunks[i][7]  # gripper command
+            print(f"delta_action_chunk: {delta_action_chunks[i]}, absolute_action: {action[i]}")
         return action

@@ -449,16 +449,6 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         q = np.asarray(arm_state[0], dtype=np.float32).reshape(-1)
         rot = np.asarray(arm_state[1], dtype=np.float32).reshape(-1)
         q = np.concatenate([q, rot], dtype=np.float32)
-
-        # if isinstance(arm_state, dict):
-        #     if "q" in arm_state:
-        #         q = np.asarray(arm_state["q"], dtype=np.float32).reshape(-1)
-        #     elif "joint_state" in arm_state:
-        #         q = np.asarray(
-        #             arm_state["joint_state"], dtype=np.float32
-        #         ).reshape(-1)
-        #         if q is None or q.size != 7:
-        #             raise ValueError("Arm state missing valid joint positions.")
         print(f"fed in arm state: q={q}")
         grip_state = self.gripper_wrapper.capture_step()
         gripper_val = None

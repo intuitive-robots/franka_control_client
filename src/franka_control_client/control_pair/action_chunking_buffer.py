@@ -88,18 +88,8 @@ class DeltaActionChunkingBuffer:
         for i in range(n_steps):
             action[i][:3] = current_ee_pos + delta_action_chunks[i][:3]
             current_ee_pos = action[i][:3]
-
-            # delta position and delta rotation action space
-            # action[i][3:7] = (
-            #     R.from_quat(current_ee_quat)
-            #     * R.from_euler("xyz", delta_action_chunks[i][3:6], False)
-            # ).as_quat()
-            # print(f"added action: {action[i][:7]}")
-            
-            # delta position and absolute quat rotation action space
             action[i][3:7] = delta_action_chunks[i][3:7]
-
             current_ee_quat = action[i][3:7]
             action[i][7] = delta_action_chunks[i][7]  # gripper command
-            print(f"delta_action_chunk: {delta_action_chunks[i]}, absolute_action: {action[i]}")
+            # print(f"delta_action_chunk: {delta_action_chunks[i]}, absolute_action: {action[i]}")
         return action

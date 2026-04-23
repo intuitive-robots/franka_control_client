@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import importlib.util
+import sys
 import time
+import types
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -11,8 +14,34 @@ import pyzlc
 import torch
 from lerobot.configs.train import TrainPipelineConfig
 from lerobot.configs.types import FeatureType, PolicyFeature
+
+
+def _install_lerobot_groot_import_shim() -> None:
+    """Avoid importing optional GR00T model code during factory import."""
+
+    package_name = "lerobot.policies.groot"
+    if package_name in sys.modules:
+        return
+
+    spec = importlib.util.find_spec("lerobot")
+    if spec is None or not spec.submodule_search_locations:
+        return
+
+    lerobot_root = Path(next(iter(spec.submodule_search_locations)))
+    groot_dir = lerobot_root / "policies" / "groot"
+    if not groot_dir.is_dir():
+        return
+
+    groot_pkg = types.ModuleType(package_name)
+    groot_pkg.__file__ = str(groot_dir / "__init__.py")
+    groot_pkg.__path__ = [str(groot_dir)]
+    sys.modules[package_name] = groot_pkg
+
+
+_install_lerobot_groot_import_shim()
 from lerobot.policies.factory import make_policy, make_pre_post_processors
-from lerobot.utils.device_utils import get_safe_torch_device
+from lerobot.policies.pretrained import PreTrainedPolicy
+# from lerobot.utils.device_utils import get_safe_torch_device
 
 from .policy_inference_manager import PolicyInferenceManager
 from ..data_collection.irl_wrapper import (
@@ -31,80 +60,53 @@ except ImportError:
     load_dataset_meta = None
 
 
-_SAFETENSORS_SHARED_TENSOR_ERROR = (
-    "found no suitable name to keep for saving amongst"
-)
+def _install_lerobot_safetensor_load_fallback() -> None:
+    """Fallback to plain state-dict loading for shared-tensor safetensor checkpoints."""
 
-
-def _patch_lerobot_safetensor_loader() -> None:
-    """Fallback to a direct state-dict load when safetensors rejects shared views."""
-    try:
-        import lerobot.policies.pretrained as pretrained_mod
-        from safetensors.torch import load_file as load_safetensor_file
-    except Exception:
+    original_loader = PreTrainedPolicy._load_as_safetensor.__func__
+    if getattr(original_loader, "__name__", "") == "_patched_load_as_safetensor":
         return
 
-    loader_descriptor = pretrained_mod.PreTrainedPolicy.__dict__.get(
-        "_load_as_safetensor"
-    )
-    if not isinstance(loader_descriptor, classmethod):
-        return
-
-    original_loader = loader_descriptor.__func__
-    if getattr(original_loader, "_franka_shared_tensor_patch", False):
-        return
-
-    def _compat_load_as_safetensor(
-        cls, model, model_file: str, map_location: str, strict: bool
+    @classmethod
+    def _patched_load_as_safetensor(
+        cls, model: PreTrainedPolicy, model_file: str, map_location: str, strict: bool
     ):
         try:
-            return original_loader(
-                cls, model, model_file, map_location, strict
-            )
+            return original_loader(cls, model, model_file, map_location, strict)
         except RuntimeError as exc:
-            if _SAFETENSORS_SHARED_TENSOR_ERROR not in str(exc):
+            error_text = str(exc)
+            if (
+                "Refusing to save/load the model" not in error_text
+                or "shared_tensors" not in error_text
+            ):
                 raise
 
-            pyzlc.info(
-                "safetensors load hit a shared/view-backed tensor edge case; "
-                "falling back to direct state_dict loading."
-            )
-            state_dict = load_safetensor_file(model_file, device="cpu")
-            missing_keys, unexpected_keys = model.load_state_dict(
-                state_dict, strict=False
-            )
-            pretrained_mod.log_model_loading_keys(
-                missing_keys, unexpected_keys
+            pyzlc.warning(
+                "safetensors direct load failed because the checkpoint contains shared tensors; "
+                "falling back to state_dict loading."
             )
 
-            if strict and (missing_keys or unexpected_keys):
-                missing_text = ", ".join(
-                    f'"{key}"' for key in sorted(missing_keys)
-                )
-                unexpected_text = ", ".join(
-                    f'"{key}"' for key in sorted(unexpected_keys)
-                )
-                parts = [
-                    f"Error(s) in loading state_dict for {model.__class__.__name__}:"
-                ]
-                if missing_keys:
-                    parts.append(
-                        f"    Missing key(s) in state_dict: {missing_text}"
-                    )
-                if unexpected_keys:
-                    parts.append(
-                        f"    Unexpected key(s) in state_dict: {unexpected_text}"
-                    )
-                raise RuntimeError("\n".join(parts))
+            from safetensors.torch import load_file
+            from lerobot.policies.utils import log_model_loading_keys
+
+            try:
+                state_dict = load_file(model_file, device=map_location)
+            except TypeError:
+                state_dict = load_file(model_file)
+
+            missing_keys, unexpected_keys = model.load_state_dict(
+                state_dict, strict=strict
+            )
+            log_model_loading_keys(missing_keys, unexpected_keys)
 
             if map_location != "cpu":
                 model.to(map_location)
             return model
 
-    _compat_load_as_safetensor._franka_shared_tensor_patch = True
-    pretrained_mod.PreTrainedPolicy._load_as_safetensor = classmethod(
-        _compat_load_as_safetensor
-    )
+    PreTrainedPolicy._load_as_safetensor = _patched_load_as_safetensor
+
+
+_install_lerobot_safetensor_load_fallback()
 
 
 @dataclass
@@ -233,7 +235,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         """Load policy, preprocessor, and postprocessor."""
         ds_meta = self._load_dataset_meta()
         pyzlc.info(f"Loaded dataset meta: {ds_meta}")
-        device = get_safe_torch_device(self.train_cfg.policy.device, log=True)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu") #get_safe_torch_device(self.train_cfg.policy.device, log=True)
 
         policy = make_policy(
             cfg=self.train_cfg.policy,
@@ -337,9 +339,21 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         rgb = torch.from_numpy(image.copy()).float().permute(2, 0, 1) / 255.0
         return rgb.unsqueeze(0)
 
+    def _make_blank_image(
+        self, obs_key: str, fallback_shape: tuple[int, int, int] = (3, 0, 0)
+    ) -> np.ndarray:
+        """Create a blank RGB image matching the expected policy input shape."""
+        c, h, w = self._expected_image_shapes.get(obs_key, fallback_shape)
+        if c != 3:
+            raise ValueError(
+                f"Blank image generation expects 3 channels for {obs_key}, got {(c, h, w)}"
+            )
+        return np.zeros((h, w, c), dtype=np.uint8)
+
     def _build_observation(self) -> Dict[str, Any]:
         """Build observation dict from hardware data."""
         state_vec = self._build_state_vector()
+        # print(f"fed-in state vector: {state_vec}")
         images = self._build_images()
 
         state = np.asarray(state_vec, dtype=np.float32)
@@ -373,6 +387,12 @@ class LeRobotPolicyInference(PolicyInferenceManager):
                 "observation.images.image": right_img,
                 "observation.images.image2": wrist_img,
             }
+            for missing_key in expected_image_keys:
+                if missing_key not in mapped:
+                    # pyzlc.info(
+                    #     f"Missing camera input for {missing_key}; using blank image."
+                    # )
+                    mapped[missing_key] = self._make_blank_image(missing_key)
         elif not expected_image_keys:
             mapped = {f"observation.images.{k}": v for k, v in images.items()}
         else:
@@ -384,6 +404,17 @@ class LeRobotPolicyInference(PolicyInferenceManager):
                     key: images[key.replace("observation.images.", "", 1)]
                     for key in expected_image_keys
                 }
+            elif set(image_namespaced).issubset(set(expected_image_keys)):
+                mapped = {
+                    f"observation.images.{key}": value
+                    for key, value in images.items()
+                }
+                for missing_key in expected_image_keys:
+                    if missing_key not in mapped:
+                        # pyzlc.info(
+                        #     f"Missing camera input for {missing_key}; using blank image."
+                        # )
+                        mapped[missing_key] = self._make_blank_image(missing_key)
             elif len(images) == len(expected_image_keys):
                 mapped = dict(zip(expected_image_keys, images.values()))
             elif len(images) == 1 and len(expected_image_keys) == 1:
@@ -407,6 +438,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
             )
 
         observation["task"] = self.task
+        # print(f"Built observation with state shape {observation['observation.state'].shape} , images {[f'{k}: {v.shape}' for k, v in observation.items() if str(k).startswith('observation.images.')]} and task {observation['task']}")
 
         return observation
 
@@ -418,6 +450,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         q = np.asarray(arm_state[0], dtype=np.float32).reshape(-1)
         rot = np.asarray(arm_state[1], dtype=np.float32).reshape(-1)
         q = np.concatenate([q, rot], dtype=np.float32)
+
         # if isinstance(arm_state, dict):
         #     if "q" in arm_state:
         #         q = np.asarray(arm_state["q"], dtype=np.float32).reshape(-1)
@@ -425,9 +458,9 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         #         q = np.asarray(
         #             arm_state["joint_state"], dtype=np.float32
         #         ).reshape(-1)
-        # if q is None or q.size != 7:
-        #     raise ValueError("Arm state missing valid joint positions.")
-
+        #         if q is None or q.size != 7:
+        #             raise ValueError("Arm state missing valid joint positions.")
+        print(f"fed in arm state: q={q}")
         grip_state = self.gripper_wrapper.capture_step()
         gripper_val = None
         if isinstance(grip_state, dict):
@@ -443,7 +476,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
                     gripper_val = float(gripper_arr[0])
         if gripper_val is None:
             raise ValueError("Gripper state missing value.")
-        print(f"Captured state vector: q={q}, gripper={gripper_val}")
+        # print(f"Captured state vector: q={q}, gripper={gripper_val}")
         return np.concatenate([q, np.asarray([gripper_val], dtype=np.float32)])
 
     def _build_images(self) -> Dict[str, Any]:
@@ -453,6 +486,11 @@ class LeRobotPolicyInference(PolicyInferenceManager):
             if frame is None:
                 continue
             if isinstance(frame, np.ndarray):
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                #resize the image like dataset converter does, to match the policy's expected input shape
+                frame = cv2.resize(frame, (256, 256), interpolation=cv2.INTER_AREA)
+                # cv2.imshow(f"fed-in image - {cam.hw_name}", frame)
+                # cv2.waitKey(1)
                 h, w, c = frame.shape
                 images[cam.hw_name] = {
                     "height": int(h),
@@ -520,6 +558,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
     def _start_infering(self) -> None:
         # Reset action state for new episode
         self.control_pair.reset_action()
+        self.policy.reset()
         # debug
         # self._check_startup_image()
         # self.last_timestamp = None

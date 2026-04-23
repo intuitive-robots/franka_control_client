@@ -24,10 +24,11 @@ class DeltaActionChunkingBuffer:
         self._buffer = np.zeros((chunk_size, action_dim), dtype=np.float32)
 
     def add_new_action_chunk(self, new_action_chunk: np.ndarray):
-        print(new_action_chunk)
         if new_action_chunk.shape != (self._chunk_size, self._buffer.shape[1]):
             raise ValueError(
-                f"New action chunk shape {new_action_chunk.shape} does not match buffer shape {self._buffer[0].shape if self._buffer else 'None'}."
+                "New action chunk shape "
+                f"{new_action_chunk.shape} does not match expected buffer "
+                f"shape {(self._chunk_size, self._buffer.shape[1])}."
             )
         absolute_chunk = self.delta2absolute(new_action_chunk)
         with self._lock:

@@ -31,6 +31,82 @@ except ImportError:
     load_dataset_meta = None
 
 
+_SAFETENSORS_SHARED_TENSOR_ERROR = (
+    "found no suitable name to keep for saving amongst"
+)
+
+
+def _patch_lerobot_safetensor_loader() -> None:
+    """Fallback to a direct state-dict load when safetensors rejects shared views."""
+    try:
+        import lerobot.policies.pretrained as pretrained_mod
+        from safetensors.torch import load_file as load_safetensor_file
+    except Exception:
+        return
+
+    loader_descriptor = pretrained_mod.PreTrainedPolicy.__dict__.get(
+        "_load_as_safetensor"
+    )
+    if not isinstance(loader_descriptor, classmethod):
+        return
+
+    original_loader = loader_descriptor.__func__
+    if getattr(original_loader, "_franka_shared_tensor_patch", False):
+        return
+
+    def _compat_load_as_safetensor(
+        cls, model, model_file: str, map_location: str, strict: bool
+    ):
+        try:
+            return original_loader(
+                cls, model, model_file, map_location, strict
+            )
+        except RuntimeError as exc:
+            if _SAFETENSORS_SHARED_TENSOR_ERROR not in str(exc):
+                raise
+
+            pyzlc.info(
+                "safetensors load hit a shared/view-backed tensor edge case; "
+                "falling back to direct state_dict loading."
+            )
+            state_dict = load_safetensor_file(model_file, device="cpu")
+            missing_keys, unexpected_keys = model.load_state_dict(
+                state_dict, strict=False
+            )
+            pretrained_mod.log_model_loading_keys(
+                missing_keys, unexpected_keys
+            )
+
+            if strict and (missing_keys or unexpected_keys):
+                missing_text = ", ".join(
+                    f'"{key}"' for key in sorted(missing_keys)
+                )
+                unexpected_text = ", ".join(
+                    f'"{key}"' for key in sorted(unexpected_keys)
+                )
+                parts = [
+                    f"Error(s) in loading state_dict for {model.__class__.__name__}:"
+                ]
+                if missing_keys:
+                    parts.append(
+                        f"    Missing key(s) in state_dict: {missing_text}"
+                    )
+                if unexpected_keys:
+                    parts.append(
+                        f"    Unexpected key(s) in state_dict: {unexpected_text}"
+                    )
+                raise RuntimeError("\n".join(parts))
+
+            if map_location != "cpu":
+                model.to(map_location)
+            return model
+
+    _compat_load_as_safetensor._franka_shared_tensor_patch = True
+    pretrained_mod.PreTrainedPolicy._load_as_safetensor = classmethod(
+        _compat_load_as_safetensor
+    )
+
+
 @dataclass
 class LeRobotPolicyInferenceConfig:
     checkpoint_path: str
@@ -59,6 +135,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         self.data_collectors = data_collectors
         self.control_pair = control_pair
         self.cfg = cfg
+        _patch_lerobot_safetensor_loader()
 
         self.cameras: List[ImageDataWrapper] = []
         self.arm_wrapper: Optional[PandaArmDataWrapper] = None

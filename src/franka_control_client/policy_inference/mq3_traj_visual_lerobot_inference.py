@@ -12,9 +12,7 @@ from simpub.core.xrcavns import TrajectoryWaypointDict
 from enum import Enum
 
 from ..franka_robot.panda_robotiq import PandaRobotiq
-from ..control_pair.cartesian_policy_panda_control_pair import (
-    PolicyPandaRobotiqDeltaCartesianControlPair,
-)
+from ..control_pair.policy_panda_control_pair import PolicyPandaControlPair
 from ..data_collection.irl_wrapper import IRLDataWrapper
 from .lerobot_policy_inference import (
     LeRobotPolicyInference,
@@ -33,9 +31,7 @@ class WayPointColor(Enum):
 
 class PILDigitalTwin:
 
-    def __init__(
-        self, control_pair: PolicyPandaRobotiqDeltaCartesianControlPair
-    ):
+    def __init__(self, control_pair: PolicyPandaControlPair):
         self.mirror = RobotMirror.from_model_id(
             RobotModelId.FRANKA_PANDA_ROBOTIQ
         )
@@ -103,7 +99,7 @@ class MQ3TrajVisualLeRobotInference(LeRobotPolicyInference):
     def __init__(
         self,
         data_collectors: List[IRLDataWrapper],
-        control_pair: PolicyPandaRobotiqDeltaCartesianControlPair,
+        control_pair: PolicyPandaControlPair,
         cfg: LeRobotPolicyInferenceConfig,
     ) -> None:
         super().__init__(data_collectors, control_pair, cfg)

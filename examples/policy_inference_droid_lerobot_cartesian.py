@@ -1,10 +1,14 @@
+import sys
+from pathlib import Path
 from typing import List
 
 import pyzlc
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
 from franka_control_client.camera.camera import CameraDevice
-from franka_control_client.control_pair.cartesian_policy_panda_control_pair import (
-    PolicyPandaRobotiqDeltaCartesianControlPair,
+from franka_control_client.control_pair.policy_panda_control_pair import (
+    PolicyPandaRobotiqCartesianControlPair,
 )
 
 from franka_control_client.franka_robot.panda_arm import RemotePandaArm
@@ -36,23 +40,23 @@ if __name__ == "__main__":
 
     # Checkpoint path from eval_config.yaml
     checkpoint_path = (
-        "/home/jjiang/model/2026-04-07/15-06-46_beso/checkpoints/010000/pretrained_model" #/home/irl-admin/xinkai/xvla_checkpoints/100000/pretrained_model"
+        "/home/jjiang/jing/model/beso/bestmodel_fold_abs_car/checkpoints/005000/pretrained_model"
     )
-    task = "Pick up banana."  # "Pick up the bell pepper and place it in the bowl."
-    dataset_path = "/home/jjiang/jing/dataset/lerobot/pick_up_banana_20hz_gripper_0_5_to_1_delta_cartesian_euler"
+    task = "Pick up banana."
+    dataset_path = "/home/jjiang/jing/dataset/lerobot/folding_20hz_abs_cartesian_action"
 
     follower = PandaRobotiq(
         "PandaRobotiq",
         RemotePandaArm("FrankaPanda"),
         RemoteRobotiqGripper("FrankaPanda"),
     )
-    control_pair = PolicyPandaRobotiqDeltaCartesianControlPair(
-        follower.panda_arm, follower.robotiq_gripper, 100, 10, 0.5
+    control_pair = PolicyPandaRobotiqCartesianControlPair(
+        follower.panda_arm, follower.robotiq_gripper, 100
     )
 
     # Camera capture interval matches inference frequency (30 Hz = 0.033s)
-    static_cam = ImageDataWrapper(CameraDevice("static_cam", preview=True), hw_name="static_cam")
-    wrist_cam = ImageDataWrapper(CameraDevice("wrist_cam", preview=True), hw_name="wrist_cam")
+    static_cam = ImageDataWrapper(CameraDevice("static_cam", preview=False), hw_name="static_cam")
+    wrist_cam = ImageDataWrapper(CameraDevice("wrist_cam", preview=False), hw_name="wrist_cam")
 
     data_collectors: List[IRLDataWrapper] = []
     data_collectors.append(static_cam)

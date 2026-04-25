@@ -179,6 +179,8 @@ class IRLDataCollection(DataCollectionManager):
         self.timestamps = []
         self.cur_timestep = 0
         self.capture_interval = 1.0/fps # in second
+        self.leader_robot = None
+        self.leader_robot_dir = None
         for hw in data_collectors:
             if hw.hw_type == "leader_robot":
                 self.leader_robot = hw
@@ -228,7 +230,7 @@ class IRLDataCollection(DataCollectionManager):
             # end_time = time.time()
         
         self.timestamps.append(start_time)
-        leader_state = self.leader_robot.capture_step() #gello
+        leader_state = self.leader_robot.capture_step() if self.leader_robot is not None else None
         follower_arm_state = self.follower_arm.capture_step()
         follower_gripper_state = self.follower_gripper.capture_step()
         #robotiq sometimes can not get state in time, so use last time to pad
@@ -239,9 +241,10 @@ class IRLDataCollection(DataCollectionManager):
         #todo:using smarter way to wrapper
         #todo:maybe change gripper command to record robotiq command
         #leader
-        self.leader_robot_data.q_list.append(to_tensor(leader_state["gello_arm_state"]["joint_state"]))
-        self.leader_robot_data.gripper_state_list.append(to_tensor(leader_state["gello_gripper_state"]["gripper"]))
-        self.leader_robot_data.gripper_command_list.append(to_tensor(follower_gripper_state["commanded_position"]))
+        if leader_state is not None:
+            self.leader_robot_data.q_list.append(to_tensor(leader_state["gello_arm_state"]["joint_state"]))
+            self.leader_robot_data.gripper_state_list.append(to_tensor(leader_state["gello_gripper_state"]["gripper"]))
+            self.leader_robot_data.gripper_command_list.append(to_tensor(follower_gripper_state["commanded_position"]))
         #follower arm
         self.follower_robot_data.q_list.append(to_tensor(follower_arm_state["q"]))
         self.follower_robot_data.O_T_EE_list.append(to_tensor(follower_arm_state["O_T_EE"]))
@@ -272,7 +275,8 @@ class IRLDataCollection(DataCollectionManager):
         timestamps_path = self.record_dir / "timestamps.pt"
         torch.save(torch.tensor(self.timestamps, dtype=torch.float64), timestamps_path)
         print(f"Successfully saved '{timestamps_path}'")
-        self.leader_robot_data.save(self.leader_robot_dir)
+        if self.leader_robot_dir is not None:
+            self.leader_robot_data.save(self.leader_robot_dir)
         self.follower_robot_data.save(self.follower_robot_dir)
 
 
@@ -351,8 +355,11 @@ class IRLDataCollection(DataCollectionManager):
         self.record_dir = self.data_dir / datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
         self.record_dir.mkdir()
         
-        self.leader_robot_dir = self.record_dir / self.leader_robot.hw_name
-        self.leader_robot_dir.mkdir()
+        if self.leader_robot is not None:
+            self.leader_robot_dir = self.record_dir / self.leader_robot.hw_name
+            self.leader_robot_dir.mkdir()
+        else:
+            self.leader_robot_dir = None
 
         self.follower_robot_dir = self.record_dir / self.follower_arm.hw_name
         self.follower_robot_dir.mkdir()
@@ -375,7 +382,6 @@ class IRLDataCollection(DataCollectionManager):
 
     def _capture_camera_frames(self) -> None:
         if self.camera_streams==[] :
-            pyzlc.info("no camera in stream")
             return
         cur_time = time.perf_counter()
         for idx, stream in enumerate(self.camera_streams):

@@ -16,6 +16,7 @@ class ControlMode(str, Enum):
     HybridJointImpedance = "HybridJointImpedance"
     OSC = "OSC"
     CartesianImpedance = "CartesianImpedance"
+    HumanControl = "HumanControl"
     # JOINT_POSITION = "JointPosition"
     # JOINT_VELOCITY = "JointVelocity"
     # CARTESIAN_VELOCITY = "CartesianVelocity"

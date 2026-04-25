@@ -176,15 +176,23 @@ class DataCollectionManager(abc.ABC):
             self._state_machine.trigger(DataCollectionEvent.QUIT)
         elif key == "r":
             self._state_machine.trigger(DataCollectionEvent.RESET)
+        elif key == "o":
+            control_pair = getattr(self, "control_pair", None)
+            if control_pair is not None and hasattr(control_pair, "open_gripper"):
+                control_pair.open_gripper()
+        elif key == "p":
+            control_pair = getattr(self, "control_pair", None)
+            if control_pair is not None and hasattr(control_pair, "close_gripper"):
+                control_pair.close_gripper()
 
     def _on_state_enter(self, state: DataCollectionState) -> None:
         if state == DataCollectionState.WAITING:
             self._ui_console.update_hint(
-                "Press 'n' to start collecting, 'r' to reset, or 'q' to quit"
+                "Press 'n' to start collecting, 'r' to reset, 'o' to open gripper, 'p' to close gripper, or 'q' to quit"
             )
         elif state == DataCollectionState.COLLECTING:
             self._ui_console.update_hint(
-                "Collecting... Press 's' to save, 'd' to discard, or 'q' to quit"
+                "Collecting... Press 'o' to open gripper, 'p' to close gripper, 's' to save, 'd' to discard, or 'q' to quit"
             )
         elif state == DataCollectionState.STOPPED:
             self._ui_console.update_hint("Collecting stopped. Resetting...")

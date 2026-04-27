@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import pyzlc
@@ -64,23 +64,49 @@ class TrajectoryPandaControlPair(ControlPair):
         self._last_gripper_cmd = None
         pyzlc.info(f"Loaded replay trajectory with {replay_len} steps from {self.trajectory_dir}")
 
-    def save_trajectory(self, output_dir: Path) -> None:
+    def save_trajectory(self, output_dir: Path, target_len: Optional[int] = None) -> None:
         if self.joint_pos is None or self.gripper_pos is None:
             self.load_trajectory()
 
         assert self.joint_pos is not None
         assert self.gripper_pos is not None
+        joint_pos = self.joint_pos
+        gripper_pos = self.gripper_pos
+
+        if target_len is not None:
+            target_len = int(target_len)
+            if target_len < 0:
+                raise ValueError(f"target_len must be non-negative, got {target_len}")
+            joint_pos, gripper_pos = self._resize_trajectory(
+                joint_pos, gripper_pos, target_len
+            )
+
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         torch.save(
-            torch.tensor(self.joint_pos, dtype=torch.float64),
+            torch.tensor(joint_pos, dtype=torch.float64),
             output_dir / "joint_pos.pt",
         )
         torch.save(
-            torch.tensor(self.gripper_pos, dtype=torch.float64),
+            torch.tensor(gripper_pos, dtype=torch.float64),
             output_dir / "gripper_state.pt",
         )
-        pyzlc.info(f"Saved replay trajectory to {output_dir}")
+        pyzlc.info(f"Saved replay trajectory with {len(joint_pos)} steps to {output_dir}")
+
+    @staticmethod
+    def _resize_trajectory(
+        joint_pos: np.ndarray, gripper_pos: np.ndarray, target_len: int
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        if target_len <= joint_pos.shape[0]:
+            return joint_pos[:target_len], gripper_pos[:target_len]
+
+        pad_len = target_len - joint_pos.shape[0]
+        joint_padding = np.repeat(joint_pos[-1:], pad_len, axis=0)
+        gripper_padding = np.repeat(gripper_pos[-1:], pad_len, axis=0)
+        return (
+            np.concatenate([joint_pos, joint_padding], axis=0),
+            np.concatenate([gripper_pos, gripper_padding], axis=0),
+        )
 
     def control_reset(self) -> None:
         self.load_trajectory()

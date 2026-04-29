@@ -14,6 +14,7 @@ from ..core.remote_device import RemoteDevice
 class ControlMode(str, Enum):
     IDLE = "Idle"
     HybridJointImpedance = "HybridJointImpedance"
+    HybridJointExtTorqueImpedance = "HybridJointExtTorqueImpedance"
     OSC = "OSC"
     CartesianImpedance = "CartesianImpedance"
     HumanControl = "HumanControl"
@@ -49,6 +50,14 @@ class JointPositionCommand(TypedDict):
     """
 
     pos: List[float]  # 7 joint angles in radians
+
+
+class JointTorqueCommand(TypedDict):
+    """
+    External joint torque command structure.
+    """
+
+    tau: List[float]  # 7 joint torques in Nm
 
 
 class CartesianPoseCommand(TypedDict):
@@ -284,4 +293,6 @@ class RemotePandaArm(RemoteDevice):
         arr = np.asarray(joint_torques, dtype=np.float64).reshape(-1)
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint torques, got {arr.size}")
-        raise NotImplementedError
+        self.joint_torque_publisher.publish(
+            JointTorqueCommand(tau=arr.tolist())
+        )

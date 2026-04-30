@@ -137,7 +137,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         self.data_collectors = data_collectors
         self.control_pair = control_pair
         self.cfg = cfg
-        _patch_lerobot_safetensor_loader()
+        _install_lerobot_safetensor_load_fallback()
 
         self.cameras: List[ImageDataWrapper] = []
         self.arm_wrapper: Optional[PandaArmDataWrapper] = None

@@ -1,6 +1,7 @@
 import traceback
 from typing import List, Optional
 import time
+from anyio import Path
 import torch
 import pyzlc
 import numpy as np
@@ -32,6 +33,7 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         control_pair: PILPandaControlPair,
         task: str,
         cfg: LeRobotPolicyInferenceConfig,
+        save_path: str = None,
     ) -> None:
         super().__init__(data_collectors, control_pair, cfg)
         self.control_pair: PILPandaControlPair = control_pair
@@ -46,7 +48,7 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
 
         self._data_colection: PILIRLDataCollection = PILIRLDataCollection(
             data_collectors,
-            f"/home/irl-admin/xinkai/data_collection/{task}",
+            str(Path(save_path)/task) if save_path else None,
             task,
             fps=40,
             control_pair=control_pair,

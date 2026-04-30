@@ -36,10 +36,10 @@ if __name__ == "__main__":
 
     # Checkpoint path from eval_config.yaml
     checkpoint_path = (
-        "/home/jjiang/jing/model/beso/bestmodel_fold_abs_car/checkpoints/010000/pretrained_model" 
+        "/home/jjiang/jing/model/xvla/xvla_banana_10/checkpoints/064000/pretrained_model" 
     )
-    task = "folding"
-    dataset_path = "/home/jjiang/jing/dataset/lerobot/folding_20hz_abs_cartesian_action" 
+    task = "put banana in the red bowl"  # "Pick up the bell pepper and place it in the bowl."
+    dataset_path = "/home/jjiang/jing/dataset/lerobot/pick_up_banana_20hz_abs_cartesian_action" 
 
     follower = PandaRobotiq(
         "PandaRobotiq",
@@ -47,7 +47,7 @@ if __name__ == "__main__":
         RemoteRobotiqGripper("FrankaPanda"),
     )
     control_pair = PolicyPandaRobotiqDeltaCartesianControlPair(
-        follower.panda_arm, follower.robotiq_gripper, 500, 10, 0.05
+        follower.panda_arm, follower.robotiq_gripper, 1000, 10, 0.05
     )
 
     # Camera capture interval matches inference frequency (30 Hz = 0.033s)
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     inference_cfg = LeRobotPolicyInferenceConfig(
         checkpoint_path=checkpoint_path,
         task=task,
-        fps=10, #20 for xvla, 8 for beso
+        fps=18, #20 for xvla, 8 for beso
         device="cuda",
         dataset_path=dataset_path,
     )

@@ -1,4 +1,6 @@
+import pyzlc
 from simpub import init_xr_node_manager, MetaQuest3
+from simpub.core.utils import ZLC_GROUP_NAME
 from scipy.spatial.transform import Rotation as R
 from typing import List, Optional, TypedDict
 import numpy as np

@@ -36,10 +36,10 @@ if __name__ == "__main__":
 
     # Checkpoint path from eval_config.yaml
     checkpoint_path = (
-        "/home/jjiang/jing/model/beso/bestmodel_fold_abs_car/checkpoints/010000/pretrained_model" 
+        "/home/jjiang/jing/model/beso/beso_cylinder_cube_full/checkpoints/010000/pretrained_model" 
     )
-    task = "folding"
-    dataset_path = "/home/jjiang/jing/dataset/lerobot/folding_20hz_abs_cartesian_action" 
+    task = "put red cylinder on green cube and put green cylinder on red cube"
+    dataset_path = "/home/jjiang/jing/dataset/lerobot/cylinder_cube_full" 
 
     follower = PandaRobotiq(
         "PandaRobotiq",

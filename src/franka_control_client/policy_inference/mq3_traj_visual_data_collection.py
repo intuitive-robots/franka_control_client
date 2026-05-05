@@ -6,8 +6,8 @@ import pyzlc
 import numpy as np
 import threading
 
-# from digital_twin.models import RobotModelId
-# from digital_twin.simulation.mirror import RobotMirror
+from digital_twin.models import RobotModelId
+from digital_twin.simulation.mirror import RobotMirror
 from simpub.core import XRTrajectory
 
 from ..control_pair.pil_panda_control_pair import PILMode, PILPandaControlPair
@@ -35,9 +35,9 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
     ) -> None:
         super().__init__(data_collectors, control_pair, cfg)
         self.control_pair: PILPandaControlPair = control_pair
-        # self.mirror = RobotMirror.from_model_id(
-        #     RobotModelId.FRANKA_PANDA_ROBOTIQ
-        # )
+        self.mirror = RobotMirror.from_model_id(
+            RobotModelId.FRANKA_PANDA_ROBOTIQ
+        )
         self.last_chunk_traj: Optional[XRTrajectory] = None
         self.history_way_points = []
         self.history_traj: Optional[XRTrajectory] = None
@@ -46,7 +46,7 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
 
         self._data_colection: PILIRLDataCollection = PILIRLDataCollection(
             data_collectors,
-            f"/home/irl-admin/xinkai/data_collection/{task}",
+            f"/home/jjiang/ahmad/collected_data/{task}",
             task,
             fps=40,
             control_pair=control_pair,
@@ -147,7 +147,8 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
             # action_vec = action[0] if action.ndim == 2 else action
 
             ###action chunk
-            action_chunk = self.policy.predict_action_chunk(observation)
+            print(f"type of policy: {type(self.policy)}, observation keys: {list(observation.keys())}")
+            action_chunk = self.policy.predict_action_chunk(batch = observation)
 
         if action_chunk.ndim == 2:
             action_chunk = action_chunk.unsqueeze(1)
@@ -226,7 +227,7 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
                         # curr_time = time.perf_counter()
                         self._infer_step()
                         self._collect_step()
-                        self._visualize_step()
+                        # self._visualize_step()
                         # end_time = time.perf_counter()
                         # elapsed = end_time - curr_time
                         # print(f"Inference step took {elapsed:.3f} seconds")

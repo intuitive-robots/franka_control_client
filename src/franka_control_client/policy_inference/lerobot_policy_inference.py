@@ -12,7 +12,7 @@ import torch
 from lerobot.configs.train import TrainPipelineConfig
 from lerobot.configs.types import FeatureType, PolicyFeature
 from lerobot.policies.factory import make_policy, make_pre_post_processors
-from lerobot.utils.utils import get_safe_torch_device
+#from lerobot.utils.utils import get_safe_torch_device
 
 
 from .policy_inference_manager import PolicyInferenceManager
@@ -111,8 +111,10 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         ]
         if self.cfg.dataset_path:
             cli_args.append(f"--dataset.root={self.cfg.dataset_path}")
-        if self.cfg.policy_dtype:
-            cli_args.append(f"--policy.dtype={self.cfg.policy_dtype}")
+        # if self.cfg.policy_dtype:
+        #     cli_args.append(f"--policy.dtype={self.cfg.policy_dtype}")
+
+        print(f"Running with config: {self.cfg}")
 
         train_cfg = TrainPipelineConfig.from_pretrained(
             pretrained_name_or_path=self.cfg.checkpoint_path,
@@ -157,7 +159,9 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         """Load policy, preprocessor, and postprocessor."""
         ds_meta = self._load_dataset_meta()
         pyzlc.info(f"Loaded dataset meta: {ds_meta}")
-        device = get_safe_torch_device(self.train_cfg.policy.device, log=True)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        self._install_safetensors_load_fallback()
 
         policy = make_policy(
             cfg=self.train_cfg.policy,
@@ -178,6 +182,47 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         )
 
         return policy, preprocessor, postprocessor
+
+    @staticmethod
+    def _install_safetensors_load_fallback() -> None:
+        """Work around safetensors shared-storage checks for some HF modules."""
+        try:
+            import lerobot.policies.pretrained as pretrained_module
+            from safetensors.torch import load_file
+        except Exception as exc:
+            pyzlc.info(f"Could not install safetensors fallback: {exc}")
+            return
+
+        original_load_model = pretrained_module.load_model_as_safetensor
+        if getattr(original_load_model, "_franka_shared_storage_fallback", False):
+            return
+
+        def load_model_with_fallback(model, filename, *args, **kwargs):
+            try:
+                return original_load_model(model, filename, *args, **kwargs)
+            except RuntimeError as exc:
+                message = str(exc)
+                is_shared_storage_error = (
+                    "found no suitable name to keep for saving" in message
+                    and "None is covering the entire storage" in message
+                )
+                if not is_shared_storage_error:
+                    raise
+
+                pyzlc.info(
+                    "safetensors.load_model hit a shared-storage check; "
+                    "falling back to load_file + load_state_dict."
+                )
+                device = kwargs.get("device", "cpu")
+                state_dict = load_file(filename, device=str(device))
+                strict = kwargs.get("strict", True)
+                missing_keys, unexpected_keys = model.load_state_dict(
+                    state_dict, strict=strict
+                )
+                return list(missing_keys), list(unexpected_keys)
+
+        load_model_with_fallback._franka_shared_storage_fallback = True
+        pretrained_module.load_model_as_safetensor = load_model_with_fallback
 
     def _decode_image(self, img: Any) -> np.ndarray:
         """Decode image from various formats."""

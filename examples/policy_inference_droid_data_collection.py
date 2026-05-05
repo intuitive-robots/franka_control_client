@@ -45,11 +45,11 @@ if __name__ == "__main__":
     )
     # Checkpoint path from eval_config.yaml
     checkpoint_path = (
-        "/home/jjiang/ahmad/pretrained_model"
+        "/home/jjiang/ahmad/models/pretrained_model"
     )
     task = "pick_up_cylinder_on_the_top_of_cube"  # "Pick up the bell pepper and place it in the bowl."
     dataset_path = "/home/irl-admin/chekpoints/4th_March_folding"
-    dataset_path = "/home/jjiang/ahmad/pick_up_cylinder_on_the_top_of_cube"
+    dataset_path = "/home/jjiang/ahmad/bowl_on_blender_abs_cartesian_action"
     follower = PandaRobotiq(
         "PandaRobotiq",
         RemotePandaArm("FrankaPanda"),

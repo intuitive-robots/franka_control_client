@@ -281,8 +281,7 @@ class PolicyPandaControlPair(ControlPair):
             pyzlc.sleep(1.0 / self.control_hz)
             return
 
-        # joint_pos = np.asarray(action[:7], dtype=np.float32)
-        # print(f"Received action: joint_pos={joint_pos}, gripper_cmd={action[7]:.3f}")
+        print(f"Received action: joint_pos={action}, gripper_cmd={action[7]:.3f}")
         self._send_waypoint_command(action)
 
         # Gripper command
@@ -429,7 +428,8 @@ class PolicyPandaRobotiqCartesianControlPair(PolicyPandaControlPair):
             pyzlc.sleep(1.0 / self.control_hz)
             return
         cartesian_cmd = np.asarray(action[:7], dtype=np.float32)
-        # print(f"Received action: cartesian_pos={cartesian_pos}, gripper_cmd={action[7]:.3f}")
+        print(f"Received action: cartesian_pos={cartesian_cmd[:3]}, gripper_cmd={action[7]:.3f}")
+        
         self.panda_arm.send_cartesian_pose_command(
             cartesian_cmd[:3], cartesian_cmd[3:7]
         )

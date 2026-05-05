@@ -91,7 +91,8 @@ class PandaArmDataWrapper(IRLDataWrapper):
 
     def capture_step(self) -> Dict[str, np.ndarray]:
         # Implement the logic to save robot state data
-        state = self.arm.current_state
+        state = self.arm.current_ee_position
+        rot = self.arm.current_ee_rotation
         if state is None:
             raise ValueError("No arm state data received from the robot.")
         # data = np.array(
@@ -101,7 +102,7 @@ class PandaArmDataWrapper(IRLDataWrapper):
         #     ],
         #     dtype=np.float32,
         # )
-        return state
+        return [state, rot]
 
     def __getattr__(self, name):
         return getattr(self.arm, name)

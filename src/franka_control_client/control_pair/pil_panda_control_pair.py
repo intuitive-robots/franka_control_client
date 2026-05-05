@@ -9,9 +9,6 @@ import numpy as np
 import enum
 import pyzlc
 
-from franka_control_client.control_pair.policy_panda_control_pair import (
-    PolicyPandaControlPair,
-)
 from ..data_collection.pil_irl_vr_data_collection import PILIRLDataCollection
 
 from ..franka_robot.panda_robotiq import PandaRobotiq
@@ -21,7 +18,7 @@ from .mq3_panda_control_pair import MQ3PandaControlPair
 from ..vr.meta_quest3 import MQ3Controller
 
 from .control_pair import ControlPair
-from ..franka_robot.panda_arm import ControlMode, RemotePandaArm
+from ..franka_robot.panda_arm import RemotePandaArm
 from ..franka_robot.panda_gripper import RemotePandaGripper
 from ..robotiq_gripper.robotiq_gripper import RemoteRobotiqGripper
 from .cartesian_policy_panda_control_pair import (
@@ -61,7 +58,7 @@ class PILPandaControlPair(PolicyPandaRobotiqDeltaCartesianControlPair):
         self,
         panda_arm: RemotePandaArm,
         gripper: Union[RemotePandaGripper, RemoteRobotiqGripper],
-        mq3_controller: MQ3PandaControlPair,
+        mq3_controller: MQ3Controller,
         control_hz: float = DEFAULT_CONTROL_HZ,
     ) -> None:
         super().__init__(panda_arm, gripper, control_hz)
@@ -135,12 +132,15 @@ class PILPandaControlPair(PolicyPandaRobotiqDeltaCartesianControlPair):
         super().reset_action()
 
     def _replay(self):
+        if self.data_manager is None:
+            return
+
         previous_state = self.current_state
         while True:
             data = (
                 self.mq3_controller.mq3.get_controller_data()
             )  # Ensure we have the latest data from MQ3, even if not used in policy control
-            if data is None or not data["A"] or self.data_manager is None:
+            if data is None or not data["A"]:
                 self.data_manager.set_pause(False)
                 break
             self.data_manager.set_pause(True)

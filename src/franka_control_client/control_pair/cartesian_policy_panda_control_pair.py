@@ -40,6 +40,8 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
         panda_arm: RemotePandaArm,
         gripper: RemoteRobotiqGripper,
         control_hz: float = DEFAULT_CONTROL_HZ,
+        action_chunk_size: int = 10,
+        action_chunk_dt: float = 0.05,
     ) -> None:
         super().__init__(panda_arm, gripper, control_hz)
         # self.panda_arm = panda_arm
@@ -50,9 +52,9 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
         # )  # only one of the update_action and control_step visit latest_action at the same time
         self.action_buffer = DeltaActionChunkingBuffer(
             robot_arm=panda_arm,
-            action_dt=1.0 / self.control_hz,
-            chunk_size=10,
-            action_dim=7,
+            action_dt=action_chunk_dt,
+            chunk_size=action_chunk_size,
+            action_dim=8,
         )
 
         # Velocity limiting state
@@ -70,10 +72,23 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
     def update_action(self, action: np.ndarray) -> None:
         """Update the latest action used by the control loop."""
         arr = np.asarray(action, dtype=np.float64).reshape(-1)
-        if arr.size < 8:
-            raise ValueError(f"Expected action size >= 8, got {arr.size}")
+        if arr.size == 7:
+            absolute_action = self.action_buffer.delta2absolute(
+                arr.reshape(1, -1)
+            )[0]
+        elif arr.size >= 8:
+            absolute_action = arr[:8].astype(np.float32, copy=False)
+
+            #for delta position and absolute rotation action space, the input action is [delta_x, delta_y, delta_z, abs_qx, abs_qy, abs_qz, abs_qw, gripper]
+            # absolute_action = self.action_buffer.delta2absolute(
+            #     arr[:8].reshape(1, -1)
+            #     )[0]
+        else:
+            raise ValueError(
+                f"Expected delta-cartesian action size 7 or absolute action size >= 8, got {arr.size}"
+            )
         with self._action_lock:
-            self._latest_action = arr
+            self._latest_action = np.array(absolute_action, copy=True)
 
     # using by policy side to update the latest action_chunk, and control loop will read the latest action and execute it
     def update_action_chunk(self, action_chunk: np.ndarray) -> None:
@@ -104,8 +119,14 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
 
     def control_step(self) -> None:
         action = self.action_buffer.apply_action()
+        if action is None:
+            action = self._get_latest_action()
+        if action is None:
+            return
         self.panda_arm.send_cartesian_pose_command(action[:3], action[3:7])
-
+        
+        print(f"Applied command: {action}")
+        
         # Gripper command
         gripper_cmd = float(action[-1])
         gripper_cmd = 1 if gripper_cmd >= 0.5 else 0

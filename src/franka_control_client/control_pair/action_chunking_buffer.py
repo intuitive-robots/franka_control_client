@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import threading
 import time
@@ -22,22 +24,23 @@ class DeltaActionChunkingBuffer:
         self._buffer = np.zeros((chunk_size, action_dim), dtype=np.float32)
 
     def add_new_action_chunk(self, new_action_chunk: np.ndarray):
-        if new_action_chunk.shape != (self._chunk_size, self._buffer.shape[1]):
+        # print(new_action_chunk)
+        if new_action_chunk.shape[0] != self._chunk_size:
             raise ValueError(
-                f"New action chunk shape {new_action_chunk.shape} does not match buffer shape {self._buffer[0].shape if self._buffer else 'None'}."
+                f"New action chunk has {new_action_chunk.shape[0]} steps, expected {self._chunk_size}."
             )
+        absolute_chunk = self.delta2absolute(new_action_chunk)
+        print(f"added new action chunk: {absolute_chunk}")
         with self._lock:
             if self._last_action_time is None:
-                self._buffer = self.delta2absolute(new_action_chunk)
+                self._buffer = absolute_chunk
             else:
-                self._fuse_action_chunks(new_action_chunk)
+                self._fuse_action_chunks(absolute_chunk)
             self._last_action_time = time.perf_counter()
 
-    def _fuse_action_chunks(self, action_chunks: np.ndarray) -> None:
-        new_buffer = np.array(action_chunks, copy=True)
-        for idx in range(len(self._buffer)):
-            new_buffer[idx] = (action_chunks[idx] + self._buffer[idx]) * 0.5
-        self._buffer = new_buffer
+
+    def _fuse_action_chunks(self, absolute_chunks: np.ndarray) -> None:
+        self._buffer = np.array(absolute_chunks, copy=True)
 
     def _get_current_action_chunk_int(self) -> int:
         return (
@@ -49,16 +52,19 @@ class DeltaActionChunkingBuffer:
             else 0
         )
 
-    def get_action(self) -> np.ndarray:
+    def get_action(self) -> Optional[np.ndarray]:
         with self._lock:
+            if self._last_action_time is None:
+                return None
             return np.array(self._buffer, copy=True)
 
-    def apply_action(self) -> np.ndarray:
+    def apply_action(self) -> Optional[np.ndarray]:
         with self._lock:
+            if self._last_action_time is None:
+                return None
             current_index = self._get_current_action_chunk_int()
             clamped_index = min(current_index, len(self._buffer) - 1)
             action = np.array(self._buffer[clamped_index], copy=True)
-            self._buffer = np.array(self._buffer[clamped_index:], copy=True)
             return action
 
     def clear(self) -> None:
@@ -75,12 +81,25 @@ class DeltaActionChunkingBuffer:
         if current_ee_quat is None:
             raise ValueError("Current end-effector rotation is not available.")
         current_ee_quat = np.array(current_ee_quat)
-        action = np.zeros_like(delta_action_chunks)
-        for i in range(len(delta_action_chunks)):
+        print(f"Current EE pose {current_ee_pos}, {current_ee_quat}")
+        n_steps = len(delta_action_chunks)
+        # Output: pos(3) + quat(4) + gripper(1) = 8
+        action = np.zeros((n_steps, 8), dtype=np.float32)
+        for i in range(n_steps):
             action[i][:3] = current_ee_pos + delta_action_chunks[i][:3]
-            action[i][3:7] = (
-                R.from_quat(current_ee_quat)
-                * R.from_euler("xyz", delta_action_chunks[i][3:6], False)
-            ).as_quat()
-            action[i][7:] = delta_action_chunks[i][6]
+            current_ee_pos = action[i][:3]
+
+            # delta position and delta rotation action space
+            # action[i][3:7] = (
+            #     R.from_quat(current_ee_quat)
+            #     * R.from_euler("xyz", delta_action_chunks[i][3:6], False)
+            # ).as_quat()
+            # print(f"added action: {action[i][:7]}")
+            
+            # delta position and absolute quat rotation action space
+            action[i][3:7] = delta_action_chunks[i][3:7]
+
+            current_ee_quat = action[i][3:7]
+            action[i][7] = delta_action_chunks[i][7]  # gripper command
+            print(f"delta_action_chunk: {delta_action_chunks[i]}, absolute_action: {action[i]}")
         return action

@@ -47,6 +47,9 @@ if __name__ == "__main__":
     checkpoint_path = (
         "/home/jjiang/ahmad/models/pretrained_model"
     )
+    task = "folding"
+    dataset_path = "/home/jjiang/jing/dataset/lerobot/folding_20hz_abs_cartesian_action" 
+
     task = "pick_up_cylinder_on_the_top_of_cube"  # "Pick up the bell pepper and place it in the bowl."
     dataset_path = "/home/irl-admin/chekpoints/4th_March_folding"
     dataset_path = "/home/jjiang/ahmad/bowl_on_blender_abs_cartesian_action"
@@ -60,13 +63,29 @@ if __name__ == "__main__":
     control_pair = PILPandaControlPair(
         follower.panda_arm, follower.robotiq_gripper, leader, 50
     )
-    static_cam = ImageDataWrapper(CameraDevice("static_cam", preview=True), hw_name="static_cam")
-    wrist_cam = ImageDataWrapper(CameraDevice("wrist_cam", preview=True), hw_name="wrist_cam")
+
+    # Camera capture interval matches inference frequency (30 Hz = 0.033s)
+    static_cam = ImageDataWrapper(
+        CameraDevice("static_cam", preview=False),
+        capture_interval=0.033,
+        hw_name="static_cam",
+    )
+    wrist_cam = ImageDataWrapper(
+        CameraDevice("wrist_cam", preview=False),
+        capture_interval=0.033,
+        hw_name="wrist_cam",
+    )
+#    camera_wrist = ImageDataWrapper(
+#        CameraDevice("zed_wrist", preview=False),
+#        capture_interval=0.033,
+#        hw_name="zed_wrist",
+#    )
 
     data_collectors: List[IRLDataWrapper] = []
     data_collectors.append(MQ3DataWrapper(leader))
     data_collectors.append(static_cam)
     data_collectors.append(wrist_cam)
+ #   data_collectors.append(camera_wrist)
     data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
     data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
 
@@ -75,7 +94,7 @@ if __name__ == "__main__":
         task=task,
         fps=10,
         device="cuda",
-        policy_dtype="bfloat16",
+        # policy_dtype="bfloat16",
         dataset_path=dataset_path,
     )
     inference_manager = MQ3TrajVisualDataCollectionInference(
@@ -83,6 +102,7 @@ if __name__ == "__main__":
         control_pair=control_pair,
         task="pick_up_cylinder_on_the_top_of_cube",
         cfg=inference_cfg,
+        save_path="/home/jjiang/ahmad/dataset/lerobot/pick_up_cylinder_on_the_top_of_cube_mq3_data_collection",
     )
 
     try:

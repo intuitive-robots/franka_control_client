@@ -7,7 +7,7 @@ This project is a Python-based client for controlling Franka Emika robots. It pr
 To install the necessary dependencies, run:
 
 ```bash
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ## Usage

@@ -1,4 +1,8 @@
 from typing import List
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from digital_twin import RobotMirror, RobotModelId
 import pyzlc
@@ -46,10 +50,10 @@ if __name__ == "__main__":
     )
     # Checkpoint path from eval_config.yaml
     checkpoint_path = (
-        "/home/jjiang/ahmad/models/pretrained_model"
+        "/home/jjiang/jing/model/beso/bestmodel_fold_abs_car/checkpoints/last/pretrained_model"
     )
     task = "folding"
-    dataset_path = "/home/jjiang/ahmad/bowl_on_blender_abs_cartesian_action" 
+    dataset_path = "/home/jjiang/jing/dataset/lerobot/folding_20hz" 
 
     # task = "pick_up_cylinder_on_the_top_of_cube"  # "Pick up the bell pepper and place it in the bowl."
     # dataset_path = "/home/irl-admin/chekpoints/4th_March_folding"
@@ -73,12 +77,12 @@ if __name__ == "__main__":
     static_cam = ImageDataWrapper(
         CameraDevice("static_cam", preview=False),
         capture_interval=0.033,
-        hw_name="static_cam",
+        hw_name="image",
     )
     wrist_cam = ImageDataWrapper(
         CameraDevice("wrist_cam", preview=False),
         capture_interval=0.033,
-        hw_name="wrist_cam",
+        hw_name="image2",
     )
 #    camera_wrist = ImageDataWrapper(
 #        CameraDevice("zed_wrist", preview=False),

@@ -24,16 +24,41 @@ class DeltaActionChunkingBuffer:
         self._buffer = np.zeros((chunk_size, action_dim), dtype=np.float32)
 
     def add_new_action_chunk(self, new_action_chunk: np.ndarray):
-        # print(new_action_chunk)
-        if new_action_chunk.shape[0] != self._chunk_size:
+        new_action_chunk = np.asarray(new_action_chunk, dtype=np.float32)
+        if new_action_chunk.ndim != 2:
             raise ValueError(
-                f"New action chunk has {new_action_chunk.shape[0]} steps, expected {self._chunk_size}."
+                f"Expected delta action chunk shape (T, D), got {new_action_chunk.shape}."
+            )
+        if new_action_chunk.shape[0] < 1:
+            raise ValueError(
+                f"Action chunk must contain at least one action, got {new_action_chunk.shape}."
+            )
+        if new_action_chunk.shape[1] != self._buffer.shape[1]:
+            raise ValueError(
+                f"New action chunk has action dim {new_action_chunk.shape[1]}, expected {self._buffer.shape[1]}."
             )
         absolute_chunk = self.delta2absolute(new_action_chunk)
+        self.add_absolute_action_chunk(absolute_chunk)
+
+    def add_absolute_action_chunk(self, absolute_chunk: np.ndarray):
+        absolute_chunk = np.asarray(absolute_chunk, dtype=np.float32)
+        if absolute_chunk.ndim != 2:
+            raise ValueError(
+                f"Expected absolute action chunk shape (T, D), got {absolute_chunk.shape}."
+            )
+        if absolute_chunk.shape[0] < 1:
+            raise ValueError(
+                f"Action chunk must contain at least one action, got {absolute_chunk.shape}."
+            )
+        if absolute_chunk.shape[1] != self._buffer.shape[1]:
+            raise ValueError(
+                f"New action chunk has action dim {absolute_chunk.shape[1]}, expected {self._buffer.shape[1]}."
+            )
         print(f"added new action chunk: {absolute_chunk}")
         with self._lock:
+            self._chunk_size = absolute_chunk.shape[0]
             if self._last_action_time is None:
-                self._buffer = absolute_chunk
+                self._buffer = np.array(absolute_chunk, copy=True)
             else:
                 self._fuse_action_chunks(absolute_chunk)
             self._last_action_time = time.perf_counter()

@@ -230,7 +230,7 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
                         # curr_time = time.perf_counter()
                         self._infer_step()
                         self._collect_step()
-                        # self._visualize_step()
+                        self._visualize_step()
                         # end_time = time.perf_counter()
                         # elapsed = end_time - curr_time
                         # print(f"Inference step took {elapsed:.3f} seconds")

@@ -492,9 +492,17 @@ class LeRobotPolicyInference(PolicyInferenceManager):
             self.arm_wrapper is not None and self.gripper_wrapper is not None
         ), "Arm and gripper wrappers must be set to build state vector."  # for mypy
         arm_state = self.arm_wrapper.capture_step()
-        q = np.asarray(arm_state[0], dtype=np.float32).reshape(-1)
-        rot = np.asarray(arm_state[1], dtype=np.float32).reshape(-1)
-        q = np.concatenate([q, rot], dtype=np.float32)
+        if isinstance(arm_state, dict):
+            if "EE_pos" not in arm_state or "EE_quat" not in arm_state:
+                raise ValueError(
+                    f"Arm state missing EE_pos/EE_quat keys. Got keys: {list(arm_state.keys())}"
+                )
+            pos = np.asarray(arm_state["EE_pos"], dtype=np.float32).reshape(-1)
+            rot = np.asarray(arm_state["EE_quat"], dtype=np.float32).reshape(-1)
+        else:
+            pos = np.asarray(arm_state[0], dtype=np.float32).reshape(-1)
+            rot = np.asarray(arm_state[1], dtype=np.float32).reshape(-1)
+        q = np.concatenate([pos, rot], dtype=np.float32)
         print(f"fed in arm state: q={q}")
         grip_state = self.gripper_wrapper.capture_step()
         gripper_val = None

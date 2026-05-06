@@ -89,7 +89,29 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
     # using by policy side to update the latest action_chunk, and control loop will read the latest action and execute it
     def update_action_chunk(self, action_chunk: np.ndarray) -> None:
         """Update the latest action chunk used by the control loop."""
-        self.action_buffer.add_new_action_chunk(action_chunk)
+        chunk = np.asarray(action_chunk, dtype=np.float32)
+        if chunk.ndim == 1:
+            chunk = chunk.reshape(1, -1)
+        elif chunk.ndim == 2:
+            pass
+        elif chunk.ndim == 3:
+            chunk = chunk[0]
+        else:
+            raise ValueError(
+                f"Expected absolute cartesian action chunk shape (B, T, D), (T, D), or (D,), got {chunk.shape}"
+            )
+
+        if chunk.shape[0] < 1:
+            raise ValueError(
+                f"Action chunk must contain at least one action, got {chunk.shape}"
+            )
+        if chunk.shape[-1] < 8:
+            raise ValueError(
+                f"Expected absolute cartesian action size >= 8, got {chunk.shape[-1]} for chunk shape {chunk.shape}"
+            )
+
+        absolute_chunk = chunk[:, :8]
+        self.action_buffer.add_absolute_action_chunk(absolute_chunk)
 
     def _get_latest_action(self) -> Optional[np.ndarray]:
         with self._action_lock:

@@ -51,8 +51,8 @@ if __name__ == "__main__":
     )
 
     # Camera capture interval matches inference frequency (30 Hz = 0.033s)
-    static_cam = ImageDataWrapper(CameraDevice("static_cam", preview=False), hw_name="image")
-    wrist_cam = ImageDataWrapper(CameraDevice("wrist_cam", preview=False), hw_name="image2")
+    static_cam = ImageDataWrapper(CameraDevice("static_cam", preview=False), hw_name="static_cam")
+    wrist_cam = ImageDataWrapper(CameraDevice("wrist_cam", preview=False), hw_name="wrist_cam")
 
     data_collectors: List[IRLDataWrapper] = []
     data_collectors.append(static_cam)

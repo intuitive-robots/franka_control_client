@@ -95,13 +95,6 @@ class PandaArmDataWrapper(IRLDataWrapper):
         rot = self.arm.current_ee_rotation
         if state is None:
             raise ValueError("No arm state data received from the robot.")
-        # data = np.array(
-        #     [
-        #         state["q"]
-        #         #can extract here
-        #     ],
-        #     dtype=np.float32,
-        # )
         return [state, rot]
 
     def __getattr__(self, name):

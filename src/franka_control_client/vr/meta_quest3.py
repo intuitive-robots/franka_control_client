@@ -23,7 +23,10 @@ class MQ3Controller(RemoteDevice):
         self, name: str, node_ip: str, panda_arm: RemotePandaArm
     ) -> None:
         super().__init__(name)
-        init_xr_node_manager("MQ3RealRobotControl", node_ip)
+        try:
+            init_xr_node_manager("MQ3RealRobotControl", node_ip)
+        except Exception as e:
+            pyzlc.error(f"Failed to initialize XR node manager: {e}")
         self.panda_arm = panda_arm
         self._state_lock = threading.Lock()
         self.mq3 = MetaQuest3(name)

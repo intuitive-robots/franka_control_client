@@ -34,10 +34,11 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         task: str,
         cfg: LeRobotPolicyInferenceConfig,
         save_path: str = None,
+        mirror: RobotMirror = None,
     ) -> None:
         super().__init__(data_collectors, control_pair, cfg)
         self.control_pair: PILPandaControlPair = control_pair
-        self.mirror = RobotMirror.from_model_id(
+        self.mirror = mirror if mirror is not None else RobotMirror.from_model_id(
             RobotModelId.FRANKA_PANDA_ROBOTIQ
         )
         self.last_chunk_traj: Optional[XRTrajectory] = None

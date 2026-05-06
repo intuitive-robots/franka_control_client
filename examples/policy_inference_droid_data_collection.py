@@ -1,5 +1,6 @@
 from typing import List
 
+from digital_twin import RobotMirror, RobotModelId
 import pyzlc
 
 from franka_control_client.camera.camera import CameraDevice
@@ -48,16 +49,20 @@ if __name__ == "__main__":
         "/home/jjiang/ahmad/models/pretrained_model"
     )
     task = "folding"
-    dataset_path = "/home/jjiang/jing/dataset/lerobot/folding_20hz_abs_cartesian_action" 
+    dataset_path = "/home/jjiang/ahmad/bowl_on_blender_abs_cartesian_action" 
 
-    task = "pick_up_cylinder_on_the_top_of_cube"  # "Pick up the bell pepper and place it in the bowl."
-    dataset_path = "/home/irl-admin/chekpoints/4th_March_folding"
-    dataset_path = "/home/jjiang/ahmad/bowl_on_blender_abs_cartesian_action"
+    # task = "pick_up_cylinder_on_the_top_of_cube"  # "Pick up the bell pepper and place it in the bowl."
+    # dataset_path = "/home/irl-admin/chekpoints/4th_March_folding"
+    # dataset_path = "/home/jjiang/ahmad/bowl_on_blender_abs_cartesian_action"
     follower = PandaRobotiq(
         "PandaRobotiq",
         RemotePandaArm("FrankaPanda"),
         RemoteRobotiqGripper("FrankaPanda"),
     )
+    mirror = RobotMirror.from_model_id(
+        RobotModelId.FRANKA_PANDA_ROBOTIQ
+    )
+
     leader = MQ3Controller("IRL-MQ3-2", "192.168.0.117", follower.panda_arm)
     leader.mq3.wait_for_connection()
     control_pair = PILPandaControlPair(
@@ -103,6 +108,7 @@ if __name__ == "__main__":
         task="pick_up_cylinder_on_the_top_of_cube",
         cfg=inference_cfg,
         save_path="/home/jjiang/ahmad/dataset/lerobot/pick_up_cylinder_on_the_top_of_cube_mq3_data_collection",
+        mirror = mirror
     )
 
     try:

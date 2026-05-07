@@ -1,6 +1,7 @@
 import traceback
 from typing import List, Optional
 import time
+import sys
 from anyio import Path
 import torch
 import pyzlc
@@ -46,6 +47,7 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         self.history_traj: Optional[XRTrajectory] = None
         self.reset_history_event = threading.Event()
         self.running = True
+        self._closed = False
 
         self._data_colection: PILIRLDataCollection = PILIRLDataCollection(
             data_collectors,
@@ -205,7 +207,14 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
             # print(f"Inference step took {elapsed:.5f} seconds, slept for {sleep_time:.5f} seconds to maintain {self.fps} FPS.")
 
     def _close(self):
+        if self._closed:
+            return
+        self._closed = True
         self.running = False
+        try:
+            self.control_pair.stop_control_pair()
+        finally:
+            self._data_colection._close()
         return super()._close()
 
     def _reset_arm(self):
@@ -241,7 +250,8 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
                         self._reset_to_waiting()
                     # time.sleep(0.001)
         finally:
-            traceback.print_exc()
+            if sys.exc_info()[0] is not None:
+                traceback.print_exc()
             self._close()
 
     def _reset_to_waiting(self) -> None:

@@ -1,6 +1,7 @@
 from typing import List
 import sys
 from pathlib import Path
+from contextlib import contextmanager
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -37,6 +38,72 @@ from franka_control_client.vr.meta_quest3 import MQ3Controller
 # from franka_control_client.control_pair.mq3_panda_control_pair import (
 #     MQ3PandaControlPair,
 # )
+
+
+@contextmanager
+def _pyzlc_nonblocking_executor_shutdown():
+    """Avoid hanging forever in pyzlc executor shutdown during process exit."""
+    try:
+        from pyzlc.nodes.loop_manager import DaemonThreadPoolExecutor
+    except Exception:
+        yield
+        return
+
+    original_shutdown = DaemonThreadPoolExecutor.shutdown
+
+    def shutdown_without_join(self, wait=True, *, cancel_futures=False):
+        try:
+            return original_shutdown(
+                self, wait=False, cancel_futures=True
+            )
+        except TypeError:
+            return original_shutdown(self, wait=False)
+
+    DaemonThreadPoolExecutor.shutdown = shutdown_without_join
+    try:
+        yield
+    finally:
+        DaemonThreadPoolExecutor.shutdown = original_shutdown
+
+
+def _detach_pyzlc_executor_threads() -> None:
+    """Prevent Python's ThreadPoolExecutor exit hook from joining pyzlc forever."""
+    try:
+        import concurrent.futures.thread as futures_thread
+        import threading
+    except Exception:
+        return
+
+    lancom_threads = []
+    with futures_thread._global_shutdown_lock:
+        for thread, work_queue in list(futures_thread._threads_queues.items()):
+            if not thread.name.startswith("LanComPool"):
+                continue
+            lancom_threads.append(thread)
+            try:
+                work_queue.put_nowait(None)
+            except Exception:
+                pass
+            try:
+                del futures_thread._threads_queues[thread]
+            except KeyError:
+                pass
+
+    if not hasattr(threading, "_shutdown_locks"):
+        return
+    with threading._shutdown_locks_lock:
+        for thread in lancom_threads:
+            lock = getattr(thread, "_tstate_lock", None)
+            if lock is not None:
+                threading._shutdown_locks.discard(lock)
+
+
+def _shutdown_pyzlc() -> None:
+    try:
+        with _pyzlc_nonblocking_executor_shutdown():
+            pyzlc.shutdown()
+    finally:
+        _detach_pyzlc_executor_threads()
 
 
 if __name__ == "__main__":
@@ -118,4 +185,4 @@ if __name__ == "__main__":
     try:
         inference_manager.run()
     finally:
-        pyzlc.shutdown()
+        _shutdown_pyzlc()

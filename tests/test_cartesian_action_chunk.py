@@ -48,6 +48,17 @@ def test_batched_absolute_cartesian_chunk_is_accepted_without_delta_conversion()
     np.testing.assert_array_equal(stored_chunk, chunk[0])
 
 
+def test_latest_command_from_chunk_is_single_action():
+    pair = make_pair(chunk_size=10)
+    chunk = np.arange(80, dtype=np.float32).reshape(1, 10, 8)
+
+    pair.update_action_chunk(chunk)
+
+    command = pair.get_lastest_command()
+    assert command.shape == (8,)
+    np.testing.assert_array_equal(command, chunk[0, 0])
+
+
 def test_unbatched_absolute_cartesian_chunk_is_accepted():
     pair = make_pair(chunk_size=10)
     chunk = np.arange(80, dtype=np.float32).reshape(10, 8)

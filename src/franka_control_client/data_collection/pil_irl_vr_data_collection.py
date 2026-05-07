@@ -137,6 +137,30 @@ class PolicyState:
             print(f"Successfully saved '{p}'")
 
 
+def _normalize_policy_control_signal(policy_control_signal) -> Optional[np.ndarray]:
+    if policy_control_signal is None:
+        return None
+
+    action = np.asarray(policy_control_signal, dtype=np.float64)
+    if action.ndim == 3:
+        action = action[0, 0]
+    elif action.ndim == 2:
+        action = action[0]
+    elif action.ndim == 1:
+        pass
+    else:
+        raise ValueError(
+            f"Expected policy control signal shape (D,), (T, D), or (B, T, D), got {action.shape}"
+        )
+
+    action = action.reshape(-1)
+    if action.size < 8:
+        raise ValueError(
+            f"Expected policy control signal size >= 8, got {action.size}"
+        )
+    return action[:8]
+
+
 class LeaderData:
     def __init__(self):
         # self.timestamp_ms_list = []
@@ -284,6 +308,7 @@ class PILIRLDataCollection(DataCollectionManager):
         self._last_robot_time: Optional[float] = None
         self.data_lock = threading.Lock()
         self.pause_event = threading.Event()
+        self._closed = False
 
     def set_pause(self, flag: bool):
         if flag:
@@ -341,12 +366,13 @@ class PILIRLDataCollection(DataCollectionManager):
         # todo:using smarter way to wrapper
         # todo:maybe change gripper command to record robotiq command
         # leader
-        if policy_control_signal is not None:
+        policy_action = _normalize_policy_control_signal(policy_control_signal)
+        if policy_action is not None:
             # If we're in policy control, we can override the leader state with the policy control signal for certain fields.
             # This allows us to capture what the policy is commanding while still recording the actual state of the leader robot.
-            self.policy_state_data.EE_pos.append(to_tensor(policy_control_signal[:3]))
-            self.policy_state_data.EE_quat.append(to_tensor(policy_control_signal[3:7]))
-            self.policy_state_data.gripper_width.append(to_tensor(policy_control_signal[-1]))
+            self.policy_state_data.EE_pos.append(to_tensor(policy_action[:3]))
+            self.policy_state_data.EE_quat.append(to_tensor(policy_action[3:7]))
+            self.policy_state_data.gripper_width.append(to_tensor(policy_action[-1]))
         else:
             # If no policy control signal, save None/zero values
             self.policy_state_data.EE_pos.append(to_tensor(np.zeros(3)))
@@ -494,9 +520,9 @@ class PILIRLDataCollection(DataCollectionManager):
         super()._reset_to_waiting()
 
     def _close(self) -> None:
-        if self._close:
+        if self._closed:
             return
-        self._close = True
+        self._closed = True
 
         super()._close()
 

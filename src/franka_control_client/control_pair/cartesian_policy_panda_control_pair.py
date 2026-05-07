@@ -120,7 +120,10 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
             return self._latest_action.copy()
 
     def _get_latest_action_from_chunk(self) -> Optional[np.ndarray]:
-        return self.action_buffer.get_action()
+        action = self.action_buffer.apply_action()
+        if action is not None:
+            return action
+        return self._get_latest_action()
 
     def reset_action(self) -> None:
         """Reset the latest action state when starting a new episode."""

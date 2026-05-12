@@ -36,10 +36,10 @@ if __name__ == "__main__":
 
     # Checkpoint path from eval_config.yaml
     checkpoint_path = (
-        "/home/jjiang/jing/model/beso/beso_cylinder_cube_full/checkpoints/010000/pretrained_model" 
+        "/home/jjiang/jing/model/xvla/cylinder_400/080000/pretrained_model" 
     )
-    task = "put red cylinder on green cube and put green cylinder on red cube"
-    dataset_path = "/home/jjiang/jing/dataset/lerobot/cylinder_cube_full" 
+    task = "put red cylinder on yellow cube"
+    dataset_path = "/home/jjiang/jing/dataset/lerobot/cylinder_full" 
 
     follower = PandaRobotiq(
         "PandaRobotiq",
@@ -51,8 +51,8 @@ if __name__ == "__main__":
     )
 
     # Camera capture interval matches inference frequency (30 Hz = 0.033s)
-    static_cam = ImageDataWrapper(CameraDevice("static_cam", preview=False), hw_name="static_cam")
-    wrist_cam = ImageDataWrapper(CameraDevice("wrist_cam", preview=False), hw_name="wrist_cam")
+    static_cam = ImageDataWrapper(CameraDevice("static_cam", preview=False), hw_name="image")
+    wrist_cam = ImageDataWrapper(CameraDevice("wrist_cam", preview=False), hw_name="image2")
 
     data_collectors: List[IRLDataWrapper] = []
     data_collectors.append(static_cam)
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     inference_cfg = LeRobotPolicyInferenceConfig(
         checkpoint_path=checkpoint_path,
         task=task,
-        fps=10, #20 for xvla, 8 for beso
+        fps=20, #20 for xvla, 8 for beso
         device="cuda",
         dataset_path=dataset_path,
     )

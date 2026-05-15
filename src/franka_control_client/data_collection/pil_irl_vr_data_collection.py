@@ -137,6 +137,56 @@ class PolicyState:
             print(f"Successfully saved '{p}'")
 
 
+class CommandStateData:
+    def __init__(self):
+        self.EE_pos = []
+        self.EE_quat = []
+        self.gripper_state_list = []
+        self.source = []
+
+    def append(self, action: np.ndarray, source: float, to_tensor) -> None:
+        self.EE_pos.append(to_tensor(action[:3]))
+        self.EE_quat.append(to_tensor(action[3:7]))
+        self.gripper_state_list.append(to_tensor(action[-1]))
+        self.source.append(float(source))
+
+    def pop(self):
+        if len(self.EE_pos) == 0:
+            return
+        self.source.pop()
+        return (
+            self.EE_pos.pop().detach().cpu().numpy(),
+            self.EE_quat.pop().detach().cpu().numpy(),
+            self.gripper_state_list.pop().detach().cpu().numpy(),
+        )
+
+    def save(self, path: Path):
+        if len(self.EE_pos) == 0:
+            print(f"Skip saving command_state in '{path}' since it is empty")
+            return
+
+        tensor_lists = [
+            torch.stack(self.EE_pos),
+            torch.stack(self.EE_quat),
+            torch.stack(self.gripper_state_list),
+            torch.tensor(self.source, dtype=torch.float32),
+        ]
+        paths = [
+            path / "EE_pos.pt",
+            path / "EE_quat.pt",
+            path / "gripper_state.pt",
+            path / "source.pt",
+        ]
+
+        for d, p in zip(tensor_lists, paths):
+            if d.numel() == 0:
+                print(f"Skip saving '{p}' since it is empty")
+                continue
+
+            torch.save(d, p)
+            print(f"Successfully saved '{p}'")
+
+
 def _normalize_policy_control_signal(policy_control_signal) -> Optional[np.ndarray]:
     if policy_control_signal is None:
         return None
@@ -320,7 +370,8 @@ class PILIRLDataCollection(DataCollectionManager):
         with self.data_lock:
             self.follower_robot_data.pop()
             self.policy_state_data.pop()
-            return self.leader_robot_data.pop()
+            self.leader_robot_data.pop()
+            return self.command_state_data.pop()
 
     def _start_collecting(self) -> None:
         # Emit start-collection event (e.g., start control pair).
@@ -333,7 +384,9 @@ class PILIRLDataCollection(DataCollectionManager):
         self.camera_last_capture_times = [0.0] * len(self.camera_streams)
         self.last_gripper = 0.0018
 
-    def _collect_step(self, policy_control_signal=None) -> None:
+    def _collect_step(
+        self, policy_control_signal=None, command_source: float = 1.0
+    ) -> None:
         # print("debug:time start collect")
         to_tensor = lambda x: torch.tensor(x, dtype=torch.float64)
         start_time = time.perf_counter()
@@ -378,10 +431,27 @@ class PILIRLDataCollection(DataCollectionManager):
             self.policy_state_data.EE_pos.append(to_tensor(np.zeros(3)))
             self.policy_state_data.EE_quat.append(to_tensor(np.zeros(4)))
             self.policy_state_data.gripper_width.append(to_tensor(0.0))
-        
-        self.leader_robot_data.source.append(
-            1.0
-        )  # Mark this data point as coming from human control
+
+        if policy_action is not None:
+            command_action = np.array(policy_action, copy=True)
+            if command_source < 0.5:
+                command_action[-1] = 1.0 if command_action[-1] >= 0.5 else 0.0
+            self.command_state_data.append(
+                command_action, command_source, to_tensor
+            )
+        elif command_source >= 0.5:
+            interrupt_action = np.concatenate(
+                [
+                    np.asarray(leader_state["EE_pos"], dtype=np.float64),
+                    np.asarray(leader_state["EE_quat"], dtype=np.float64),
+                    np.asarray([leader_state["gripper_width"]], dtype=np.float64),
+                ]
+            )
+            self.command_state_data.append(
+                interrupt_action, command_source, to_tensor
+            )
+
+        self.leader_robot_data.source.append(command_source)
         self.leader_robot_data.EE_pos.append(to_tensor(leader_state["EE_pos"]))
         self.leader_robot_data.EE_quat.append(
             to_tensor(leader_state["EE_quat"])
@@ -448,6 +518,7 @@ class PILIRLDataCollection(DataCollectionManager):
         self.leader_robot_data.save(self.leader_robot_dir)
         self.follower_robot_data.save(self.follower_robot_dir)
         self.policy_state_data.save(self.policy_state_dir)
+        self.command_state_data.save(self.command_state_dir)
 
         self.__report_camera_rates()
 
@@ -541,6 +612,9 @@ class PILIRLDataCollection(DataCollectionManager):
         self.policy_state_dir = self.record_dir / "policy_state"
         self.policy_state_dir.mkdir()
 
+        self.command_state_dir = self.record_dir / "command_state"
+        self.command_state_dir.mkdir()
+
         self.sensors_dir = self.record_dir / "sensors"
         self.sensors_dir.mkdir()
 
@@ -554,6 +628,7 @@ class PILIRLDataCollection(DataCollectionManager):
         self.leader_robot_data = LeaderData()
         self.follower_robot_data = FollowerData()
         self.policy_state_data = PolicyState()
+        self.command_state_data = CommandStateData()
         self.camera_timestamps = [[] for _ in self.camera_streams]
         self.camera_frame_idx = [0] * len(
             self.camera_streams

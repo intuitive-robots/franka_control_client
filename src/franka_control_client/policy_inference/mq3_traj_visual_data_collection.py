@@ -1,5 +1,5 @@
 import traceback
-from typing import List, Optional
+from typing import List, Optional, Sequence
 import time
 import sys
 from anyio import Path
@@ -24,6 +24,10 @@ from .lerobot_policy_inference import (
     LeRobotPolicyInference,
     LeRobotPolicyInferenceConfig,
 )
+from .finger_waypoints import (
+    align_gripper_trajectory_start,
+    build_finger_waypoint_positions,
+)
 from ..data_collection.data_collection_manager import DataCollectionState
 
 
@@ -36,18 +40,27 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         cfg: LeRobotPolicyInferenceConfig,
         save_path: str = None,
         mirror: RobotMirror = None,
+        visualize_history: bool = False,
+        visualization_hz: float = 30.0,
     ) -> None:
         super().__init__(data_collectors, control_pair, cfg)
         self.control_pair: PILPandaControlPair = control_pair
         self.mirror = mirror if mirror is not None else RobotMirror.from_model_id(
             RobotModelId.FRANKA_PANDA_ROBOTIQ
         )
-        self.last_chunk_traj: Optional[XRTrajectory] = None
         self.history_way_points = []
         self.history_traj: Optional[XRTrajectory] = None
         self.reset_history_event = threading.Event()
+        self.visualize_history = visualize_history
+        self.visualization_hz = float(visualization_hz)
+        self._finger_waypoint_sphere_names: dict[str, list[str]] = {}
         self.running = True
         self._closed = False
+        self._visualization_thread = threading.Thread(
+            target=self._visualization_loop,
+            daemon=True,
+            name="robot-mirror-visualization",
+        )
 
         self._data_colection: PILIRLDataCollection = PILIRLDataCollection(
             data_collectors,
@@ -59,15 +72,41 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         # self.data_collection_thread = threading.Thread(target=self.run_data_collection, daemon=True)
         # self.data_collection_thread.start()
         self.control_pair.register_history(self._data_colection)
+        self._visualization_thread.start()
+        pyzlc.info(
+            f"Started robot mirror visualization thread at {self.visualization_hz:.1f} Hz."
+        )
+
+    def _update_mirror_arm_state(self) -> None:
+        arm_state = self.arm_wrapper.arm.current_state
+        if arm_state is not None:
+            self.mirror.apply_arm_state(np.array(arm_state["q"]))
+
+    def _visualization_loop(self) -> None:
+        period = 1.0 / self.visualization_hz if self.visualization_hz > 0 else 0.0
+        while self.running:
+            start_time = time.perf_counter()
+            try:
+                self._update_mirror_arm_state()
+            except Exception as exc:
+                pyzlc.error(f"Robot mirror visualization update failed: {exc}")
+            if period <= 0:
+                continue
+            elapsed = time.perf_counter() - start_time
+            sleep_time = max(0.0, period - elapsed)
+            if sleep_time > 0.0:
+                time.sleep(sleep_time)
 
     def _collect_step(self) -> None:
-        # only collect data when in interrupt mode
         if self.control_pair.current_state == PILMode.INTERRUPT:
+            self._data_colection._collect_step(command_source=1.0)
+        elif self.control_pair.current_state == PILMode.POLICY:
+            # During policy control, we can also collect data but mark it differently
             self._data_colection._collect_step(
-                self.control_pair.get_lastest_command()
+                self.control_pair.get_lastest_command(),
+                command_source=0.0,
             )
-        elif self.control_pair.current_state == PILMode.REPLAY or \
-            self.control_pair.current_state == PILMode.POLICY:
+        elif self.control_pair.current_state == PILMode.REPLAY:
             return
 
     def _visualize_step(self) -> None:
@@ -76,9 +115,11 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
             self.history_way_points = []
             self.reset_history_event.clear()
             return
-        arm_state = self.arm_wrapper.arm.current_state
-        if arm_state is not None:
-            self.mirror.apply_arm_state(np.array(arm_state["q"]))
+        self._update_mirror_arm_state()
+        if not self.visualize_history:
+            return
+        if not hasattr(self._data_colection, "command_state_data"):
+            return
         if self.control_pair.current_state == PILMode.POLICY:
             color = [0.0, 0.0, 1.0, 1.0]
         elif self.control_pair.current_state == PILMode.INTERRUPT:
@@ -86,14 +127,14 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         else:
             self.history_way_points = []
             with self._data_colection.data_lock:
-                leader_data = self._data_colection.leader_robot_data
-                for pos, source in zip(leader_data.EE_pos, leader_data.source):
+                command_data = self._data_colection.command_state_data
+                for pos, source in zip(command_data.EE_pos, command_data.source):
                     self.history_way_points.append(
                         {
                             "pos": pos.tolist(),
                             "color": (
                                 [0.0, 0.0, 1.0, 1.0]
-                                if float(source) > 0.5
+                                if float(source) < 0.5
                                 else [0.0, 1.0, 0.0, 1.0]
                             ),
                         }
@@ -101,9 +142,7 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
             if len(self.history_way_points) != 0:
                 self.history_traj.update(waypoints=self.history_way_points)
             return
-        if not hasattr(self._data_colection, "leader_robot_data"):
-            return
-        lastest_action = self._data_colection.leader_robot_data
+        lastest_action = self._data_colection.command_state_data
         if lastest_action is not None and len(lastest_action.EE_pos) != 0:
             self.history_way_points.append(
                 {
@@ -175,21 +214,40 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
             post_action_chunk[:, chunk_idx, :] = processed_action
 
         post_action_chunk = post_action_chunk.float().cpu().numpy()
-        way_points = []
-        for idx in range(len(post_action_chunk[0])):
-            # pyzlc.info(f"Postprocessed action chunk for batch {idx}: {post_action_chunk[0][idx]}")
-            way_points.append(
-                {
-                    "pos": post_action_chunk[0][idx][:3].tolist(),
-                    "color": [1.0, 0.0, 0.0, 1.0],
-                }
+        visual_action_chunk = np.array(post_action_chunk[0], copy=True)
+        arm_state = self.arm_wrapper.arm.current_state
+        if (
+            arm_state is not None
+            and "EE_pos" in arm_state
+            and len(visual_action_chunk) > 0
+        ):
+            current_ee_pos = np.asarray(
+                arm_state["EE_pos"], dtype=np.float32
+            ).reshape(-1)
+            if current_ee_pos.size >= 3:
+                visual_action_chunk[:, :3] += (
+                    current_ee_pos[:3] - visual_action_chunk[0, :3]
+                )
+        current_gripper = self._get_current_gripper_command()
+        if current_gripper is not None and len(visual_action_chunk) > 0:
+            visual_action_chunk = align_gripper_trajectory_start(
+                visual_action_chunk, current_gripper
             )
-        if self.last_chunk_traj is None:
-            self.last_chunk_traj = self.mirror._cavns.create_trajectory(
-                name="ee_trajectory", waypoints=way_points
-            )
-        else:
-            self.last_chunk_traj.update(waypoints=way_points)
+        left_finger_positions, right_finger_positions = (
+            build_finger_waypoint_positions(visual_action_chunk)
+        )
+        self._update_waypoint_sphere_group(
+            left_finger_positions,
+            name_prefix="left_finger_waypoint_sphere",
+            start_color=(0.0, 0.9, 1.0, 1.0),
+            end_color=(0.0, 0.2, 1.0, 1.0),
+        )
+        self._update_waypoint_sphere_group(
+            right_finger_positions,
+            name_prefix="right_finger_waypoint_sphere",
+            start_color=(1.0, 0.7, 0.0, 1.0),
+            end_color=(1.0, 0.0, 0.0, 1.0),
+        )
         try:
             # single_action
             # self.control_pair.update_action(action_vec)
@@ -212,6 +270,11 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         self._closed = True
         self.running = False
         try:
+            if (
+                self._visualization_thread.is_alive()
+                and threading.current_thread() is not self._visualization_thread
+            ):
+                self._visualization_thread.join(timeout=1.0)
             self.control_pair.stop_control_pair()
         finally:
             self._data_colection._close()
@@ -220,7 +283,89 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
     def _reset_arm(self):
         self.control_pair.clear_lastest_command()
         self.reset_history_event.set()
+        self._clear_finger_waypoint_spheres()
         return super()._reset_arm()
+
+    def _get_current_gripper_command(self) -> Optional[float]:
+        if self.gripper_wrapper is None:
+            return None
+        try:
+            grip_state = self.gripper_wrapper.capture_step()
+        except Exception as exc:
+            pyzlc.error(f"Failed to read gripper state for visualization: {exc}")
+            return None
+
+        if not isinstance(grip_state, dict):
+            return None
+        if "position" in grip_state:
+            return float(np.clip(grip_state["position"], 0.0, 1.0))
+        if "commanded_position" in grip_state:
+            return float(np.clip(grip_state["commanded_position"], 0.0, 1.0))
+        if "gripper" in grip_state:
+            gripper = np.asarray(grip_state["gripper"], dtype=np.float32).reshape(-1)
+            if gripper.size > 0:
+                return float(np.clip(gripper[0], 0.0, 1.0))
+        if "width" in grip_state:
+            width = np.asarray(grip_state["width"], dtype=np.float32).reshape(-1)
+            if width.size > 0:
+                return float(np.clip(1.0 - width[0] / 0.08, 0.0, 1.0))
+        return None
+
+    def _update_waypoint_sphere_group(
+        self,
+        positions: np.ndarray,
+        *,
+        name_prefix: str,
+        radius: float = 0.005,
+        start_color: Sequence[float] = (0.0, 1.0, 0.0, 1.0),
+        end_color: Sequence[float] = (1.0, 0.0, 0.0, 1.0),
+    ) -> None:
+        positions_array = np.asarray(positions, dtype=float)
+        marker_names = self._finger_waypoint_sphere_names.setdefault(
+            name_prefix, []
+        )
+        identity_quat = np.array([1.0, 0.0, 0.0, 0.0])
+
+        if positions_array.size == 0:
+            self._hide_waypoint_spheres(marker_names, identity_quat)
+            return
+        if positions_array.ndim != 2 or positions_array.shape[1] != 3:
+            raise ValueError("positions must have shape (N, 3)")
+        if not np.all(np.isfinite(positions_array)):
+            raise ValueError("positions must contain finite numeric values")
+
+        num_waypoints = positions_array.shape[0]
+        for idx, pos in enumerate(positions_array):
+            if idx >= len(marker_names):
+                marker_name = f"{name_prefix}_{idx}"
+                color = self.mirror._interpolate_rgba(
+                    idx, num_waypoints, start_color, end_color
+                )
+                self.mirror._create_future_waypoint_sphere(
+                    marker_name, pos, radius, color
+                )
+                marker_names.append(marker_name)
+            marker_name = marker_names[idx]
+            self.mirror._publisher.tracked_obj_trans[marker_name] = (
+                pos.copy(),
+                identity_quat,
+            )
+
+        self._hide_waypoint_spheres(marker_names[num_waypoints:], identity_quat)
+
+    def _clear_finger_waypoint_spheres(self) -> None:
+        identity_quat = np.array([1.0, 0.0, 0.0, 0.0])
+        for marker_names in self._finger_waypoint_sphere_names.values():
+            self._hide_waypoint_spheres(marker_names, identity_quat)
+
+    def _hide_waypoint_spheres(
+        self, marker_names: Sequence[str], identity_quat: np.ndarray
+    ) -> None:
+        for marker_name in marker_names:
+            self.mirror._publisher.tracked_obj_trans[marker_name] = (
+                np.array([0.0, 0.0, -10.0]),
+                identity_quat,
+            )
 
     def run(self) -> None:
         self._on_state_enter(self._state_machine.state)

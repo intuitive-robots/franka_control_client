@@ -113,14 +113,16 @@ if __name__ == "__main__":
         group="224.0.0.1",
         group_name="robot_lab_robotiq_202",
         group_port=7725,
+        # log_level=pyzlc.LogLevel.DEBUG,
+
         
     )
     # Checkpoint path from eval_config.yaml
     checkpoint_path = (
-        "/home/jjiang/jing/model/beso/bestmodel_fold_abs_car/checkpoints/last/pretrained_model"
+        "/home/jjiang/jing/model/xvla/cylinder_400/080000/pretrained_model"
     )
-    task = "folding"
-    dataset_path = "/home/jjiang/jing/dataset/lerobot/folding_20hz" 
+    task = "put green cylinder on yellow cube"
+    dataset_path = "/home/jjiang/jing/dataset/lerobot/cylinder_full" 
 
     # task = "pick_up_cylinder_on_the_top_of_cube"  # "Pick up the bell pepper and place it in the bowl."
     # dataset_path = "/home/irl-admin/chekpoints/4th_March_folding"
@@ -137,7 +139,7 @@ if __name__ == "__main__":
     leader = MQ3Controller("IRL-MQ3-2", "192.168.0.117", follower.panda_arm)
     leader.mq3.wait_for_connection()
     control_pair = PILPandaControlPair(
-        follower.panda_arm, follower.robotiq_gripper, leader, 50
+        follower.panda_arm, follower.robotiq_gripper, leader, 1
     )
 
     # Camera capture interval matches inference frequency (30 Hz = 0.033s)
@@ -168,7 +170,7 @@ if __name__ == "__main__":
     inference_cfg = LeRobotPolicyInferenceConfig(
         checkpoint_path=checkpoint_path,
         task=task,
-        fps=10,
+        fps=1,
         device="cuda",
         # policy_dtype="bfloat16",
         dataset_path=dataset_path,
@@ -179,7 +181,8 @@ if __name__ == "__main__":
         task="pick_up_cylinder_on_the_top_of_cube",
         cfg=inference_cfg,
         save_path="/home/jjiang/ahmad/dataset/lerobot/pick_up_cylinder_on_the_top_of_cube_mq3_data_collection",
-        mirror = mirror
+        mirror = mirror,
+        visualization_hz=30.0,
     )
 
     try:

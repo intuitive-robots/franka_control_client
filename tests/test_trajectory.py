@@ -55,6 +55,7 @@ from scipy.spatial.transform import Rotation as R
 from franka_control_client.vr.meta_quest3 import MQ3Controller
 
 import cv2
+import pytest
 import torch
 import numpy as np
 import threading
@@ -92,10 +93,17 @@ class CameraDisplayThread(threading.Thread):
 
 
 class TrajectoryLoader:
-    def __init__(self, record_dir: str, robot_name: str):
+    def __init__(
+        self,
+        record_dir: str,
+        robot_name: str = "command_state",
+        display_cameras: bool = True,
+    ):
         self.record_dir = Path(record_dir)
         self.robot_dir = self.record_dir / robot_name
         self.sensors_dir = self.record_dir / "sensors"
+        self.robot_name = robot_name
+        self.display_cameras = display_cameras
 
         self.camera_names = []
         if self.sensors_dir.exists():
@@ -107,14 +115,27 @@ class TrajectoryLoader:
         self.steps = self._load_trajectory()
 
         # Initialize and start the background display thread
-        self.display_thread = CameraDisplayThread()
-        self.display_thread.start()
+        self.display_thread = None
+        if self.display_cameras:
+            self.display_thread = CameraDisplayThread()
+            self.display_thread.start()
 
     def _load_trajectory(self) -> list:
         loaded_data = {}
+        if self.robot_name == "command_state" and not self.robot_dir.exists():
+            raise FileNotFoundError(
+                f"No command_state trajectory found at {self.robot_dir}. "
+                "This episode was collected before mixed command replay was supported."
+            )
+
         pt_files = list(self.robot_dir.glob("*.pt"))
 
         if not pt_files:
+            if self.robot_name == "command_state":
+                raise FileNotFoundError(
+                    f"No command_state trajectory files found in {self.robot_dir}. "
+                    "This episode was collected before mixed command replay was supported."
+                )
             raise FileNotFoundError(
                 f"No '.pt' files found in {self.robot_dir}"
             )
@@ -134,36 +155,43 @@ class TrajectoryLoader:
 
         return trajectory_list
 
-    def pop(self) -> Optional[Tuple[np.ndarray, np.ndarray, float]]:
+    @staticmethod
+    def _format_source(source: float) -> str:
+        return "policy" if source < 0.5 else "human_interrupt"
+
+    def pop(self) -> Optional[Tuple[np.ndarray, np.ndarray, float, float]]:
         """
-        Retrieves the next step, queues camera frames safely, and returns pos/quat/gripper.
+        Retrieves the next step, queues camera frames safely, and returns pos/quat/gripper/source.
         """
         if not self.steps:
             # Safely shut down the display thread when the trajectory is finished
-            self.display_thread.stop()
+            if self.display_thread is not None:
+                self.display_thread.stop()
             return None
 
         step_data = self.steps.pop(0)
 
         # --- 1. Safely Queue Camera Frames ---
-        for cam_name in self.camera_names:
-            img_path = (
-                self.sensors_dir
-                / cam_name
-                / f"{self.current_step_idx:06d}.png"
-            )
-            if img_path.exists():
-                img = cv2.imread(str(img_path))
-                # Put the image in the queue without blocking the robot's control loop
-                if not self.display_thread.frame_queue.full():
-                    self.display_thread.frame_queue.put((cam_name, img))
-            else:
-                print(f"Warning: Missing image frame at {img_path}")
+        if self.display_thread is not None:
+            for cam_name in self.camera_names:
+                img_path = (
+                    self.sensors_dir
+                    / cam_name
+                    / f"{self.current_step_idx:06d}.png"
+                )
+                if img_path.exists():
+                    img = cv2.imread(str(img_path))
+                    # Put the image in the queue without blocking the robot's control loop
+                    if not self.display_thread.frame_queue.full():
+                        self.display_thread.frame_queue.put((cam_name, img))
+                else:
+                    print(f"Warning: Missing image frame at {img_path}")
 
         self.current_step_idx += 1
 
         # --- 2. Extract Data ---
         gripper_width = float(np.squeeze(step_data.get("gripper_state", 0.0)))
+        source = float(np.squeeze(step_data.get("source", -1.0)))
 
         pos_data = step_data.get("EE_pos")
         quat_data = step_data.get("EE_quat")
@@ -176,24 +204,87 @@ class TrajectoryLoader:
         pos = np.array(pos_data).squeeze()
         quat = np.array(quat_data).squeeze()
 
-        # Using your specific data points to define the behavior
-        if gripper_width < 0.05:
-            print(
-                f"Action: Opening the gripper completely (State: Open): {gripper_width:.3f}"
-            )
-        elif 0.45 <= gripper_width <= 0.60:
-            print(
-                f"Action: Grasping an object similar to the cylinder (Value: {gripper_width:.3f})"
-            )
-        elif gripper_width > 0.8:  # Assuming 1.0 is max
-            print("Action: Closing the gripper completely with no object")
-        else:
-            print(
-                f"Action: Moving to intermediate position (Value: {gripper_width:.3f})"
-            )
+        # # Using your specific data points to define the behavior
+        # if gripper_width < 0.05:
+        #     print(
+        #         f"Action: Opening the gripper completely (State: Open): {gripper_width:.3f}"
+        #     )
+        # elif 0.45 <= gripper_width <= 0.60:
+        #     print(
+        #         f"Action: Grasping an object similar to the cylinder (Value: {gripper_width:.3f})"
+        #     )
+        # elif gripper_width > 0.8:  # Assuming 1.0 is max
+        #     print("Action: Closing the gripper completely with no object")
+        # else:
+        #     print(
+        #         f"Action: Moving to intermediate position (Value: {gripper_width:.3f})"
+        #     )
 
         # time.sleep(0.15)
-        return pos, quat, gripper_width
+        print(
+            f"Replay step {self.current_step_idx - 1}: "
+            f"source={self._format_source(source)} ({source:.1f})"
+        )
+        return pos, quat, gripper_width, source
+
+
+def test_trajectory_loader_reads_command_state_in_order(tmp_path):
+    command_dir = tmp_path / "command_state"
+    command_dir.mkdir()
+    torch.save(
+        torch.tensor(
+            [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]], dtype=torch.float32
+        ),
+        command_dir / "EE_pos.pt",
+    )
+    torch.save(
+        torch.tensor(
+            [
+                [0.0, 0.0, 0.0, 1.0],
+                [0.0, 0.0, 1.0, 0.0],
+            ],
+            dtype=torch.float32,
+        ),
+        command_dir / "EE_quat.pt",
+    )
+    torch.save(
+        torch.tensor([0.25, 0.75], dtype=torch.float32),
+        command_dir / "gripper_state.pt",
+    )
+    torch.save(
+        torch.tensor([0.0, 1.0], dtype=torch.float32),
+        command_dir / "source.pt",
+    )
+
+    loader = TrajectoryLoader(tmp_path, display_cameras=False)
+
+    pos, quat, gripper, source = loader.pop()
+    np.testing.assert_allclose(pos, [0.1, 0.2, 0.3])
+    np.testing.assert_allclose(quat, [0.0, 0.0, 0.0, 1.0])
+    assert gripper == pytest.approx(0.25)
+    assert source == pytest.approx(0.0)
+
+    pos, quat, gripper, source = loader.pop()
+    np.testing.assert_allclose(pos, [0.4, 0.5, 0.6])
+    np.testing.assert_allclose(quat, [0.0, 0.0, 1.0, 0.0])
+    assert gripper == pytest.approx(0.75)
+    assert source == pytest.approx(1.0)
+    assert loader.pop() is None
+
+
+def test_trajectory_loader_rejects_episode_without_command_state(tmp_path):
+    mq3_dir = tmp_path / "MQ3"
+    mq3_dir.mkdir()
+    torch.save(
+        torch.zeros((1, 3), dtype=torch.float32),
+        mq3_dir / "EE_pos.pt",
+    )
+
+    with pytest.raises(
+        FileNotFoundError,
+        match="collected before mixed command replay was supported",
+    ):
+        TrajectoryLoader(tmp_path, display_cameras=False)
 
 
 class ReplayControlPair(PILPandaControlPair):
@@ -207,8 +298,9 @@ class ReplayControlPair(PILPandaControlPair):
     ):
         super().__init__(panda_arm, gripper, mq3_controller, control_hz)
         self._last_gripper = None
+        self._last_gripper_cmd = None
         self.current_state = PILMode.REPLAY
-        self.data_loader = TrajectoryLoader(replay_path, "MQ3")
+        self.data_loader = TrajectoryLoader(replay_path)
 
     def _replay(self):
         previous_state = self.current_state
@@ -221,8 +313,8 @@ class ReplayControlPair(PILPandaControlPair):
             # Pop the oldest data point to maintain sync with control steps
             if result is None:
                 break
-            pos, quat, gripper_width = result
-            gripper_cmd = 1 if gripper_width >= 0.5 else 0
+            pos, quat, gripper_width, _source = result
+            gripper_cmd = float(gripper_width)
             self.panda_arm.send_cartesian_pose_command(pos=pos, rot=quat)
             if (
                 self._last_gripper_cmd is None
@@ -244,9 +336,10 @@ class ReplayControlPair(PILPandaControlPair):
 if __name__ == "__main__":
     pyzlc.init(
         "data_collection",
-        "192.168.1.1",
-        group_name="DroidGroup",
-        group_port=7730,
+        "141.3.53.25",
+        group="224.0.0.1",
+        group_name="robot_lab_robotiq_202",
+        group_port=7725,
     )
     follower = PandaRobotiq(
         "PandaRobotiq",
@@ -259,8 +352,7 @@ if __name__ == "__main__":
         panda_arm=follower.panda_arm,
         gripper=follower.robotiq_gripper,
         mq3_controller=leader,
-        replay_path="/home/irl-admin/xinkai/data_collection/"
-        "pick_up_cylinder_on_the_top_of_cube/2026_03_25-16_59_52",
+        replay_path="/home/jjiang/ahmad/dataset/lerobot/pick_up_cylinder_on_the_top_of_cube_mq3_data_collection/pick_up_cylinder_on_the_top_of_cube/2026_05_07-13_24_08",
         control_hz=50,
     )
 
@@ -276,10 +368,10 @@ if __name__ == "__main__":
     # data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
     # data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
     # name = time.strftim  e("%Y%m%d_%H%M%S", time.localtime())
-    task = "new_scarf_40hz"
+    task = "folding"
     data_collection_manager = IRLDataCollection(
         data_collectors,
-        f"/home/irl-admin/new_data_collection/{task}",
+        f"/home/jjiang/ahmad/dataset/lerobot/{task}",
         task,
         fps=20,
         control_pair=control_pair,

@@ -180,9 +180,9 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
 
         # Evaluate policy and postprocess each action in the predicted chunk.
         with torch.inference_mode():
-            ###single action
-            #       action = self.policy.select_action(observation)
-            # action = action[:, :8]
+            ##single action
+            action = self.policy.select_action(observation)
+            action_chunk = action[:, :8]
 
             # # Postprocess action
             # action = self.postprocessor(action).float().cpu().numpy()
@@ -191,8 +191,10 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
             # action_vec = action[0] if action.ndim == 2 else action
 
             ###action chunk
-            print(f"type of policy: {type(self.policy)}, observation keys: {list(observation.keys())}")
-            action_chunk = self.policy.predict_action_chunk(batch = observation)
+            # print(f"type of policy: {type(self.policy)}, observation keys: {list(observation.keys())}")
+            # action_chunk = self.policy.predict_action_chunk(batch = observation)
+            print("action_chunk shape:", tuple(action_chunk.shape))
+
 
         if action_chunk.ndim == 2:
             action_chunk = action_chunk.unsqueeze(1)

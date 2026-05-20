@@ -8,16 +8,33 @@
 #
 # Step 1 — start the policy server on the GPU node (starVLA repo):
 #   cd starVLA/
-#   python deployment/model_server/server_policy.py \
+#   python deployment/model_server/server_poli
+# cy.py \
 #       --ckpt_path /path/to/checkpoint.pt \
 #       --port 10093 \
 #       --use_bf16
+
+
+#   python deployment/model_server/server_poli
+# cy.py \
+#       --ckpt_path /home/jjiang/nils/models/GR00T_real_robot_abs_eef_qwen08ft/final_model/pytorch_model.pt \
+#       --port 10093 \
+#       --use_bf16
+
+
+
 #   Check logs for available_unnorm_keys and action_chunk_size.
 #
 # Step 2 — smoke test (no robot, verifies server connection + action shape):
 #   cd starVLA/
 #   python franka_control_client/src/franka_control_client/policy_inference/starvla_server_inference.py \
 #       --host <server_ip> --port 10093 \
+#       --task "put red cylinder on green cube" \
+#       --n_cameras 2 --n_infer 3
+
+
+#   python franka_control_client/src/franka_control_client/policy_inference/starvla_server_inference.py \
+#       --port 10093 \
 #       --task "put red cylinder on green cube" \
 #       --n_cameras 2 --n_infer 3
 #   Expected: actions shape=(24, 8) and "Smoke test PASSED".
@@ -89,7 +106,7 @@ if __name__ == "__main__":
         follower.panda_arm,
         follower.robotiq_gripper,
         CONTROL_HZ,
-        action_chunk_size=10,       # buffer size for the physical control loop
+        action_chunk_size=1,       # buffer size for the physical control loop
         action_chunk_dt=ACTION_CHUNK_DT,
     )
 

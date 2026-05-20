@@ -26,6 +26,8 @@ VELOCITY_LIMITS = np.array([[-4 * np.pi / 2, 4 * np.pi / 2]] * 7).T / 32
 VELOCITY_LIMITS_NORM = np.linalg.norm(VELOCITY_LIMITS)
 
 
+print(f"Using velocity limits:\n{VELOCITY_LIMITS}\nNorm: {VELOCITY_LIMITS_NORM:.3f}")
+
 class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
     """
     Apply policy actions to a Panda arm with a gripper.

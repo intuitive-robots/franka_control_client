@@ -32,7 +32,9 @@
 
 from __future__ import annotations
 
+import sys
 import time
+from pathlib import Path
 from typing import List, Optional, Tuple
 
 import cv2
@@ -40,23 +42,35 @@ import numpy as np
 import pyzlc
 from scipy.spatial.transform import Rotation as R
 
-from .websocket_policy_client import WebsocketClientPolicy
+if __package__ in (None, ""):
+    # Support `python src/franka_control_client/.../starvla_server_inference.py`.
+    # Adding src/ lets sibling relative imports resolve through the package.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from franka_control_client.policy_inference.websocket_policy_client import (
+        WebsocketClientPolicy,
+    )
+else:
+    from .websocket_policy_client import WebsocketClientPolicy
 
-try:
-    # Relative imports only available when used as a module (not run directly).
-    from ..control_pair.cartesian_policy_panda_control_pair import (
-        PolicyPandaRobotiqDeltaCartesianControlPair,
-    )
-    from ..data_collection.irl_wrapper import (
-        IRLDataWrapper,
-        ImageDataWrapper,
-        PandaArmDataWrapper,
-        RobotiqGripperDataWrapper,
-    )
-    from .policy_inference_manager import PolicyInferenceManager
-except ImportError:
-    # Running as __main__ for smoke testing — hardware classes not needed.
+if __package__ in (None, ""):
+    # Direct execution is only used for the smoke test below; robot hardware
+    # classes are not needed until the package is imported by the robot example.
     PolicyInferenceManager = object  # type: ignore[assignment,misc]
+else:
+    try:
+        from ..control_pair.cartesian_policy_panda_control_pair import (
+            PolicyPandaRobotiqDeltaCartesianControlPair,
+        )
+        from ..data_collection.irl_wrapper import (
+            IRLDataWrapper,
+            ImageDataWrapper,
+            PandaArmDataWrapper,
+            RobotiqGripperDataWrapper,
+        )
+        from .policy_inference_manager import PolicyInferenceManager
+    except ImportError:
+        # Allows importing this module in lightweight smoke-test environments.
+        PolicyInferenceManager = object  # type: ignore[assignment,misc]
 
 
 class StarVLAServerInference(PolicyInferenceManager):
@@ -263,15 +277,6 @@ class StarVLAServerInference(PolicyInferenceManager):
 if __name__ == "__main__":
     import argparse
     import logging
-    import sys
-
-    # When run directly, resolve the local websocket client without relative imports.
-    import importlib.util, pathlib
-    _here = pathlib.Path(__file__).parent
-    spec = importlib.util.spec_from_file_location("websocket_policy_client", _here / "websocket_policy_client.py")
-    _wpc_mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(_wpc_mod)
-    WebsocketClientPolicy = _wpc_mod.WebsocketClientPolicy  # type: ignore[assignment]
 
     def _build_argparser() -> argparse.ArgumentParser:
         ap = argparse.ArgumentParser(

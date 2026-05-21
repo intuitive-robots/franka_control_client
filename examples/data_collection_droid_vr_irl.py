@@ -39,7 +39,8 @@ from franka_control_client.control_pair.mq3_panda_control_pair import (
 if __name__ == "__main__":
     pyzlc.init(
         "data_collection",
-        "192.168.1.1",
+         #"192.168.1.1",
+        "141.3.53.25",
         group_name="DroidGroup",
         group_port=7730,
     )

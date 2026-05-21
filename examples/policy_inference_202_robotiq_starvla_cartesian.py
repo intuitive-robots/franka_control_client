@@ -80,7 +80,7 @@ if __name__ == "__main__":
     # ----------------------------------------------------------------
     # Configuration — adapt to your deployment
     # ----------------------------------------------------------------
-    TASK = "put red cylinder on green cube and put green cylinder on red cube"
+    TASK = "pick_up_banana"
 
     SERVER_HOST = "127.0.0.1"  # IP of the machine running server_policy.py
     SERVER_PORT = 10093
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     INFERENCE_FPS = 10          # how fast the inference loop runs
     IMAGE_SIZE = (224, 224)     # must match training obs_image_size
     ACTION_CHUNK_DT = 0.05      # seconds per chunk step at the control pair level
-    CONTROL_HZ = 500
+    CONTROL_HZ = 200
 
     # ----------------------------------------------------------------
     # Hardware setup (same as existing BESO example)

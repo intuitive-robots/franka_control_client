@@ -123,7 +123,7 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
             return
         self.panda_arm.send_cartesian_pose_command(action[:3], action[3:7])
         
-        print(f"Applied command: {action}")
+        # print(f"Applied command: {action}")
         
         # Gripper command
         gripper_cmd = float(action[-1])

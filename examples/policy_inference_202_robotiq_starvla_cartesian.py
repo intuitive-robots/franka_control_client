@@ -82,6 +82,22 @@ if __name__ == "__main__":
     # ----------------------------------------------------------------
     TASK = "pick_up_banana"
 
+    TASK = 'Put the orange lego block into the red dustpan'
+
+    TASK_LIST = [
+        "Put the orange carrot into the red bowl",
+        "Put the orange carrot into the red dustpan",
+        "Put the orange lego block into the red bowl",
+        "Put the orange lego block into the red dustpan",
+        "Put the yellow cube into the red bowl",
+        "Put the yellow cube into the red dustpan",
+        "Put the yellow cuboid into the red bowl",
+        "Put the yellow cuboid into the red dustpan",
+        "Put the yellow lego block into the red bowl",
+        "Put the yellow lego block into the red dustpan",
+
+    ]
+
     SERVER_HOST = "127.0.0.1"  # IP of the machine running server_policy.py
     SERVER_PORT = 10093
 

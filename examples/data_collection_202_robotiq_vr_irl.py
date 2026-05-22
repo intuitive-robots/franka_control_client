@@ -54,8 +54,8 @@ if __name__ == "__main__":
     leader = MQ3Controller("IRL-MQ3-2", "192.168.0.117", follower.panda_arm)
     leader.mq3.wait_for_connection()
     control_pair = MQ3PandaControlPair(leader, follower)
-    static_cam = ImageDataWrapper(CameraDevice("static_cam", preview=True), hw_name="static_cam")
-    wrist_cam = ImageDataWrapper(CameraDevice("wrist_cam", preview=True), hw_name="wrist_cam")
+    static_cam = ImageDataWrapper(CameraDevice("static_cam", preview=False), hw_name="static_cam")
+    wrist_cam = ImageDataWrapper(CameraDevice("wrist_cam", preview=False), hw_name="wrist_cam")
     data_collectors: List[IRL_HardwareDataWrapper] = []
     data_collectors.append(static_cam)
     data_collectors.append(wrist_cam)
@@ -63,12 +63,12 @@ if __name__ == "__main__":
     data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
     data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
     name = time.strftime("%Y%m%d_%H%M%S", time.localtime())
-    task = "folding"
+    task = "all_obs_Put_the_yellow_cuboid_into_the_red_bowl"
     data_collection_manager = IRLDataCollection(
         data_collectors, 
-        f"/home/jjiang/jing/dataset/{task}", 
+        f"/media/jjiang/Intenso Ext/all/{task}", 
         task, 
-        fps=40,
+        fps=20,
         control_pair=control_pair
     )
     control_pair.control_reset()

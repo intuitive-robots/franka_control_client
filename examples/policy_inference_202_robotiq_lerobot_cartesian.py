@@ -36,10 +36,10 @@ if __name__ == "__main__":
 
     # Checkpoint path from eval_config.yaml
     checkpoint_path = (
-        "/home/jjiang/jing/model/xvla/xvla_banana_10/checkpoints/064000/pretrained_model" 
+        "/home/jjiang/jing/model/beso/beso_cylinder_400/047600/pretrained_model" 
     )
-    task = "put banana in the red bowl"  # "Pick up the bell pepper and place it in the bowl."
-    dataset_path = "/home/jjiang/jing/dataset/lerobot/pick_up_banana_20hz_abs_cartesian_action" 
+    task = "put green cylinder on yellow cube"
+    dataset_path = "/home/jjiang/jing/dataset/lerobot/cylinder_full_trimmed_stationary_prefix" 
 
     follower = PandaRobotiq(
         "PandaRobotiq",

@@ -529,8 +529,8 @@ class LeRobotPolicyInference(PolicyInferenceManager):
             if frame is None:
                 continue
             if isinstance(frame, np.ndarray):
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                #resize the image like dataset converter does, to match the policy's expected input shape
+                frame = np.ascontiguousarray(frame)
+                # resize the RGB image like dataset converter does, to match the policy's expected input shape
                 frame = cv2.resize(frame, (256, 256), interpolation=cv2.INTER_AREA)
                 # cv2.imshow(f"fed-in image - {cam.hw_name}", frame)
                 # cv2.waitKey(1)

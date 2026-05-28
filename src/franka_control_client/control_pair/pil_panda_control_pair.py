@@ -60,8 +60,16 @@ class PILPandaControlPair(PolicyPandaRobotiqDeltaCartesianControlPair):
         gripper: Union[RemotePandaGripper, RemoteRobotiqGripper],
         mq3_controller: MQ3Controller,
         control_hz: float = DEFAULT_CONTROL_HZ,
+        # action_chunk_size: int = 10,
+        # action_chunk_dt: float = 0.05,
     ) -> None:
-        super().__init__(panda_arm, gripper, control_hz)
+        super().__init__(
+            panda_arm,
+            gripper,
+            control_hz,
+            # action_chunk_size,
+            # action_chunk_dt,
+        )
         self.policy_pair = self
         self.panda_arm = panda_arm
         self.gripper = gripper

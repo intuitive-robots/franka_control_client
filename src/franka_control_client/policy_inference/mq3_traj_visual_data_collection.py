@@ -1,4 +1,5 @@
 import traceback
+from collections import deque
 from typing import List, Optional, Sequence
 import time
 import sys
@@ -42,6 +43,7 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         mirror: RobotMirror = None,
         visualize_history: bool = False,
         visualization_hz: float = 30.0,
+        action_buffer_refill_threshold: int = 0,
     ) -> None:
         super().__init__(data_collectors, control_pair, cfg)
         self.control_pair: PILPandaControlPair = control_pair
@@ -53,7 +55,12 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         self.reset_history_event = threading.Event()
         self.visualize_history = visualize_history
         self.visualization_hz = float(visualization_hz)
+        self.action_buffer_refill_threshold = max(
+            0, int(action_buffer_refill_threshold)
+        )
+        self._action_buffer: deque[np.ndarray] = deque()
         self._finger_waypoint_sphere_names: dict[str, list[str]] = {}
+        self._mirror_lock = threading.Lock()
         self.running = True
         self._closed = False
         self._visualization_thread = threading.Thread(
@@ -80,7 +87,8 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
     def _update_mirror_arm_state(self) -> None:
         arm_state = self.arm_wrapper.arm.current_state
         if arm_state is not None:
-            self.mirror.apply_arm_state(np.array(arm_state["q"]))
+            with self._mirror_lock:
+                self.mirror.apply_arm_state(np.array(arm_state["q"]))
 
     def _visualization_loop(self) -> None:
         period = 1.0 / self.visualization_hz if self.visualization_hz > 0 else 0.0
@@ -140,7 +148,8 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
                         }
                     )
             if len(self.history_way_points) != 0:
-                self.history_traj.update(waypoints=self.history_way_points)
+                with self._mirror_lock:
+                    self.history_traj.update(waypoints=self.history_way_points)
             return
         lastest_action = self._data_colection.command_state_data
         if lastest_action is not None and len(lastest_action.EE_pos) != 0:
@@ -151,21 +160,17 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
                 }
             )
             if self.history_traj is None:
-                self.history_traj = self.mirror._cavns.create_trajectory(
-                    name="history_traj", waypoints=self.history_way_points
-                )
+                with self._mirror_lock:
+                    self.history_traj = self.mirror._cavns.create_trajectory(
+                        name="history_traj", waypoints=self.history_way_points
+                    )
             else:
-                self.history_traj.update(waypoints=self.history_way_points)
+                with self._mirror_lock:
+                    self.history_traj.update(waypoints=self.history_way_points)
 
-    def _infer_step(self) -> None:
-        # if self.last_timestamp is None:
-        #     self.last_timestamp = time.perf_counter()
-        start_time = time.perf_counter()
-        # Build observation from hardware
+    def _refill_action_buffer(self) -> None:
         observation = self._build_observation()
-
         try:
-            # Preprocess observation
             observation = self.preprocessor(observation)
         except Exception as exc:
             image_shapes = {
@@ -178,24 +183,21 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
                 f"Preprocessor failed. image_shapes={image_shapes}, state_shape={tuple(observation['observation.state'].shape)}"
             ) from exc
 
-        # Evaluate policy and postprocess each action in the predicted chunk.
         with torch.inference_mode():
-            ##single action
-            action = self.policy.select_action(observation)
-            action_chunk = action[:, :8]
+            action_chunk = self.policy.predict_action_chunk(batch=observation)
+            print(f"Raw action chunk size from policy: {action_chunk.shape}")
 
-            # # Postprocess action
-            # action = self.postprocessor(action).float().cpu().numpy()
-            # # print("post action:",action)
+        post_action_chunk = self._postprocess_action_chunk(action_chunk)
+        if post_action_chunk.shape[0] < 1:
+            raise RuntimeError(
+                f"Expected at least one batch in action chunk, got {post_action_chunk.shape}"
+            )
 
-            # action_vec = action[0] if action.ndim == 2 else action
+        self._action_buffer.clear()
+        for action in post_action_chunk[0]:
+            self._action_buffer.append(np.array(action, copy=True))
 
-            ###action chunk
-            # print(f"type of policy: {type(self.policy)}, observation keys: {list(observation.keys())}")
-            # action_chunk = self.policy.predict_action_chunk(batch = observation)
-            print("action_chunk shape:", tuple(action_chunk.shape))
-
-
+    def _postprocess_action_chunk(self, action_chunk: torch.Tensor) -> np.ndarray:
         if action_chunk.ndim == 2:
             action_chunk = action_chunk.unsqueeze(1)
         elif action_chunk.ndim != 3:
@@ -203,20 +205,32 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
                 f"Expected action_chunk to have shape (B, T, D) or (B, D), got {tuple(action_chunk.shape)}"
             )
 
-        batch_size, chunk_size, action_dim = action_chunk.shape
-        action_dim_expected = 8  # 7 joints + 1 gripper
-        post_action_chunk = torch.zeros(
-            (batch_size, chunk_size, action_dim_expected), dtype=torch.float32
-        )
+        _, chunk_size, _ = action_chunk.shape
+        if chunk_size < 1:
+            raise RuntimeError(
+                f"Action chunk must contain at least one action, got {tuple(action_chunk.shape)}"
+            )
+
+        processed_actions = []
         for chunk_idx in range(chunk_size):
             single_action = action_chunk[:, chunk_idx, :]
             single_action = single_action[:, :8]
             processed_action = self.postprocessor(single_action)
-            # pyzlc.info(f"Processed action chunk {chunk_idx}: {processed_action.float().cpu().numpy()}")
-            post_action_chunk[:, chunk_idx, :] = processed_action
+            if processed_action.ndim == 1:
+                processed_action = processed_action.unsqueeze(0)
+            processed_actions.append(processed_action[:, :8])
 
-        post_action_chunk = post_action_chunk.float().cpu().numpy()
-        visual_action_chunk = np.array(post_action_chunk[0], copy=True)
+        return torch.stack(processed_actions, dim=1).float().cpu().numpy()
+
+    def _get_buffered_action_chunk(self) -> np.ndarray:
+        if not self._action_buffer:
+            return np.empty((0, 8), dtype=np.float32)
+        return np.array(list(self._action_buffer), dtype=np.float32, copy=True)
+
+    def _update_finger_waypoint_visualization(
+        self, action_chunk: np.ndarray
+    ) -> None:
+        visual_action_chunk = np.array(action_chunk, copy=True)
         arm_state = self.arm_wrapper.arm.current_state
         if (
             arm_state is not None
@@ -250,21 +264,32 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
             start_color=(1.0, 0.7, 0.0, 1.0),
             end_color=(1.0, 0.0, 0.0, 1.0),
         )
+
+    def _infer_step(self) -> None:
+        # if self.last_timestamp is None:
+        #     self.last_timestamp = time.perf_counter()
+        if len(self._action_buffer) <= self.action_buffer_refill_threshold:
+            self._refill_action_buffer()
+
+        visual_action_chunk = self._get_buffered_action_chunk()
+        self._update_finger_waypoint_visualization(visual_action_chunk)
+
+        if not self._action_buffer:
+            raise RuntimeError("Policy action buffer is empty after refill.")
+        action_vec = self._action_buffer.popleft()
         try:
-            # single_action
-            # self.control_pair.update_action(action_vec)
-            # action chunk
-            self.control_pair.update_action_chunk(post_action_chunk)
+            self.control_pair.update_action(action_vec)
         except Exception as exc:
             pyzlc.error(f"Failed to apply policy action: {exc}")
-        end_time = time.perf_counter()
-        elapsed = end_time - start_time
-        # print(f"Inference step took {elapsed:.4f} seconds.")
 
-        sleep_time = max(0.0, (1.0 / self.fps) - elapsed)
+    def _sleep_for_policy_fps(self, loop_start_time: float) -> None:
+        if self.control_pair.current_state != PILMode.POLICY:
+            return
+        sleep_time = max(
+            0.0, (1.0 / self.fps) - (time.perf_counter() - loop_start_time)
+        )
         if sleep_time > 0.001:
             time.sleep(sleep_time)
-            # print(f"Inference step took {elapsed:.5f} seconds, slept for {sleep_time:.5f} seconds to maintain {self.fps} FPS.")
 
     def _close(self):
         if self._closed:
@@ -283,7 +308,8 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         return super()._close()
 
     def _reset_arm(self):
-        self.control_pair.clear_lastest_command()
+        self.control_pair.reset_action()
+        self._action_buffer.clear()
         self.reset_history_event.set()
         self._clear_finger_waypoint_spheres()
         return super()._reset_arm()
@@ -337,37 +363,53 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
             raise ValueError("positions must contain finite numeric values")
 
         num_waypoints = positions_array.shape[0]
-        for idx, pos in enumerate(positions_array):
-            if idx >= len(marker_names):
-                marker_name = f"{name_prefix}_{idx}"
-                color = self.mirror._interpolate_rgba(
-                    idx, num_waypoints, start_color, end_color
+        with self._mirror_lock:
+            for idx, pos in enumerate(positions_array):
+                if idx >= len(marker_names):
+                    marker_name = f"{name_prefix}_{idx}"
+                    color = self.mirror._interpolate_rgba(
+                        idx, num_waypoints, start_color, end_color
+                    )
+                    self.mirror._create_future_waypoint_sphere(
+                        marker_name, pos, radius, color
+                    )
+                    marker_names.append(marker_name)
+                marker_name = marker_names[idx]
+                self.mirror._publisher.tracked_obj_trans[marker_name] = (
+                    pos.copy(),
+                    identity_quat,
                 )
-                self.mirror._create_future_waypoint_sphere(
-                    marker_name, pos, radius, color
-                )
-                marker_names.append(marker_name)
-            marker_name = marker_names[idx]
-            self.mirror._publisher.tracked_obj_trans[marker_name] = (
-                pos.copy(),
-                identity_quat,
-            )
 
-        self._hide_waypoint_spheres(marker_names[num_waypoints:], identity_quat)
+            self._hide_waypoint_spheres(
+                marker_names[num_waypoints:], identity_quat, already_locked=True
+            )
 
     def _clear_finger_waypoint_spheres(self) -> None:
         identity_quat = np.array([1.0, 0.0, 0.0, 0.0])
-        for marker_names in self._finger_waypoint_sphere_names.values():
-            self._hide_waypoint_spheres(marker_names, identity_quat)
+        with self._mirror_lock:
+            for marker_names in self._finger_waypoint_sphere_names.values():
+                self._hide_waypoint_spheres(
+                    marker_names, identity_quat, already_locked=True
+                )
 
     def _hide_waypoint_spheres(
-        self, marker_names: Sequence[str], identity_quat: np.ndarray
+        self,
+        marker_names: Sequence[str],
+        identity_quat: np.ndarray,
+        already_locked: bool = False,
     ) -> None:
-        for marker_name in marker_names:
-            self.mirror._publisher.tracked_obj_trans[marker_name] = (
-                np.array([0.0, 0.0, -10.0]),
-                identity_quat,
-            )
+        def hide() -> None:
+            for marker_name in marker_names:
+                self.mirror._publisher.tracked_obj_trans[marker_name] = (
+                    np.array([0.0, 0.0, -10.0]),
+                    identity_quat,
+                )
+
+        if already_locked:
+            hide()
+        else:
+            with self._mirror_lock:
+                hide()
 
     def run(self) -> None:
         self._on_state_enter(self._state_machine.state)
@@ -383,13 +425,11 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
                         self._state_machine.state
                         == PolicyInferenceState.INFERING
                     ):
-                        # curr_time = time.perf_counter()
+                        loop_start_time = time.perf_counter()
                         self._infer_step()
                         self._collect_step()
                         self._visualize_step()
-                        # end_time = time.perf_counter()
-                        # elapsed = end_time - curr_time
-                        # print(f"Inference step took {elapsed:.3f} seconds")
+                        self._sleep_for_policy_fps(loop_start_time)
                     if (
                         self._state_machine.state
                         == PolicyInferenceState.STOPPED
@@ -407,12 +447,20 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
 
     def _discard_infering(self) -> None:
         self._data_colection._discard_collecting()
-        return super()._discard_infering()
+        result = super()._discard_infering()
+        self.control_pair.reset_action()
+        self._action_buffer.clear()
+        return result
 
     def _save_episode(self) -> None:
         self._data_colection._save_episode()
-        return super()._save_episode()
+        result = super()._save_episode()
+        self.control_pair.reset_action()
+        self._action_buffer.clear()
+        return result
 
     def _start_infering(self):
+        self.control_pair.reset_action()
+        self._action_buffer.clear()
         self._data_colection._start_collecting()
         return super()._start_infering()

@@ -352,7 +352,7 @@ if __name__ == "__main__":
         panda_arm=follower.panda_arm,
         gripper=follower.robotiq_gripper,
         mq3_controller=leader,
-        replay_path="/home/jjiang/ahmad/dataset/lerobot/pick_up_cylinder_on_the_top_of_cube_mq3_data_collection/pick_up_cylinder_on_the_top_of_cube/2026_05_07-13_24_08",
+        replay_path="/home/jjiang/ahmad/dataset/lerobot/pick_up_cylinder_on_the_top_of_cube_mq3_data_collection/pick_up_cylinder_on_the_top_of_cube/2026_05_22-10_45_19",
         control_hz=50,
     )
 
@@ -368,7 +368,7 @@ if __name__ == "__main__":
     # data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
     # data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
     # name = time.strftim  e("%Y%m%d_%H%M%S", time.localtime())
-    task = "folding"
+    task = "pick_up_cylinder_on_the_top_of_cube"
     data_collection_manager = IRLDataCollection(
         data_collectors,
         f"/home/jjiang/ahmad/dataset/lerobot/{task}",

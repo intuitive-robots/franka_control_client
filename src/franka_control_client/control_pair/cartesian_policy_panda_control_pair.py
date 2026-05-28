@@ -66,6 +66,8 @@ class PolicyPandaRobotiqDeltaCartesianControlPair(PolicyPandaControlPair):
         return self._get_latest_action_from_chunk()
 
     def clear_lastest_command(self) -> None:
+        with self._action_lock:
+            self._latest_action = None
         self.action_buffer.clear()
 
     # using by policy side to update the latest action, and control loop will read the latest action and execute it

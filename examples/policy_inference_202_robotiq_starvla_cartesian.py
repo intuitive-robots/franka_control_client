@@ -33,6 +33,15 @@
 #       --n_cameras 2 --n_infer 3
 
 
+
+# Step 2 — smoke test (no robot, verifies server connection + action shape):
+#   cd starVLA/
+#   python franka_control_client/src/franka_control_client/policy_inference/starvla_server_inference.py \
+#       --host <server_ip> --port 10093 \
+#       --task "put red cylinder on green cube" \
+#       --n_cameras 2 --n_infer 3
+
+
 #   python franka_control_client/src/franka_control_client/policy_inference/starvla_server_inference.py \
 #       --port 10093 \
 #       --task "put red cylinder on green cube" \
@@ -82,7 +91,7 @@ if __name__ == "__main__":
     # ----------------------------------------------------------------
     TASK = "pick_up_banana"
 
-    TASK = 'Put the orange lego block into the red dustpan'
+    TASK = 'Put the yellow lego block into the red dustpan'
 
     TASK_LIST = [
         "Put the orange carrot into the red bowl",

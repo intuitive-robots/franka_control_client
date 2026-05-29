@@ -187,7 +187,7 @@ if __name__ == "__main__":
         save_path="/home/jjiang/ahmad/dataset/",
         mirror = mirror,
         visualization_hz=30.0,
-        action_buffer_refill_threshold=3,
+        action_buffer_refill_threshold=0,
     )
 
     try:

@@ -137,6 +137,69 @@ class PolicyState:
             print(f"Successfully saved '{p}'")
 
 
+class ActionChunkData:
+    """Stores parallel policy/correction action chunks for contrastive learning.
+
+    Each appended row contains a `(chunk_size, 8)` policy chunk and a
+    `(chunk_size, 8)` correction chunk. During pure policy rollout the
+    correction chunk is zero-padded; during human interrupt windows it
+    contains the actual leader commands (possibly framed by policy actions
+    for partial windows). `source` is `(chunk_size,)` per row — one flag
+    per slot — so we record exactly which actions came from the policy
+    (0.0) and which came from a leader correction sample (1.0). Policy
+    padding inside a correction chunk gets 0.0.
+    """
+
+    def __init__(self):
+        self.policy_chunks: List[torch.Tensor] = []
+        self.correction_chunks: List[torch.Tensor] = []
+        self.source: List[torch.Tensor] = []
+
+    def append(
+        self,
+        policy_chunk: np.ndarray,
+        correction_chunk: np.ndarray,
+        source: np.ndarray,
+    ) -> None:
+        policy_t = torch.tensor(policy_chunk, dtype=torch.float64)
+        correction_t = torch.tensor(correction_chunk, dtype=torch.float64)
+        source_t = torch.tensor(source, dtype=torch.float32).reshape(-1)
+        if policy_t.shape != correction_t.shape:
+            raise ValueError(
+                f"policy_chunk shape {tuple(policy_t.shape)} != correction_chunk shape {tuple(correction_t.shape)}"
+            )
+        if source_t.shape[0] != policy_t.shape[0]:
+            raise ValueError(
+                f"source length {source_t.shape[0]} != chunk_size {policy_t.shape[0]}"
+            )
+        self.policy_chunks.append(policy_t)
+        self.correction_chunks.append(correction_t)
+        self.source.append(source_t)
+
+    def save(self, path: Path):
+        if len(self.policy_chunks) == 0:
+            print(f"Skip saving action_chunks in '{path}' since it is empty")
+            return
+
+        tensor_lists = [
+            torch.stack(self.policy_chunks),
+            torch.stack(self.correction_chunks),
+            torch.stack(self.source),
+        ]
+        paths = [
+            path / "policy_action_chunks.pt",
+            path / "correction_action_chunks.pt",
+            path / "source.pt",
+        ]
+
+        for d, p in zip(tensor_lists, paths):
+            if d.numel() == 0:
+                print(f"Skip saving '{p}' since it is empty")
+                continue
+            torch.save(d, p)
+            print(f"Successfully saved '{p}'")
+
+
 class CommandStateData:
     def __init__(self):
         self.EE_pos = []
@@ -366,6 +429,17 @@ class PILIRLDataCollection(DataCollectionManager):
         else:
             self.pause_event.clear()
 
+    def emit_chunk_pair(
+        self,
+        policy_chunk: np.ndarray,
+        correction_chunk: np.ndarray,
+        source: np.ndarray,
+    ) -> None:
+        with self.data_lock:
+            self.action_chunk_data.append(
+                policy_chunk, correction_chunk, source
+            )
+
     def pop(self):
         with self.data_lock:
             self.follower_robot_data.pop()
@@ -519,6 +593,7 @@ class PILIRLDataCollection(DataCollectionManager):
         self.follower_robot_data.save(self.follower_robot_dir)
         self.policy_state_data.save(self.policy_state_dir)
         self.command_state_data.save(self.command_state_dir)
+        self.action_chunk_data.save(self.action_chunks_dir)
 
         self.__report_camera_rates()
 
@@ -615,6 +690,9 @@ class PILIRLDataCollection(DataCollectionManager):
         self.command_state_dir = self.record_dir / "command_state"
         self.command_state_dir.mkdir()
 
+        self.action_chunks_dir = self.record_dir / "action_chunks"
+        self.action_chunks_dir.mkdir()
+
         self.sensors_dir = self.record_dir / "sensors"
         self.sensors_dir.mkdir()
 
@@ -629,6 +707,7 @@ class PILIRLDataCollection(DataCollectionManager):
         self.follower_robot_data = FollowerData()
         self.policy_state_data = PolicyState()
         self.command_state_data = CommandStateData()
+        self.action_chunk_data = ActionChunkData()
         self.camera_timestamps = [[] for _ in self.camera_streams]
         self.camera_frame_idx = [0] * len(
             self.camera_streams

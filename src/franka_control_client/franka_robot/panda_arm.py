@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TypedDict, Iterable, List, Optional
+from typing import Iterable, TypedDict, Iterable, List, Optional
 import pyzlc
 import numpy as np
 

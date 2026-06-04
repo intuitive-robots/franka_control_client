@@ -64,24 +64,11 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         self.running = True
         self._closed = False
 
-        # Chunk-pair recording state. `_active_policy_chunk` is the most
-        # recently inferred policy chunk that the policy buffer is draining
-        # from; `_chunk_size` is its length. During an interrupt window we
-        # track which policy chunk was paired with the current correction
-        # window, how many leader corrections we've collected, and the
-        # offset `k` where corrections begin inside the chunk (only > 0
-        # for the first partial window after trigger press).
-        #
-        # `_latest_viz_policy_chunk` is the chunk the user is currently
-        # being shown — re-inferred every interrupt step, used both as
-        # the finger-waypoint visualization source and as the payload
-        # that fills the leftover correction slots on release (and that
-        # the policy then executes when control returns to it).
+        # `_active_policy_chunk` is the policy chunk that the policy buffer
+        # is draining from. During interrupt, each collected leader action
+        # gets its own fresh policy chunk in `_latest_viz_policy_chunk`.
         self._chunk_size: Optional[int] = None
         self._active_policy_chunk: Optional[np.ndarray] = None
-        self._correction_window_policy_chunk: Optional[np.ndarray] = None
-        self._correction_window_buffer: list[np.ndarray] = []
-        self._correction_window_k: int = 0
         self._latest_viz_policy_chunk: Optional[np.ndarray] = None
         self._prev_pil_state: PILMode = PILMode.POLICY
         self._visualization_thread = threading.Thread(
@@ -148,11 +135,8 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
 
         if current_state == PILMode.INTERRUPT:
             self._data_colection._collect_step(command_source=1.0)
-            # Re-infer at every interrupt step so the user sees a live
-            # policy projection on the finger waypoints; the same chunk
-            # also serves as the storage source on release.
             self._refresh_viz_policy_chunk()
-            self._record_correction_sample()
+            self._record_interruption_policy_chunk()
         elif current_state == PILMode.POLICY:
             # During policy control, we can also collect data but mark it differently
             self._data_colection._collect_step(
@@ -165,8 +149,7 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
     def _refresh_viz_policy_chunk(self) -> None:
         """Run one fresh policy inference and update the finger-waypoint
         visualization. Called on every leader-sample tick (~40 Hz) during
-        interrupt. The result is also the snapshot used by storage at
-        window boundaries and by release to fill the correction tail.
+        interrupt. The result is also saved next to that tick's user action.
         """
         try:
             chunk = self._infer_fresh_policy_chunk()
@@ -179,39 +162,17 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         self._update_finger_waypoint_visualization(chunk)
 
     def _on_interrupt_start(self) -> None:
-        """Begin the first correction window after the trigger is pressed."""
+        """Seed interrupt visualization when the trigger is pressed."""
         if self._active_policy_chunk is None or self._chunk_size is None:
-            # No chunk has been inferred yet this episode — produce one
-            # immediately and treat k=0 (correction will fill all slots).
             self._active_policy_chunk = self._infer_fresh_policy_chunk()
             self._chunk_size = int(self._active_policy_chunk.shape[0])
 
-        self._correction_window_policy_chunk = np.array(
-            self._active_policy_chunk, copy=True
-        )
-        # Seed the live viz with the active chunk; it will be refreshed on
-        # the very next `_collect_step` tick.
         self._latest_viz_policy_chunk = np.array(
             self._active_policy_chunk, copy=True
         )
-        consumed = self._chunk_size - len(self._action_buffer)
-        self._correction_window_k = int(max(0, min(consumed, self._chunk_size)))
-        self._correction_window_buffer = []
 
     def _on_interrupt_end(self) -> None:
-        """Finalize the in-flight correction window on trigger release.
-
-        The last visualization chunk the user was looking at becomes the
-        next executed trajectory — it's loaded straight into the action
-        buffer (no extra inference latency on resume) and its leading
-        slots also fill the tail of the just-finalized correction chunk
-        via `_finalize_correction_window`.
-        """
-        if self._correction_window_policy_chunk is not None:
-            self._finalize_correction_window()
-        self._correction_window_policy_chunk = None
-        self._correction_window_buffer = []
-        self._correction_window_k = 0
+        """Load the last interrupt policy chunk into the execution buffer."""
 
         self._action_buffer.clear()
         if (
@@ -224,87 +185,16 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
                 self._latest_viz_policy_chunk, copy=True
             )
 
-    def _record_correction_sample(self) -> None:
-        """Capture one leader correction action into the current window."""
-        if (
-            self._correction_window_policy_chunk is None
-            or self._chunk_size is None
-        ):
+    def _record_interruption_policy_chunk(self) -> None:
+        """Store the latest user action with a freshly inferred policy chunk."""
+        if self._latest_viz_policy_chunk is None:
             return
-
         leader_action = self._get_last_leader_action()
         if leader_action is None:
             return
-
-        self._correction_window_buffer.append(leader_action)
-
-        slots_filled = self._correction_window_k + len(
-            self._correction_window_buffer
-        )
-        if slots_filled >= self._chunk_size:
-            self._finalize_correction_window()
-            # Start a fresh window. Reuse the most recent viz chunk
-            # (re-inferred in `_refresh_viz_policy_chunk` on this same
-            # tick) so storage and visualization stay in sync without an
-            # extra inference call.
-            if self._latest_viz_policy_chunk is not None:
-                self._correction_window_policy_chunk = np.array(
-                    self._latest_viz_policy_chunk, copy=True
-                )
-            else:
-                self._correction_window_policy_chunk = (
-                    self._infer_fresh_policy_chunk()
-                )
-            self._correction_window_k = 0
-            self._correction_window_buffer = []
-
-    def _finalize_correction_window(self) -> None:
-        """Emit the (policy_chunk, correction_chunk, slot_source) tuple.
-
-        Layout of the correction chunk:
-          - slots `[0:k]`            = window-start policy_chunk[0:k]
-            (executed by policy before interrupt — only k>0 for the
-            first partial window after trigger press)
-          - slots `[k:k+j]`          = collected leader corrections
-          - slots `[k+j:chunk_size]` = latest viz chunk[0:chunk_size-k-j]
-            (only happens when the user releases mid-window; the same
-            chunk is loaded into the action buffer for execution by
-            `_on_interrupt_end`)
-
-        Per-slot source: 1.0 for the leader sample slots `[k:k+j]`, 0.0
-        for both policy-padding regions.
-        """
-        policy_chunk = self._correction_window_policy_chunk
-        if policy_chunk is None or self._chunk_size is None:
-            return
-        chunk_size = self._chunk_size
-        k = self._correction_window_k
-        buffer = self._correction_window_buffer
-        j = len(buffer)
-
-        correction_chunk = np.zeros_like(policy_chunk)
-        if k > 0:
-            correction_chunk[0:k] = policy_chunk[0:k]
-        if j > 0:
-            correction_chunk[k : k + j] = np.stack(buffer, axis=0)
-        if k + j < chunk_size:
-            n_remaining = chunk_size - k - j
-            viz_chunk = self._latest_viz_policy_chunk
-            if viz_chunk is not None:
-                correction_chunk[k + j : chunk_size] = viz_chunk[0:n_remaining]
-            else:
-                correction_chunk[k + j : chunk_size] = policy_chunk[
-                    k + j : chunk_size
-                ]
-
-        slot_source = np.zeros(chunk_size, dtype=np.float32)
-        if j > 0:
-            slot_source[k : k + j] = 1.0
-
-        self._data_colection.emit_chunk_pair(
-            policy_chunk=policy_chunk,
-            correction_chunk=correction_chunk,
-            source=slot_source,
+        self._data_colection.emit_interruption_policy_chunk(
+            policy_chunk=self._latest_viz_policy_chunk,
+            user_action=leader_action,
         )
 
     def _get_last_leader_action(self) -> Optional[np.ndarray]:
@@ -417,20 +307,6 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
 
         self._active_policy_chunk = chunk
         self._chunk_size = int(chunk.shape[0])
-
-        # Pure policy rollout: pair this fresh policy chunk with a
-        # zero-padded correction chunk. During interrupt the natural
-        # inference cadence still drains the buffer, but we suppress
-        # emission here because the correction window owns chunk-pair
-        # bookkeeping.
-        if self.control_pair.current_state == PILMode.POLICY:
-            zeros = np.zeros_like(chunk)
-            slot_source = np.zeros(self._chunk_size, dtype=np.float32)
-            self._data_colection.emit_chunk_pair(
-                policy_chunk=chunk,
-                correction_chunk=zeros,
-                source=slot_source,
-            )
 
     def _postprocess_action_chunk(self, action_chunk: torch.Tensor) -> np.ndarray:
         if action_chunk.ndim == 2:
@@ -562,12 +438,9 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         return super()._reset_arm()
 
     def _reset_chunk_pair_state(self) -> None:
-        """Drop any in-flight chunk-pair bookkeeping between episodes."""
+        """Drop interruption policy-chunk bookkeeping between episodes."""
         self._active_policy_chunk = None
         self._chunk_size = None
-        self._correction_window_policy_chunk = None
-        self._correction_window_buffer = []
-        self._correction_window_k = 0
         self._latest_viz_policy_chunk = None
         self._prev_pil_state = self.control_pair.current_state
 
@@ -711,13 +584,6 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         return result
 
     def _save_episode(self) -> None:
-        # Flush a partial correction window so its chunk pair makes it
-        # into the saved file before the data collector serializes.
-        if self._correction_window_policy_chunk is not None:
-            self._finalize_correction_window()
-            self._correction_window_policy_chunk = None
-            self._correction_window_buffer = []
-            self._correction_window_k = 0
         self._data_colection._save_episode()
         result = super()._save_episode()
         self.control_pair.reset_action()

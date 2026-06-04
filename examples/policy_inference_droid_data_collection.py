@@ -182,7 +182,7 @@ if __name__ == "__main__":
     inference_manager = MQ3TrajVisualDataCollectionInference(
         data_collectors=data_collectors,
         control_pair=control_pair,
-        task="green_on_yellow",
+        task=task,
         cfg=inference_cfg,
         save_path="/home/jjiang/ahmad/dataset/",
         mirror = mirror,

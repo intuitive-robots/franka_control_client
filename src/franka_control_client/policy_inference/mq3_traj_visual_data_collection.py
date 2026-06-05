@@ -474,7 +474,7 @@ class MQ3TrajVisualDataCollectionInference(LeRobotPolicyInference):
         positions: np.ndarray,
         *,
         name_prefix: str,
-        radius: float = 0.005,
+        radius: float = 0.01,
         start_color: Sequence[float] = (0.0, 1.0, 0.0, 1.0),
         end_color: Sequence[float] = (1.0, 0.0, 0.0, 1.0),
     ) -> None:

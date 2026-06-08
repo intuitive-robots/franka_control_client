@@ -25,16 +25,22 @@ from franka_control_client.control_pair.trajectory_panda_control_pair import (
 )
 
 
+# DEFAULT_TRAJECTORY_DIR = Path(
+#     "/home/irl-admin/new_data_collection/human_usb_task/"
+#     "2026_04_29-16_33_31/FrankaPanda"
+# )
+
 DEFAULT_TRAJECTORY_DIR = Path(
-    "/home/irl-admin/new_data_collection/human_demo_test/"
-    "2026_04_25-12_51_21/FrankaPanda"
+    "/home/irl-admin/new_data_collection/human_socket_task"
+    "/2026_05_18-20_25_22/FrankaPanda"
 )
-
-
 class ReplayIRLDataCollection(IRLDataCollection):
     def _save_data_task(self) -> None:
         super()._save_data_task()
-        self.control_pair.save_trajectory(self.record_dir / "Traj")
+        robot_state_len = len(self.follower_robot_data.q_list)
+        self.control_pair.save_trajectory(
+            self.record_dir / "Traj", target_len=robot_state_len
+        )
 
 
 if __name__ == "__main__":
@@ -67,7 +73,7 @@ if __name__ == "__main__":
     data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
     data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
 
-    task = "replay_demo_test"
+    task = "cam_right_socket"
     data_collection_manager = ReplayIRLDataCollection(
         data_collectors,
         f"/home/irl-admin/new_data_collection/{task}",

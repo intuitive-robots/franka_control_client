@@ -1,0 +1,1261 @@
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_17_53
+  timestamps.pt:
+    timestamps.pt: 2073
+  FrankaPanda:
+    ee_pos.pt: 2073
+    external_joint_torque.pt: 2073
+    external_wrench.pt: 2073
+    gripper_current.pt: 2073
+    gripper_state.pt: 2073
+    joint_pos.pt: 2073
+    joint_vel.pt: 2073
+  Traj:
+    gripper_state.pt: 2073
+    joint_pos.pt: 2073
+  expected robot-state length: 2073
+  sensors:
+    zed_left: 519 image(s)
+    zed_right: 519 image(s)
+    zed_wrist: 519 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_18_40
+  timestamps.pt:
+    timestamps.pt: 1799
+  FrankaPanda:
+    ee_pos.pt: 1799
+    external_joint_torque.pt: 1799
+    external_wrench.pt: 1799
+    gripper_current.pt: 1799
+    gripper_state.pt: 1799
+    joint_pos.pt: 1799
+    joint_vel.pt: 1799
+  Traj:
+    gripper_state.pt: 1799
+    joint_pos.pt: 1799
+  expected robot-state length: 1799
+  sensors:
+    zed_left: 450 image(s)
+    zed_right: 450 image(s)
+    zed_wrist: 450 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_22_23
+  timestamps.pt:
+    timestamps.pt: 1719
+  FrankaPanda:
+    ee_pos.pt: 1719
+    external_joint_torque.pt: 1719
+    external_wrench.pt: 1719
+    gripper_current.pt: 1719
+    gripper_state.pt: 1719
+    joint_pos.pt: 1719
+    joint_vel.pt: 1719
+  Traj:
+    gripper_state.pt: 1719
+    joint_pos.pt: 1719
+  expected robot-state length: 1719
+  sensors:
+    zed_left: 430 image(s)
+    zed_right: 430 image(s)
+    zed_wrist: 430 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_25_26
+  timestamps.pt:
+    timestamps.pt: 1708
+  FrankaPanda:
+    ee_pos.pt: 1708
+    external_joint_torque.pt: 1708
+    external_wrench.pt: 1708
+    gripper_current.pt: 1708
+    gripper_state.pt: 1708
+    joint_pos.pt: 1708
+    joint_vel.pt: 1708
+  Traj:
+    gripper_state.pt: 1708
+    joint_pos.pt: 1708
+  expected robot-state length: 1708
+  sensors:
+    zed_left: 428 image(s)
+    zed_right: 428 image(s)
+    zed_wrist: 428 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_28_57
+  timestamps.pt:
+    timestamps.pt: 1985
+  FrankaPanda:
+    ee_pos.pt: 1985
+    external_joint_torque.pt: 1985
+    external_wrench.pt: 1985
+    gripper_current.pt: 1985
+    gripper_state.pt: 1985
+    joint_pos.pt: 1985
+    joint_vel.pt: 1985
+  Traj:
+    gripper_state.pt: 1985
+    joint_pos.pt: 1985
+  expected robot-state length: 1985
+  sensors:
+    zed_left: 497 image(s)
+    zed_right: 497 image(s)
+    zed_wrist: 497 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_32_37
+  timestamps.pt:
+    timestamps.pt: 1997
+  FrankaPanda:
+    ee_pos.pt: 1997
+    external_joint_torque.pt: 1997
+    external_wrench.pt: 1997
+    gripper_current.pt: 1997
+    gripper_state.pt: 1997
+    joint_pos.pt: 1997
+    joint_vel.pt: 1997
+  Traj:
+    gripper_state.pt: 1997
+    joint_pos.pt: 1997
+  expected robot-state length: 1997
+  sensors:
+    zed_left: 500 image(s)
+    zed_right: 500 image(s)
+    zed_wrist: 500 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_33_17
+  timestamps.pt:
+    timestamps.pt: 2058
+  FrankaPanda:
+    ee_pos.pt: 2058
+    external_joint_torque.pt: 2058
+    external_wrench.pt: 2058
+    gripper_current.pt: 2058
+    gripper_state.pt: 2058
+    joint_pos.pt: 2058
+    joint_vel.pt: 2058
+  Traj:
+    gripper_state.pt: 2058
+    joint_pos.pt: 2058
+  expected robot-state length: 2058
+  sensors:
+    zed_left: 515 image(s)
+    zed_right: 515 image(s)
+    zed_wrist: 515 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_33_55
+  timestamps.pt:
+    timestamps.pt: 1982
+  FrankaPanda:
+    ee_pos.pt: 1982
+    external_joint_torque.pt: 1982
+    external_wrench.pt: 1982
+    gripper_current.pt: 1982
+    gripper_state.pt: 1982
+    joint_pos.pt: 1982
+    joint_vel.pt: 1982
+  Traj:
+    gripper_state.pt: 1982
+    joint_pos.pt: 1982
+  expected robot-state length: 1982
+  sensors:
+    zed_left: 496 image(s)
+    zed_right: 496 image(s)
+    zed_wrist: 496 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_39_28
+  timestamps.pt:
+    timestamps.pt: 1800
+  FrankaPanda:
+    ee_pos.pt: 1800
+    external_joint_torque.pt: 1800
+    external_wrench.pt: 1800
+    gripper_current.pt: 1800
+    gripper_state.pt: 1800
+    joint_pos.pt: 1800
+    joint_vel.pt: 1800
+  Traj:
+    gripper_state.pt: 1800
+    joint_pos.pt: 1800
+  expected robot-state length: 1800
+  sensors:
+    zed_left: 450 image(s)
+    zed_right: 450 image(s)
+    zed_wrist: 450 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_40_08
+  timestamps.pt:
+    timestamps.pt: 1632
+  FrankaPanda:
+    ee_pos.pt: 1632
+    external_joint_torque.pt: 1632
+    external_wrench.pt: 1632
+    gripper_current.pt: 1632
+    gripper_state.pt: 1632
+    joint_pos.pt: 1632
+    joint_vel.pt: 1632
+  Traj:
+    gripper_state.pt: 1632
+    joint_pos.pt: 1632
+  expected robot-state length: 1632
+  sensors:
+    zed_left: 408 image(s)
+    zed_right: 408 image(s)
+    zed_wrist: 408 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_41_25
+  timestamps.pt:
+    timestamps.pt: 1940
+  FrankaPanda:
+    ee_pos.pt: 1940
+    external_joint_torque.pt: 1940
+    external_wrench.pt: 1940
+    gripper_current.pt: 1940
+    gripper_state.pt: 1940
+    joint_pos.pt: 1940
+    joint_vel.pt: 1940
+  Traj:
+    gripper_state.pt: 1940
+    joint_pos.pt: 1940
+  expected robot-state length: 1940
+  sensors:
+    zed_left: 485 image(s)
+    zed_right: 485 image(s)
+    zed_wrist: 485 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_43_44
+  timestamps.pt:
+    timestamps.pt: 1780
+  FrankaPanda:
+    ee_pos.pt: 1780
+    external_joint_torque.pt: 1780
+    external_wrench.pt: 1780
+    gripper_current.pt: 1780
+    gripper_state.pt: 1780
+    joint_pos.pt: 1780
+    joint_vel.pt: 1780
+  Traj:
+    gripper_state.pt: 1780
+    joint_pos.pt: 1780
+  expected robot-state length: 1780
+  sensors:
+    zed_left: 445 image(s)
+    zed_right: 445 image(s)
+    zed_wrist: 445 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_53_07
+  timestamps.pt:
+    timestamps.pt: 2221
+  FrankaPanda:
+    ee_pos.pt: 2221
+    external_joint_torque.pt: 2221
+    external_wrench.pt: 2221
+    gripper_current.pt: 2221
+    gripper_state.pt: 2221
+    joint_pos.pt: 2221
+    joint_vel.pt: 2221
+  Traj:
+    gripper_state.pt: 2221
+    joint_pos.pt: 2221
+  expected robot-state length: 2221
+  sensors:
+    zed_left: 556 image(s)
+    zed_right: 556 image(s)
+    zed_wrist: 556 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_54_47
+  timestamps.pt:
+    timestamps.pt: 2207
+  FrankaPanda:
+    ee_pos.pt: 2207
+    external_joint_torque.pt: 2207
+    external_wrench.pt: 2207
+    gripper_current.pt: 2207
+    gripper_state.pt: 2207
+    joint_pos.pt: 2207
+    joint_vel.pt: 2207
+  Traj:
+    gripper_state.pt: 2207
+    joint_pos.pt: 2207
+  expected robot-state length: 2207
+  sensors:
+    zed_left: 552 image(s)
+    zed_right: 552 image(s)
+    zed_wrist: 552 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_59_03
+  timestamps.pt:
+    timestamps.pt: 2020
+  FrankaPanda:
+    ee_pos.pt: 2020
+    external_joint_torque.pt: 2020
+    external_wrench.pt: 2020
+    gripper_current.pt: 2020
+    gripper_state.pt: 2020
+    joint_pos.pt: 2020
+    joint_vel.pt: 2020
+  Traj:
+    gripper_state.pt: 2020
+    joint_pos.pt: 2020
+  expected robot-state length: 2020
+  sensors:
+    zed_left: 505 image(s)
+    zed_right: 505 image(s)
+    zed_wrist: 505 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_01_36
+  timestamps.pt:
+    timestamps.pt: 1955
+  FrankaPanda:
+    ee_pos.pt: 1955
+    external_joint_torque.pt: 1955
+    external_wrench.pt: 1955
+    gripper_current.pt: 1955
+    gripper_state.pt: 1955
+    joint_pos.pt: 1955
+    joint_vel.pt: 1955
+  Traj:
+    gripper_state.pt: 1955
+    joint_pos.pt: 1955
+  expected robot-state length: 1955
+  sensors:
+    zed_left: 489 image(s)
+    zed_right: 489 image(s)
+    zed_wrist: 489 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_02_24
+  timestamps.pt:
+    timestamps.pt: 2335
+  FrankaPanda:
+    ee_pos.pt: 2335
+    external_joint_torque.pt: 2335
+    external_wrench.pt: 2335
+    gripper_current.pt: 2335
+    gripper_state.pt: 2335
+    joint_pos.pt: 2335
+    joint_vel.pt: 2335
+  Traj:
+    gripper_state.pt: 2335
+    joint_pos.pt: 2335
+  expected robot-state length: 2335
+  sensors:
+    zed_left: 584 image(s)
+    zed_right: 584 image(s)
+    zed_wrist: 584 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_03_16
+  timestamps.pt:
+    timestamps.pt: 2023
+  FrankaPanda:
+    ee_pos.pt: 2023
+    external_joint_torque.pt: 2023
+    external_wrench.pt: 2023
+    gripper_current.pt: 2023
+    gripper_state.pt: 2023
+    joint_pos.pt: 2023
+    joint_vel.pt: 2023
+  Traj:
+    gripper_state.pt: 2023
+    joint_pos.pt: 2023
+  expected robot-state length: 2023
+  sensors:
+    zed_left: 506 image(s)
+    zed_right: 506 image(s)
+    zed_wrist: 506 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_08_16
+  timestamps.pt:
+    timestamps.pt: 1974
+  FrankaPanda:
+    ee_pos.pt: 1974
+    external_joint_torque.pt: 1974
+    external_wrench.pt: 1974
+    gripper_current.pt: 1974
+    gripper_state.pt: 1974
+    joint_pos.pt: 1974
+    joint_vel.pt: 1974
+  Traj:
+    gripper_state.pt: 1974
+    joint_pos.pt: 1974
+  expected robot-state length: 1974
+  sensors:
+    zed_left: 494 image(s)
+    zed_right: 494 image(s)
+    zed_wrist: 494 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_09_39
+  timestamps.pt:
+    timestamps.pt: 2239
+  FrankaPanda:
+    ee_pos.pt: 2239
+    external_joint_torque.pt: 2239
+    external_wrench.pt: 2239
+    gripper_current.pt: 2239
+    gripper_state.pt: 2239
+    joint_pos.pt: 2239
+    joint_vel.pt: 2239
+  Traj:
+    gripper_state.pt: 2239
+    joint_pos.pt: 2239
+  expected robot-state length: 2239
+  sensors:
+    zed_left: 560 image(s)
+    zed_right: 560 image(s)
+    zed_wrist: 560 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_10_39
+  timestamps.pt:
+    timestamps.pt: 2239
+  FrankaPanda:
+    ee_pos.pt: 2239
+    external_joint_torque.pt: 2239
+    external_wrench.pt: 2239
+    gripper_current.pt: 2239
+    gripper_state.pt: 2239
+    joint_pos.pt: 2239
+    joint_vel.pt: 2239
+  Traj:
+    gripper_state.pt: 2239
+    joint_pos.pt: 2239
+  expected robot-state length: 2239
+  sensors:
+    zed_left: 560 image(s)
+    zed_right: 560 image(s)
+    zed_wrist: 560 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_16_45
+  timestamps.pt:
+    timestamps.pt: 1963
+  FrankaPanda:
+    ee_pos.pt: 1963
+    external_joint_torque.pt: 1963
+    external_wrench.pt: 1963
+    gripper_current.pt: 1963
+    gripper_state.pt: 1963
+    joint_pos.pt: 1963
+    joint_vel.pt: 1963
+  Traj:
+    gripper_state.pt: 1963
+    joint_pos.pt: 1963
+  expected robot-state length: 1963
+  sensors:
+    zed_left: 491 image(s)
+    zed_right: 491 image(s)
+    zed_wrist: 491 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_18_17
+  timestamps.pt:
+    timestamps.pt: 1903
+  FrankaPanda:
+    ee_pos.pt: 1903
+    external_joint_torque.pt: 1903
+    external_wrench.pt: 1903
+    gripper_current.pt: 1903
+    gripper_state.pt: 1903
+    joint_pos.pt: 1903
+    joint_vel.pt: 1903
+  Traj:
+    gripper_state.pt: 1903
+    joint_pos.pt: 1903
+  expected robot-state length: 1903
+  sensors:
+    zed_left: 476 image(s)
+    zed_right: 476 image(s)
+    zed_wrist: 476 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_18_55
+  timestamps.pt:
+    timestamps.pt: 2024
+  FrankaPanda:
+    ee_pos.pt: 2024
+    external_joint_torque.pt: 2024
+    external_wrench.pt: 2024
+    gripper_current.pt: 2024
+    gripper_state.pt: 2024
+    joint_pos.pt: 2024
+    joint_vel.pt: 2024
+  Traj:
+    gripper_state.pt: 2024
+    joint_pos.pt: 2024
+  expected robot-state length: 2024
+  sensors:
+    zed_left: 506 image(s)
+    zed_right: 506 image(s)
+    zed_wrist: 506 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_21_46
+  timestamps.pt:
+    timestamps.pt: 1860
+  FrankaPanda:
+    ee_pos.pt: 1860
+    external_joint_torque.pt: 1860
+    external_wrench.pt: 1860
+    gripper_current.pt: 1860
+    gripper_state.pt: 1860
+    joint_pos.pt: 1860
+    joint_vel.pt: 1860
+  Traj:
+    gripper_state.pt: 1860
+    joint_pos.pt: 1860
+  expected robot-state length: 1860
+  sensors:
+    zed_left: 465 image(s)
+    zed_right: 465 image(s)
+    zed_wrist: 465 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_26_26
+  timestamps.pt:
+    timestamps.pt: 1991
+  FrankaPanda:
+    ee_pos.pt: 1991
+    external_joint_torque.pt: 1991
+    external_wrench.pt: 1991
+    gripper_current.pt: 1991
+    gripper_state.pt: 1991
+    joint_pos.pt: 1991
+    joint_vel.pt: 1991
+  Traj:
+    gripper_state.pt: 1991
+    joint_pos.pt: 1991
+  expected robot-state length: 1991
+  sensors:
+    zed_left: 498 image(s)
+    zed_right: 498 image(s)
+    zed_wrist: 498 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_26_59
+  timestamps.pt:
+    timestamps.pt: 1951
+  FrankaPanda:
+    ee_pos.pt: 1951
+    external_joint_torque.pt: 1951
+    external_wrench.pt: 1951
+    gripper_current.pt: 1951
+    gripper_state.pt: 1951
+    joint_pos.pt: 1951
+    joint_vel.pt: 1951
+  Traj:
+    gripper_state.pt: 1951
+    joint_pos.pt: 1951
+  expected robot-state length: 1951
+  sensors:
+    zed_left: 488 image(s)
+    zed_right: 488 image(s)
+    zed_wrist: 488 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_31_12
+  timestamps.pt:
+    timestamps.pt: 1891
+  FrankaPanda:
+    ee_pos.pt: 1891
+    external_joint_torque.pt: 1891
+    external_wrench.pt: 1891
+    gripper_current.pt: 1891
+    gripper_state.pt: 1891
+    joint_pos.pt: 1891
+    joint_vel.pt: 1891
+  Traj:
+    gripper_state.pt: 1891
+    joint_pos.pt: 1891
+  expected robot-state length: 1891
+  sensors:
+    zed_left: 473 image(s)
+    zed_right: 473 image(s)
+    zed_wrist: 473 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_37_17
+  timestamps.pt:
+    timestamps.pt: 2270
+  FrankaPanda:
+    ee_pos.pt: 2270
+    external_joint_torque.pt: 2270
+    external_wrench.pt: 2270
+    gripper_current.pt: 2270
+    gripper_state.pt: 2270
+    joint_pos.pt: 2270
+    joint_vel.pt: 2270
+  Traj:
+    gripper_state.pt: 2270
+    joint_pos.pt: 2270
+  expected robot-state length: 2270
+  sensors:
+    zed_left: 568 image(s)
+    zed_right: 568 image(s)
+    zed_wrist: 568 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_47_33
+  timestamps.pt:
+    timestamps.pt: 2027
+  FrankaPanda:
+    ee_pos.pt: 2027
+    external_joint_torque.pt: 2027
+    external_wrench.pt: 2027
+    gripper_current.pt: 2027
+    gripper_state.pt: 2027
+    joint_pos.pt: 2027
+    joint_vel.pt: 2027
+  Traj:
+    gripper_state.pt: 2027
+    joint_pos.pt: 2027
+  expected robot-state length: 2027
+  sensors:
+    zed_left: 507 image(s)
+    zed_right: 507 image(s)
+    zed_wrist: 507 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_48_06
+  timestamps.pt:
+    timestamps.pt: 2078
+  FrankaPanda:
+    ee_pos.pt: 2078
+    external_joint_torque.pt: 2078
+    external_wrench.pt: 2078
+    gripper_current.pt: 2078
+    gripper_state.pt: 2078
+    joint_pos.pt: 2078
+    joint_vel.pt: 2078
+  Traj:
+    gripper_state.pt: 2078
+    joint_pos.pt: 2078
+  expected robot-state length: 2078
+  sensors:
+    zed_left: 520 image(s)
+    zed_right: 520 image(s)
+    zed_wrist: 520 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_48_38
+  timestamps.pt:
+    timestamps.pt: 1987
+  FrankaPanda:
+    ee_pos.pt: 1987
+    external_joint_torque.pt: 1987
+    external_wrench.pt: 1987
+    gripper_current.pt: 1987
+    gripper_state.pt: 1987
+    joint_pos.pt: 1987
+    joint_vel.pt: 1987
+  Traj:
+    gripper_state.pt: 1987
+    joint_pos.pt: 1987
+  expected robot-state length: 1987
+  sensors:
+    zed_left: 497 image(s)
+    zed_right: 497 image(s)
+    zed_wrist: 497 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_49_49
+  timestamps.pt:
+    timestamps.pt: 1904
+  FrankaPanda:
+    ee_pos.pt: 1904
+    external_joint_torque.pt: 1904
+    external_wrench.pt: 1904
+    gripper_current.pt: 1904
+    gripper_state.pt: 1904
+    joint_pos.pt: 1904
+    joint_vel.pt: 1904
+  Traj:
+    gripper_state.pt: 1904
+    joint_pos.pt: 1904
+  expected robot-state length: 1904
+  sensors:
+    zed_left: 476 image(s)
+    zed_right: 476 image(s)
+    zed_wrist: 476 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_59_45
+  timestamps.pt:
+    timestamps.pt: 1861
+  FrankaPanda:
+    ee_pos.pt: 1861
+    external_joint_torque.pt: 1861
+    external_wrench.pt: 1861
+    gripper_current.pt: 1861
+    gripper_state.pt: 1861
+    joint_pos.pt: 1861
+    joint_vel.pt: 1861
+  Traj:
+    gripper_state.pt: 1861
+    joint_pos.pt: 1861
+  expected robot-state length: 1861
+  sensors:
+    zed_left: 466 image(s)
+    zed_right: 466 image(s)
+    zed_wrist: 466 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_01_40
+  timestamps.pt:
+    timestamps.pt: 2107
+  FrankaPanda:
+    ee_pos.pt: 2107
+    external_joint_torque.pt: 2107
+    external_wrench.pt: 2107
+    gripper_current.pt: 2107
+    gripper_state.pt: 2107
+    joint_pos.pt: 2107
+    joint_vel.pt: 2107
+  Traj:
+    gripper_state.pt: 2107
+    joint_pos.pt: 2107
+  expected robot-state length: 2107
+  sensors:
+    zed_left: 527 image(s)
+    zed_right: 527 image(s)
+    zed_wrist: 527 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_03_01
+  timestamps.pt:
+    timestamps.pt: 1902
+  FrankaPanda:
+    ee_pos.pt: 1902
+    external_joint_torque.pt: 1902
+    external_wrench.pt: 1902
+    gripper_current.pt: 1902
+    gripper_state.pt: 1902
+    joint_pos.pt: 1902
+    joint_vel.pt: 1902
+  Traj:
+    gripper_state.pt: 1902
+    joint_pos.pt: 1902
+  expected robot-state length: 1902
+  sensors:
+    zed_left: 476 image(s)
+    zed_right: 476 image(s)
+    zed_wrist: 476 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_04_42
+  timestamps.pt:
+    timestamps.pt: 1764
+  FrankaPanda:
+    ee_pos.pt: 1764
+    external_joint_torque.pt: 1764
+    external_wrench.pt: 1764
+    gripper_current.pt: 1764
+    gripper_state.pt: 1764
+    joint_pos.pt: 1764
+    joint_vel.pt: 1764
+  Traj:
+    gripper_state.pt: 1764
+    joint_pos.pt: 1764
+  expected robot-state length: 1764
+  sensors:
+    zed_left: 441 image(s)
+    zed_right: 441 image(s)
+    zed_wrist: 441 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_20_00
+  timestamps.pt:
+    timestamps.pt: 1998
+  FrankaPanda:
+    ee_pos.pt: 1998
+    external_joint_torque.pt: 1998
+    external_wrench.pt: 1998
+    gripper_current.pt: 1998
+    gripper_state.pt: 1998
+    joint_pos.pt: 1998
+    joint_vel.pt: 1998
+  Traj:
+    gripper_state.pt: 1998
+    joint_pos.pt: 1998
+  expected robot-state length: 1998
+  sensors:
+    zed_left: 500 image(s)
+    zed_right: 500 image(s)
+    zed_wrist: 500 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_20_43
+  timestamps.pt:
+    timestamps.pt: 2423
+  FrankaPanda:
+    ee_pos.pt: 2423
+    external_joint_torque.pt: 2423
+    external_wrench.pt: 2423
+    gripper_current.pt: 2423
+    gripper_state.pt: 2423
+    joint_pos.pt: 2423
+    joint_vel.pt: 2423
+  Traj:
+    gripper_state.pt: 2423
+    joint_pos.pt: 2423
+  expected robot-state length: 2423
+  sensors:
+    zed_left: 606 image(s)
+    zed_right: 606 image(s)
+    zed_wrist: 606 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_21_23
+  timestamps.pt:
+    timestamps.pt: 2562
+  FrankaPanda:
+    ee_pos.pt: 2562
+    external_joint_torque.pt: 2562
+    external_wrench.pt: 2562
+    gripper_current.pt: 2562
+    gripper_state.pt: 2562
+    joint_pos.pt: 2562
+    joint_vel.pt: 2562
+  Traj:
+    gripper_state.pt: 2562
+    joint_pos.pt: 2562
+  expected robot-state length: 2562
+  sensors:
+    zed_left: 641 image(s)
+    zed_right: 641 image(s)
+    zed_wrist: 641 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_28_23
+  timestamps.pt:
+    timestamps.pt: 2060
+  FrankaPanda:
+    ee_pos.pt: 2060
+    external_joint_torque.pt: 2060
+    external_wrench.pt: 2060
+    gripper_current.pt: 2060
+    gripper_state.pt: 2060
+    joint_pos.pt: 2060
+    joint_vel.pt: 2060
+  Traj:
+    gripper_state.pt: 2060
+    joint_pos.pt: 2060
+  expected robot-state length: 2060
+  sensors:
+    zed_left: 515 image(s)
+    zed_right: 515 image(s)
+    zed_wrist: 515 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_45_02
+  timestamps.pt:
+    timestamps.pt: 2108
+  FrankaPanda:
+    ee_pos.pt: 2108
+    external_joint_torque.pt: 2108
+    external_wrench.pt: 2108
+    gripper_current.pt: 2108
+    gripper_state.pt: 2108
+    joint_pos.pt: 2108
+    joint_vel.pt: 2108
+  Traj:
+    gripper_state.pt: 2108
+    joint_pos.pt: 2108
+  expected robot-state length: 2108
+  sensors:
+    zed_left: 528 image(s)
+    zed_right: 528 image(s)
+    zed_wrist: 528 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_47_33
+  timestamps.pt:
+    timestamps.pt: 2133
+  FrankaPanda:
+    ee_pos.pt: 2133
+    external_joint_torque.pt: 2133
+    external_wrench.pt: 2133
+    gripper_current.pt: 2133
+    gripper_state.pt: 2133
+    joint_pos.pt: 2133
+    joint_vel.pt: 2133
+  Traj:
+    gripper_state.pt: 2133
+    joint_pos.pt: 2133
+  expected robot-state length: 2133
+  sensors:
+    zed_left: 534 image(s)
+    zed_right: 534 image(s)
+    zed_wrist: 534 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_55_51
+  timestamps.pt:
+    timestamps.pt: 2102
+  FrankaPanda:
+    ee_pos.pt: 2102
+    external_joint_torque.pt: 2102
+    external_wrench.pt: 2102
+    gripper_current.pt: 2102
+    gripper_state.pt: 2102
+    joint_pos.pt: 2102
+    joint_vel.pt: 2102
+  Traj:
+    gripper_state.pt: 2102
+    joint_pos.pt: 2102
+  expected robot-state length: 2102
+  sensors:
+    zed_left: 526 image(s)
+    zed_right: 526 image(s)
+    zed_wrist: 526 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_57_24
+  timestamps.pt:
+    timestamps.pt: 2093
+  FrankaPanda:
+    ee_pos.pt: 2093
+    external_joint_torque.pt: 2093
+    external_wrench.pt: 2093
+    gripper_current.pt: 2093
+    gripper_state.pt: 2093
+    joint_pos.pt: 2093
+    joint_vel.pt: 2093
+  Traj:
+    gripper_state.pt: 2093
+    joint_pos.pt: 2093
+  expected robot-state length: 2093
+  sensors:
+    zed_left: 524 image(s)
+    zed_right: 524 image(s)
+    zed_wrist: 524 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-17_09_12
+  timestamps.pt:
+    timestamps.pt: 1867
+  FrankaPanda:
+    ee_pos.pt: 1867
+    external_joint_torque.pt: 1867
+    external_wrench.pt: 1867
+    gripper_current.pt: 1867
+    gripper_state.pt: 1867
+    joint_pos.pt: 1867
+    joint_vel.pt: 1867
+  Traj:
+    gripper_state.pt: 1867
+    joint_pos.pt: 1867
+  expected robot-state length: 1867
+  sensors:
+    zed_left: 467 image(s)
+    zed_right: 467 image(s)
+    zed_wrist: 467 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-17_14_56
+  timestamps.pt:
+    timestamps.pt: 1904
+  FrankaPanda:
+    ee_pos.pt: 1904
+    external_joint_torque.pt: 1904
+    external_wrench.pt: 1904
+    gripper_current.pt: 1904
+    gripper_state.pt: 1904
+    joint_pos.pt: 1904
+    joint_vel.pt: 1904
+  Traj:
+    gripper_state.pt: 1904
+    joint_pos.pt: 1904
+  expected robot-state length: 1904
+  sensors:
+    zed_left: 476 image(s)
+    zed_right: 476 image(s)
+    zed_wrist: 476 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-17_17_22
+  timestamps.pt:
+    timestamps.pt: 1969
+  FrankaPanda:
+    ee_pos.pt: 1969
+    external_joint_torque.pt: 1969
+    external_wrench.pt: 1969
+    gripper_current.pt: 1969
+    gripper_state.pt: 1969
+    joint_pos.pt: 1969
+    joint_vel.pt: 1969
+  Traj:
+    gripper_state.pt: 1969
+    joint_pos.pt: 1969
+  expected robot-state length: 1969
+  sensors:
+    zed_left: 493 image(s)
+    zed_right: 493 image(s)
+    zed_wrist: 493 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-17_24_04
+  timestamps.pt:
+    timestamps.pt: 1959
+  FrankaPanda:
+    ee_pos.pt: 1959
+    external_joint_torque.pt: 1959
+    external_wrench.pt: 1959
+    gripper_current.pt: 1959
+    gripper_state.pt: 1959
+    joint_pos.pt: 1959
+    joint_vel.pt: 1959
+  Traj:
+    gripper_state.pt: 1959
+    joint_pos.pt: 1959
+  expected robot-state length: 1959
+  sensors:
+    zed_left: 490 image(s)
+    zed_right: 490 image(s)
+    zed_wrist: 490 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-17_24_47
+  timestamps.pt:
+    timestamps.pt: 2014
+  FrankaPanda:
+    ee_pos.pt: 2014
+    external_joint_torque.pt: 2014
+    external_wrench.pt: 2014
+    gripper_current.pt: 2014
+    gripper_state.pt: 2014
+    joint_pos.pt: 2014
+    joint_vel.pt: 2014
+  Traj:
+    gripper_state.pt: 2014
+    joint_pos.pt: 2014
+  expected robot-state length: 2014
+  sensors:
+    zed_left: 504 image(s)
+    zed_right: 504 image(s)
+    zed_wrist: 504 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-17_25_19
+  timestamps.pt:
+    timestamps.pt: 1907
+  FrankaPanda:
+    ee_pos.pt: 1907
+    external_joint_torque.pt: 1907
+    external_wrench.pt: 1907
+    gripper_current.pt: 1907
+    gripper_state.pt: 1907
+    joint_pos.pt: 1907
+    joint_vel.pt: 1907
+  Traj:
+    gripper_state.pt: 1907
+    joint_pos.pt: 1907
+  expected robot-state length: 1907
+  sensors:
+    zed_left: 477 image(s)
+    zed_right: 477 image(s)
+    zed_wrist: 477 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-17_48_55
+  timestamps.pt:
+    timestamps.pt: 2108
+  FrankaPanda:
+    ee_pos.pt: 2108
+    external_joint_torque.pt: 2108
+    external_wrench.pt: 2108
+    gripper_current.pt: 2108
+    gripper_state.pt: 2108
+    joint_pos.pt: 2108
+    joint_vel.pt: 2108
+  Traj:
+    gripper_state.pt: 2108
+    joint_pos.pt: 2108
+  expected robot-state length: 2108
+  sensors:
+    zed_left: 527 image(s)
+    zed_right: 527 image(s)
+    zed_wrist: 527 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-18_07_31
+  timestamps.pt:
+    timestamps.pt: 1801
+  FrankaPanda:
+    ee_pos.pt: 1801
+    external_joint_torque.pt: 1801
+    external_wrench.pt: 1801
+    gripper_current.pt: 1801
+    gripper_state.pt: 1801
+    joint_pos.pt: 1801
+    joint_vel.pt: 1801
+  Traj:
+    gripper_state.pt: 1801
+    joint_pos.pt: 1801
+  expected robot-state length: 1801
+  sensors:
+    zed_left: 451 image(s)
+    zed_right: 451 image(s)
+    zed_wrist: 451 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-18_08_16
+  timestamps.pt:
+    timestamps.pt: 2134
+  FrankaPanda:
+    ee_pos.pt: 2134
+    external_joint_torque.pt: 2134
+    external_wrench.pt: 2134
+    gripper_current.pt: 2134
+    gripper_state.pt: 2134
+    joint_pos.pt: 2134
+    joint_vel.pt: 2134
+  Traj:
+    gripper_state.pt: 2134
+    joint_pos.pt: 2134
+  expected robot-state length: 2134
+  sensors:
+    zed_left: 534 image(s)
+    zed_right: 534 image(s)
+    zed_wrist: 534 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-18_08_55
+  timestamps.pt:
+    timestamps.pt: 1785
+  FrankaPanda:
+    ee_pos.pt: 1785
+    external_joint_torque.pt: 1785
+    external_wrench.pt: 1785
+    gripper_current.pt: 1785
+    gripper_state.pt: 1785
+    joint_pos.pt: 1785
+    joint_vel.pt: 1785
+  Traj:
+    gripper_state.pt: 1785
+    joint_pos.pt: 1785
+  expected robot-state length: 1785
+  sensors:
+    zed_left: 446 image(s)
+    zed_right: 446 image(s)
+    zed_wrist: 446 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-18_09_34
+  timestamps.pt:
+    timestamps.pt: 2037
+  FrankaPanda:
+    ee_pos.pt: 2037
+    external_joint_torque.pt: 2037
+    external_wrench.pt: 2037
+    gripper_current.pt: 2037
+    gripper_state.pt: 2037
+    joint_pos.pt: 2037
+    joint_vel.pt: 2037
+  Traj:
+    gripper_state.pt: 2037
+    joint_pos.pt: 2037
+  expected robot-state length: 2037
+  sensors:
+    zed_left: 510 image(s)
+    zed_right: 510 image(s)
+    zed_wrist: 510 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-18_14_56
+  timestamps.pt:
+    timestamps.pt: 1940
+  FrankaPanda:
+    ee_pos.pt: 1940
+    external_joint_torque.pt: 1940
+    external_wrench.pt: 1940
+    gripper_current.pt: 1940
+    gripper_state.pt: 1940
+    joint_pos.pt: 1940
+    joint_vel.pt: 1940
+  Traj:
+    gripper_state.pt: 1940
+    joint_pos.pt: 1940
+  expected robot-state length: 1940
+  sensors:
+    zed_left: 485 image(s)
+    zed_right: 485 image(s)
+    zed_wrist: 485 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-18_15_31
+  timestamps.pt:
+    timestamps.pt: 1928
+  FrankaPanda:
+    ee_pos.pt: 1928
+    external_joint_torque.pt: 1928
+    external_wrench.pt: 1928
+    gripper_current.pt: 1928
+    gripper_state.pt: 1928
+    joint_pos.pt: 1928
+    joint_vel.pt: 1928
+  Traj:
+    gripper_state.pt: 1928
+    joint_pos.pt: 1928
+  expected robot-state length: 1928
+  sensors:
+    zed_left: 483 image(s)
+    zed_right: 483 image(s)
+    zed_wrist: 483 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-18_18_27
+  timestamps.pt:
+    timestamps.pt: 1950
+  FrankaPanda:
+    ee_pos.pt: 1950
+    external_joint_torque.pt: 1950
+    external_wrench.pt: 1950
+    gripper_current.pt: 1950
+    gripper_state.pt: 1950
+    joint_pos.pt: 1950
+    joint_vel.pt: 1950
+  Traj:
+    gripper_state.pt: 1950
+    joint_pos.pt: 1950
+  expected robot-state length: 1950
+  sensors:
+    zed_left: 488 image(s)
+    zed_right: 488 image(s)
+    zed_wrist: 488 image(s)
+  result: OK
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-18_19_01
+  timestamps.pt:
+    timestamps.pt: 2042
+  FrankaPanda:
+    ee_pos.pt: 2042
+    external_joint_torque.pt: 2042
+    external_wrench.pt: 2042
+    gripper_current.pt: 2042
+    gripper_state.pt: 2042
+    joint_pos.pt: 2042
+    joint_vel.pt: 2042
+  Traj:
+    gripper_state.pt: 2042
+    joint_pos.pt: 2042
+  expected robot-state length: 2042
+  sensors:
+    zed_left: 511 image(s)
+    zed_right: 511 image(s)
+    zed_wrist: 511 image(s)
+  result: OK
+
+Checked 60 episode(s). Failed episodes: 0.

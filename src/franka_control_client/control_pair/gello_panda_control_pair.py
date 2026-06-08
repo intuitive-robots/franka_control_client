@@ -96,3 +96,19 @@ class GelloPandControlPair(ControlPair):
             self.control_end()
         except Exception as e:
             print(f"Control task encountered an error: {e}")
+
+    def close_gripper(self) -> None:
+        self.follower.robotiq_gripper.send_grasp_command(
+            position=1.0,
+            speed=GRIPPER_SPEED,
+            force=GRIPPER_FORCE,
+            blocking=False,
+        )
+
+    def open_gripper(self) -> None:
+        self.follower.robotiq_gripper.send_grasp_command(
+            position=0.0,
+            speed=GRIPPER_SPEED,
+            force=GRIPPER_FORCE,
+            blocking=False,
+        )

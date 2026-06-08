@@ -161,6 +161,7 @@ class TrajectoryTorquePandaControlPair(ControlPair):
 
         self.follower.panda_arm.send_joint_position_command(self.joint_pos[idx])
         self.follower.panda_arm.send_joint_torque_command(self.ext_torque[idx])
+        # pyzlc.info(f"Control step {self._step_idx}: sending external torque {self.ext_torque[idx]}")
         gripper_cmd = float(np.clip(self.gripper_pos[idx], 0.0, 1.0))
         if (
             self._last_gripper_cmd is None

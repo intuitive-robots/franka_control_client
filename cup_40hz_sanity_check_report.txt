@@ -1,0 +1,1901 @@
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-17_55_55
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (504 files)
+  [OK] Sensor folder has content: zed_right (504 files)
+  [OK] Sensor folder has content: zed_wrist (504 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-17_56_44
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (551 files)
+  [OK] Sensor folder has content: zed_right (551 files)
+  [OK] Sensor folder has content: zed_wrist (551 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-17_59_36
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (586 files)
+  [OK] Sensor folder has content: zed_right (586 files)
+  [OK] Sensor folder has content: zed_wrist (586 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_00_33
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (552 files)
+  [OK] Sensor folder has content: zed_right (552 files)
+  [OK] Sensor folder has content: zed_wrist (552 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_06_18
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (539 files)
+  [OK] Sensor folder has content: zed_right (539 files)
+  [OK] Sensor folder has content: zed_wrist (539 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_07_29
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (578 files)
+  [OK] Sensor folder has content: zed_right (578 files)
+  [OK] Sensor folder has content: zed_wrist (578 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_08_28
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (583 files)
+  [OK] Sensor folder has content: zed_right (583 files)
+  [OK] Sensor folder has content: zed_wrist (583 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_09_40
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (548 files)
+  [OK] Sensor folder has content: zed_right (548 files)
+  [OK] Sensor folder has content: zed_wrist (548 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_10_47
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (472 files)
+  [OK] Sensor folder has content: zed_right (472 files)
+  [OK] Sensor folder has content: zed_wrist (472 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_12_01
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (571 files)
+  [OK] Sensor folder has content: zed_right (571 files)
+  [OK] Sensor folder has content: zed_wrist (571 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_13_05
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (554 files)
+  [OK] Sensor folder has content: zed_right (554 files)
+  [OK] Sensor folder has content: zed_wrist (554 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_14_06
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (568 files)
+  [OK] Sensor folder has content: zed_right (568 files)
+  [OK] Sensor folder has content: zed_wrist (568 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_15_21
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (486 files)
+  [OK] Sensor folder has content: zed_right (486 files)
+  [OK] Sensor folder has content: zed_wrist (486 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_16_26
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (504 files)
+  [OK] Sensor folder has content: zed_right (504 files)
+  [OK] Sensor folder has content: zed_wrist (504 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_17_40
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (565 files)
+  [OK] Sensor folder has content: zed_right (565 files)
+  [OK] Sensor folder has content: zed_wrist (565 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_18_55
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (613 files)
+  [OK] Sensor folder has content: zed_right (613 files)
+  [OK] Sensor folder has content: zed_wrist (613 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_20_03
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (543 files)
+  [OK] Sensor folder has content: zed_right (543 files)
+  [OK] Sensor folder has content: zed_wrist (543 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_33_58
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (581 files)
+  [OK] Sensor folder has content: zed_right (581 files)
+  [OK] Sensor folder has content: zed_wrist (581 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_35_59
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (560 files)
+  [OK] Sensor folder has content: zed_right (560 files)
+  [OK] Sensor folder has content: zed_wrist (560 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_37_43
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (561 files)
+  [OK] Sensor folder has content: zed_right (561 files)
+  [OK] Sensor folder has content: zed_wrist (561 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_38_46
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (594 files)
+  [OK] Sensor folder has content: zed_right (594 files)
+  [OK] Sensor folder has content: zed_wrist (594 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_39_59
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (545 files)
+  [OK] Sensor folder has content: zed_right (545 files)
+  [OK] Sensor folder has content: zed_wrist (545 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_41_07
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (583 files)
+  [OK] Sensor folder has content: zed_right (583 files)
+  [OK] Sensor folder has content: zed_wrist (583 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_41_59
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (593 files)
+  [OK] Sensor folder has content: zed_right (593 files)
+  [OK] Sensor folder has content: zed_wrist (593 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_43_49
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (562 files)
+  [OK] Sensor folder has content: zed_right (562 files)
+  [OK] Sensor folder has content: zed_wrist (562 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_45_11
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (583 files)
+  [OK] Sensor folder has content: zed_right (583 files)
+  [OK] Sensor folder has content: zed_wrist (583 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_46_43
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (533 files)
+  [OK] Sensor folder has content: zed_right (533 files)
+  [OK] Sensor folder has content: zed_wrist (533 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_49_31
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (662 files)
+  [OK] Sensor folder has content: zed_right (662 files)
+  [OK] Sensor folder has content: zed_wrist (662 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_50_56
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (672 files)
+  [OK] Sensor folder has content: zed_right (672 files)
+  [OK] Sensor folder has content: zed_wrist (672 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_52_11
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (618 files)
+  [OK] Sensor folder has content: zed_right (618 files)
+  [OK] Sensor folder has content: zed_wrist (618 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_53_26
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (542 files)
+  [OK] Sensor folder has content: zed_right (542 files)
+  [OK] Sensor folder has content: zed_wrist (542 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_55_45
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (583 files)
+  [OK] Sensor folder has content: zed_right (583 files)
+  [OK] Sensor folder has content: zed_wrist (583 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_58_30
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (598 files)
+  [OK] Sensor folder has content: zed_right (598 files)
+  [OK] Sensor folder has content: zed_wrist (598 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-18_59_49
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (725 files)
+  [OK] Sensor folder has content: zed_right (725 files)
+  [OK] Sensor folder has content: zed_wrist (725 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_01_08
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (580 files)
+  [OK] Sensor folder has content: zed_right (580 files)
+  [OK] Sensor folder has content: zed_wrist (580 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_02_35
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (564 files)
+  [OK] Sensor folder has content: zed_right (564 files)
+  [OK] Sensor folder has content: zed_wrist (564 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_04_02
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (533 files)
+  [OK] Sensor folder has content: zed_right (533 files)
+  [OK] Sensor folder has content: zed_wrist (533 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_24_18
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (573 files)
+  [OK] Sensor folder has content: zed_right (573 files)
+  [OK] Sensor folder has content: zed_wrist (573 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_26_33
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (630 files)
+  [OK] Sensor folder has content: zed_right (630 files)
+  [OK] Sensor folder has content: zed_wrist (630 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_29_35
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (726 files)
+  [OK] Sensor folder has content: zed_right (726 files)
+  [OK] Sensor folder has content: zed_wrist (726 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_30_38
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (575 files)
+  [OK] Sensor folder has content: zed_right (575 files)
+  [OK] Sensor folder has content: zed_wrist (575 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_32_05
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (549 files)
+  [OK] Sensor folder has content: zed_right (549 files)
+  [OK] Sensor folder has content: zed_wrist (549 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_33_08
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (635 files)
+  [OK] Sensor folder has content: zed_right (635 files)
+  [OK] Sensor folder has content: zed_wrist (635 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_34_17
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (741 files)
+  [OK] Sensor folder has content: zed_right (741 files)
+  [OK] Sensor folder has content: zed_wrist (741 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_35_30
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (754 files)
+  [OK] Sensor folder has content: zed_right (754 files)
+  [OK] Sensor folder has content: zed_wrist (754 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_36_45
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (612 files)
+  [OK] Sensor folder has content: zed_right (612 files)
+  [OK] Sensor folder has content: zed_wrist (612 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_37_49
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (585 files)
+  [OK] Sensor folder has content: zed_right (585 files)
+  [OK] Sensor folder has content: zed_wrist (585 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_41_40
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (629 files)
+  [OK] Sensor folder has content: zed_right (629 files)
+  [OK] Sensor folder has content: zed_wrist (629 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_42_35
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (658 files)
+  [OK] Sensor folder has content: zed_right (658 files)
+  [OK] Sensor folder has content: zed_wrist (658 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_10-19_43_30
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (599 files)
+  [OK] Sensor folder has content: zed_right (599 files)
+  [OK] Sensor folder has content: zed_wrist (599 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-13_46_08
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (548 files)
+  [OK] Sensor folder has content: zed_right (548 files)
+  [OK] Sensor folder has content: zed_wrist (548 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-13_47_49
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (587 files)
+  [OK] Sensor folder has content: zed_right (587 files)
+  [OK] Sensor folder has content: zed_wrist (587 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-13_49_14
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (649 files)
+  [OK] Sensor folder has content: zed_right (649 files)
+  [OK] Sensor folder has content: zed_wrist (649 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-13_51_12
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (612 files)
+  [OK] Sensor folder has content: zed_right (612 files)
+  [OK] Sensor folder has content: zed_wrist (612 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-13_52_37
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (579 files)
+  [OK] Sensor folder has content: zed_right (579 files)
+  [OK] Sensor folder has content: zed_wrist (579 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-13_53_39
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (687 files)
+  [OK] Sensor folder has content: zed_right (687 files)
+  [OK] Sensor folder has content: zed_wrist (687 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-13_54_44
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (567 files)
+  [OK] Sensor folder has content: zed_right (567 files)
+  [OK] Sensor folder has content: zed_wrist (567 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-13_55_33
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (631 files)
+  [OK] Sensor folder has content: zed_right (631 files)
+  [OK] Sensor folder has content: zed_wrist (631 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-13_56_35
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (631 files)
+  [OK] Sensor folder has content: zed_right (631 files)
+  [OK] Sensor folder has content: zed_wrist (631 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-13_57_35
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (609 files)
+  [OK] Sensor folder has content: zed_right (609 files)
+  [OK] Sensor folder has content: zed_wrist (609 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-13_58_44
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (663 files)
+  [OK] Sensor folder has content: zed_right (663 files)
+  [OK] Sensor folder has content: zed_wrist (663 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_00_51
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (605 files)
+  [OK] Sensor folder has content: zed_right (605 files)
+  [OK] Sensor folder has content: zed_wrist (605 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_02_21
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (601 files)
+  [OK] Sensor folder has content: zed_right (601 files)
+  [OK] Sensor folder has content: zed_wrist (601 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_13_33
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (581 files)
+  [OK] Sensor folder has content: zed_right (581 files)
+  [OK] Sensor folder has content: zed_wrist (581 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_14_55
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (566 files)
+  [OK] Sensor folder has content: zed_right (566 files)
+  [OK] Sensor folder has content: zed_wrist (566 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_15_48
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (537 files)
+  [OK] Sensor folder has content: zed_right (537 files)
+  [OK] Sensor folder has content: zed_wrist (537 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_17_45
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (598 files)
+  [OK] Sensor folder has content: zed_right (598 files)
+  [OK] Sensor folder has content: zed_wrist (598 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_20_02
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (806 files)
+  [OK] Sensor folder has content: zed_right (806 files)
+  [OK] Sensor folder has content: zed_wrist (806 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_21_12
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (703 files)
+  [OK] Sensor folder has content: zed_right (703 files)
+  [OK] Sensor folder has content: zed_wrist (703 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_32_45
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (637 files)
+  [OK] Sensor folder has content: zed_right (637 files)
+  [OK] Sensor folder has content: zed_wrist (637 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_34_02
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (535 files)
+  [OK] Sensor folder has content: zed_right (535 files)
+  [OK] Sensor folder has content: zed_wrist (535 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_35_03
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (641 files)
+  [OK] Sensor folder has content: zed_right (641 files)
+  [OK] Sensor folder has content: zed_wrist (641 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_36_23
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (642 files)
+  [OK] Sensor folder has content: zed_right (642 files)
+  [OK] Sensor folder has content: zed_wrist (642 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_37_35
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (665 files)
+  [OK] Sensor folder has content: zed_right (665 files)
+  [OK] Sensor folder has content: zed_wrist (665 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_38_31
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (631 files)
+  [OK] Sensor folder has content: zed_right (631 files)
+  [OK] Sensor folder has content: zed_wrist (631 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_39_30
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (768 files)
+  [OK] Sensor folder has content: zed_right (768 files)
+  [OK] Sensor folder has content: zed_wrist (768 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_40_58
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (641 files)
+  [OK] Sensor folder has content: zed_right (641 files)
+  [OK] Sensor folder has content: zed_wrist (641 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_42_08
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (666 files)
+  [OK] Sensor folder has content: zed_right (666 files)
+  [OK] Sensor folder has content: zed_wrist (666 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_43_35
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (687 files)
+  [OK] Sensor folder has content: zed_right (687 files)
+  [OK] Sensor folder has content: zed_wrist (687 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_45_25
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (659 files)
+  [OK] Sensor folder has content: zed_right (659 files)
+  [OK] Sensor folder has content: zed_wrist (659 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_47_41
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (745 files)
+  [OK] Sensor folder has content: zed_right (745 files)
+  [OK] Sensor folder has content: zed_wrist (745 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_54_51
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (711 files)
+  [OK] Sensor folder has content: zed_right (711 files)
+  [OK] Sensor folder has content: zed_wrist (711 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-14_57_31
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (641 files)
+  [OK] Sensor folder has content: zed_right (641 files)
+  [OK] Sensor folder has content: zed_wrist (641 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_00_09
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (640 files)
+  [OK] Sensor folder has content: zed_right (640 files)
+  [OK] Sensor folder has content: zed_wrist (640 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_01_32
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (669 files)
+  [OK] Sensor folder has content: zed_right (669 files)
+  [OK] Sensor folder has content: zed_wrist (669 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_07_42
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (656 files)
+  [OK] Sensor folder has content: zed_right (656 files)
+  [OK] Sensor folder has content: zed_wrist (656 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_08_46
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (649 files)
+  [OK] Sensor folder has content: zed_right (649 files)
+  [OK] Sensor folder has content: zed_wrist (649 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_09_53
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (680 files)
+  [OK] Sensor folder has content: zed_right (680 files)
+  [OK] Sensor folder has content: zed_wrist (680 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_10_47
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (600 files)
+  [OK] Sensor folder has content: zed_right (600 files)
+  [OK] Sensor folder has content: zed_wrist (600 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_12_19
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (626 files)
+  [OK] Sensor folder has content: zed_right (626 files)
+  [OK] Sensor folder has content: zed_wrist (626 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_14_09
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (653 files)
+  [OK] Sensor folder has content: zed_right (653 files)
+  [OK] Sensor folder has content: zed_wrist (653 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_15_09
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (637 files)
+  [OK] Sensor folder has content: zed_right (637 files)
+  [OK] Sensor folder has content: zed_wrist (637 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_17_21
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (688 files)
+  [OK] Sensor folder has content: zed_right (688 files)
+  [OK] Sensor folder has content: zed_wrist (688 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_20_50
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (803 files)
+  [OK] Sensor folder has content: zed_right (803 files)
+  [OK] Sensor folder has content: zed_wrist (803 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_22_56
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (605 files)
+  [OK] Sensor folder has content: zed_right (605 files)
+  [OK] Sensor folder has content: zed_wrist (605 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_24_33
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (597 files)
+  [OK] Sensor folder has content: zed_right (597 files)
+  [OK] Sensor folder has content: zed_wrist (597 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_25_21
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (614 files)
+  [OK] Sensor folder has content: zed_right (614 files)
+  [OK] Sensor folder has content: zed_wrist (614 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_26_39
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (589 files)
+  [OK] Sensor folder has content: zed_right (589 files)
+  [OK] Sensor folder has content: zed_wrist (589 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_27_41
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (627 files)
+  [OK] Sensor folder has content: zed_right (627 files)
+  [OK] Sensor folder has content: zed_wrist (627 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/cup_40hz/2026_05_12-15_28_25
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (583 files)
+  [OK] Sensor folder has content: zed_right (583 files)
+  [OK] Sensor folder has content: zed_wrist (583 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checked 100 episode(s). Total issues found: 0.

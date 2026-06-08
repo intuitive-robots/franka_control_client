@@ -25,11 +25,14 @@ from franka_control_client.control_pair.trajectory_with_torque_panda_control_pai
 )
 
 
+# DEFAULT_TRAJECTORY_DIR = Path(
+#     "/home/irl-admin/new_data_collection/usb_25_100hz/"
+#     "2026_04_29-16_35_34/FrankaPanda"
+# )
 DEFAULT_TRAJECTORY_DIR = Path(
-    "/home/irl-admin/new_data_collection/human_demo_test/"
-    "2026_04_25-12_51_21/FrankaPanda"
+    "/home/irl-admin/new_data_collection/human_button_task"
+    "2026_05_03-17_08_27/FrankaPanda"
 )
-
 
 class ReplayIRLDataCollection(IRLDataCollection):
     def _save_data_task(self) -> None:

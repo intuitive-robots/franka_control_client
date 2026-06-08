@@ -10,7 +10,7 @@ from typing import Iterable, List, Sequence
 import torch
 # usage 
 # python data_sanity_check.py dataset_root
-# python /home/irl-admin/data_collect_scripts/franka_control_client/dataset_utils/data_sanity_check.py /home/irl-admin/new_data_collection/insert_blue_bird_100hz_cam_25hz --delete-failed
+# python /home/irl-admin/data_collect_scripts/franka_control_client/dataset_utils/data_sanity_check.py home/irl-admin/new_data_collection/cup_40hz --delete-failed
 
 EPISODE_DIR_PATTERN = re.compile(r"^\d{4}_\d{2}_\d{2}-\d{2}_\d{2}_\d{2}$")
 

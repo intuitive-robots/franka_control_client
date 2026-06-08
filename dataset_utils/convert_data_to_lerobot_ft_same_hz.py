@@ -477,11 +477,11 @@ def create_lerobot_dataset(
 def main():
     # Configuration - modify these variables as needed
     repo_id = (
-        "new_scarf_100hz_cam_25hz"  # HF repo id (e.g. user/dataset). Required if push_to_hub=True
+        "cup_40hz"  # HF repo id (e.g. user/dataset). Required if push_to_hub=True
     )
-    raw_dir = Path(f"/home/irl-admin/new_data_collection/{repo_id}")
+    raw_dir = Path(f"/home/irl-admin/new_data_collection/cup_40hz")
     local_dir = Path(
-        f"/home/irl-admin/new_data_collection/lerobot_test/{repo_id}"
+        f"/home/irl-admin/new_data_collection/lerobot_meta/{repo_id}"
     )
     push_to_hub = False
     follower_subdir = (
@@ -489,7 +489,7 @@ def main():
     ) = "FrankaPanda"  # for FLOWER this should be e.g. JOINT_POS
     control_mode = "position"  # Change this if necessary
     num_arms = 1
-    fps = 25
+    fps = 40
     use_videos = True
     image_writer_process = 5
     image_writer_threads = 10
@@ -498,7 +498,7 @@ def main():
     # Structure configuration
     leader_subdir = "Gello"
     sensors_dirname = "sensors"
-    cams = ["zed_right", "zed_left", "zed_wrist"]
+    cams = ["zed_right", "zed_wrist"]
     tactile_names = []  # Optional tactile folder names
     resize_w = 256
     resize_h = 256
@@ -506,7 +506,7 @@ def main():
     # The script looks up the parent dir name of an episode and matches the key
     # in the following directory to identify the correct task instruction
     task_instruction_mapping = {
-        repo_id: "fold the scarf on the table."
+        repo_id: "Pick up the pepper and put it into the cup."
     }
 
     create_lerobot_dataset(

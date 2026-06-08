@@ -641,14 +641,14 @@ def create_lerobot_dataset(
 def main():
     # Configuration - modify these variables as needed
     repo_id = (
-        "ZhuoyueLLL/new_scarf_100hz_cam_25hz"  # HF repo id (e.g. user/dataset). Required if push_to_hub=True
+        "ZhuoyueLLL/insert_blue_bird_100hz_cam_25hz"  # HF repo id (e.g. user/dataset). Required if push_to_hub=True
     )
     # raw_dir = Path(f"/home/irl-admin/new_data_collection/{repo_id}")
-    raw_dir = Path(f"/home/irl-admin/new_data_collection/new_scarf_100hz_cam_25hz")
+    raw_dir = Path(f"/home/irl-admin/new_data_collection/insert_blue_bird_100hz_cam_25hz")
     local_dir = Path(
-        f"/home/irl-admin/new_data_collection/lerobot_test/{repo_id}"
+        f"/home/irl-admin/new_data_collection/lerobot_data/{repo_id}"
     )
-    push_to_hub = True
+    push_to_hub = False
     follower_subdir = (
         robot_type
     ) = "FrankaPanda"  # for FLOWER this should be e.g. JOINT_POS
@@ -678,7 +678,7 @@ def main():
     # The script looks up the parent dir name of an episode and matches the key
     # in the following directory to identify the correct task instruction
     task_instruction_mapping = {
-        "new_scarf_100hz_cam_25hz": "fold the scarf on the table."
+        "insert_blue_bird_100hz_cam_25hz": "pick up the blue bird and insert it into the base.",
     }
 
     create_lerobot_dataset(

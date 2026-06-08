@@ -1,0 +1,1971 @@
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_06_44
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (738 files)
+  [OK] Sensor folder has content: zed_right (738 files)
+  [OK] Sensor folder has content: zed_wrist (738 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_08_09
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (743 files)
+  [OK] Sensor folder has content: zed_right (743 files)
+  [OK] Sensor folder has content: zed_wrist (743 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_08_55
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (678 files)
+  [OK] Sensor folder has content: zed_right (678 files)
+  [OK] Sensor folder has content: zed_wrist (678 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_09_37
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (645 files)
+  [OK] Sensor folder has content: zed_right (645 files)
+  [OK] Sensor folder has content: zed_wrist (645 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_10_19
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (706 files)
+  [OK] Sensor folder has content: zed_right (706 files)
+  [OK] Sensor folder has content: zed_wrist (706 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_11_00
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (603 files)
+  [OK] Sensor folder has content: zed_right (603 files)
+  [OK] Sensor folder has content: zed_wrist (603 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_42_36
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (801 files)
+  [OK] Sensor folder has content: zed_right (801 files)
+  [OK] Sensor folder has content: zed_wrist (801 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_43_21
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (648 files)
+  [OK] Sensor folder has content: zed_right (648 files)
+  [OK] Sensor folder has content: zed_wrist (648 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_44_09
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (651 files)
+  [OK] Sensor folder has content: zed_right (651 files)
+  [OK] Sensor folder has content: zed_wrist (651 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_44_55
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (628 files)
+  [OK] Sensor folder has content: zed_right (628 files)
+  [OK] Sensor folder has content: zed_wrist (628 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_45_41
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (703 files)
+  [OK] Sensor folder has content: zed_right (703 files)
+  [OK] Sensor folder has content: zed_wrist (703 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_46_37
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (621 files)
+  [OK] Sensor folder has content: zed_right (621 files)
+  [OK] Sensor folder has content: zed_wrist (621 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_47_10
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (630 files)
+  [OK] Sensor folder has content: zed_right (630 files)
+  [OK] Sensor folder has content: zed_wrist (630 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_47_55
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (635 files)
+  [OK] Sensor folder has content: zed_right (635 files)
+  [OK] Sensor folder has content: zed_wrist (635 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_48_28
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (613 files)
+  [OK] Sensor folder has content: zed_right (613 files)
+  [OK] Sensor folder has content: zed_wrist (613 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_49_10
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (658 files)
+  [OK] Sensor folder has content: zed_right (658 files)
+  [OK] Sensor folder has content: zed_wrist (658 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_49_56
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (646 files)
+  [OK] Sensor folder has content: zed_right (646 files)
+  [OK] Sensor folder has content: zed_wrist (646 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_50_35
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (599 files)
+  [OK] Sensor folder has content: zed_right (599 files)
+  [OK] Sensor folder has content: zed_wrist (599 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_51_09
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (706 files)
+  [OK] Sensor folder has content: zed_right (706 files)
+  [OK] Sensor folder has content: zed_wrist (706 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_52_36
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (558 files)
+  [OK] Sensor folder has content: zed_right (558 files)
+  [OK] Sensor folder has content: zed_wrist (558 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_53_05
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (573 files)
+  [OK] Sensor folder has content: zed_right (573 files)
+  [OK] Sensor folder has content: zed_wrist (573 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_53_37
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (659 files)
+  [OK] Sensor folder has content: zed_right (659 files)
+  [OK] Sensor folder has content: zed_wrist (659 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_54_24
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (644 files)
+  [OK] Sensor folder has content: zed_right (644 files)
+  [OK] Sensor folder has content: zed_wrist (644 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_55_24
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (587 files)
+  [OK] Sensor folder has content: zed_right (587 files)
+  [OK] Sensor folder has content: zed_wrist (587 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_56_21
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (555 files)
+  [OK] Sensor folder has content: zed_right (555 files)
+  [OK] Sensor folder has content: zed_wrist (555 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_56_58
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (549 files)
+  [OK] Sensor folder has content: zed_right (549 files)
+  [OK] Sensor folder has content: zed_wrist (549 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_58_08
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (579 files)
+  [OK] Sensor folder has content: zed_right (579 files)
+  [OK] Sensor folder has content: zed_wrist (579 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_58_49
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (574 files)
+  [OK] Sensor folder has content: zed_right (574 files)
+  [OK] Sensor folder has content: zed_wrist (574 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-11_59_23
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (607 files)
+  [OK] Sensor folder has content: zed_right (607 files)
+  [OK] Sensor folder has content: zed_wrist (607 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_00_03
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (571 files)
+  [OK] Sensor folder has content: zed_right (571 files)
+  [OK] Sensor folder has content: zed_wrist (571 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_00_43
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (565 files)
+  [OK] Sensor folder has content: zed_right (565 files)
+  [OK] Sensor folder has content: zed_wrist (565 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_01_15
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (632 files)
+  [OK] Sensor folder has content: zed_right (632 files)
+  [OK] Sensor folder has content: zed_wrist (632 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_01_56
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (551 files)
+  [OK] Sensor folder has content: zed_right (551 files)
+  [OK] Sensor folder has content: zed_wrist (551 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_03_22
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (652 files)
+  [OK] Sensor folder has content: zed_right (652 files)
+  [OK] Sensor folder has content: zed_wrist (652 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_03_58
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (662 files)
+  [OK] Sensor folder has content: zed_right (662 files)
+  [OK] Sensor folder has content: zed_wrist (662 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_04_45
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (599 files)
+  [OK] Sensor folder has content: zed_right (599 files)
+  [OK] Sensor folder has content: zed_wrist (599 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_05_43
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (637 files)
+  [OK] Sensor folder has content: zed_right (637 files)
+  [OK] Sensor folder has content: zed_wrist (637 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_06_36
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (625 files)
+  [OK] Sensor folder has content: zed_right (625 files)
+  [OK] Sensor folder has content: zed_wrist (625 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_07_16
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (687 files)
+  [OK] Sensor folder has content: zed_right (687 files)
+  [OK] Sensor folder has content: zed_wrist (687 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_09_00
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (679 files)
+  [OK] Sensor folder has content: zed_right (679 files)
+  [OK] Sensor folder has content: zed_wrist (679 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_11_22
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (718 files)
+  [OK] Sensor folder has content: zed_right (718 files)
+  [OK] Sensor folder has content: zed_wrist (718 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_12_09
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (859 files)
+  [OK] Sensor folder has content: zed_right (859 files)
+  [OK] Sensor folder has content: zed_wrist (859 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_13_28
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (717 files)
+  [OK] Sensor folder has content: zed_right (717 files)
+  [OK] Sensor folder has content: zed_wrist (717 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_14_17
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (694 files)
+  [OK] Sensor folder has content: zed_right (694 files)
+  [OK] Sensor folder has content: zed_wrist (694 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_18_47
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (827 files)
+  [OK] Sensor folder has content: zed_right (827 files)
+  [OK] Sensor folder has content: zed_wrist (827 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_19_44
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (794 files)
+  [OK] Sensor folder has content: zed_right (794 files)
+  [OK] Sensor folder has content: zed_wrist (794 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_20_53
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (791 files)
+  [OK] Sensor folder has content: zed_right (791 files)
+  [OK] Sensor folder has content: zed_wrist (791 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_21_37
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (602 files)
+  [OK] Sensor folder has content: zed_right (602 files)
+  [OK] Sensor folder has content: zed_wrist (602 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_22_21
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (743 files)
+  [OK] Sensor folder has content: zed_right (743 files)
+  [OK] Sensor folder has content: zed_wrist (743 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_23_11
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (649 files)
+  [OK] Sensor folder has content: zed_right (649 files)
+  [OK] Sensor folder has content: zed_wrist (649 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_23_54
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (670 files)
+  [OK] Sensor folder has content: zed_right (670 files)
+  [OK] Sensor folder has content: zed_wrist (670 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_24_38
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (711 files)
+  [OK] Sensor folder has content: zed_right (711 files)
+  [OK] Sensor folder has content: zed_wrist (711 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_25_37
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (701 files)
+  [OK] Sensor folder has content: zed_right (701 files)
+  [OK] Sensor folder has content: zed_wrist (701 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_26_17
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (729 files)
+  [OK] Sensor folder has content: zed_right (729 files)
+  [OK] Sensor folder has content: zed_wrist (729 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_27_10
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (733 files)
+  [OK] Sensor folder has content: zed_right (733 files)
+  [OK] Sensor folder has content: zed_wrist (733 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_28_14
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (690 files)
+  [OK] Sensor folder has content: zed_right (690 files)
+  [OK] Sensor folder has content: zed_wrist (690 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_28_52
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (751 files)
+  [OK] Sensor folder has content: zed_right (751 files)
+  [OK] Sensor folder has content: zed_wrist (751 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_29_41
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (567 files)
+  [OK] Sensor folder has content: zed_right (567 files)
+  [OK] Sensor folder has content: zed_wrist (567 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_30_47
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (702 files)
+  [OK] Sensor folder has content: zed_right (702 files)
+  [OK] Sensor folder has content: zed_wrist (702 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_32_20
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (673 files)
+  [OK] Sensor folder has content: zed_right (673 files)
+  [OK] Sensor folder has content: zed_wrist (673 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_33_04
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (717 files)
+  [OK] Sensor folder has content: zed_right (717 files)
+  [OK] Sensor folder has content: zed_wrist (717 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_34_51
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (677 files)
+  [OK] Sensor folder has content: zed_right (677 files)
+  [OK] Sensor folder has content: zed_wrist (677 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_35_39
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (581 files)
+  [OK] Sensor folder has content: zed_right (581 files)
+  [OK] Sensor folder has content: zed_wrist (581 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_36_22
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (643 files)
+  [OK] Sensor folder has content: zed_right (643 files)
+  [OK] Sensor folder has content: zed_wrist (643 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_37_01
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (623 files)
+  [OK] Sensor folder has content: zed_right (623 files)
+  [OK] Sensor folder has content: zed_wrist (623 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_37_34
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (598 files)
+  [OK] Sensor folder has content: zed_right (598 files)
+  [OK] Sensor folder has content: zed_wrist (598 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_38_29
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (596 files)
+  [OK] Sensor folder has content: zed_right (596 files)
+  [OK] Sensor folder has content: zed_wrist (596 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_39_10
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (607 files)
+  [OK] Sensor folder has content: zed_right (607 files)
+  [OK] Sensor folder has content: zed_wrist (607 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_39_55
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (581 files)
+  [OK] Sensor folder has content: zed_right (581 files)
+  [OK] Sensor folder has content: zed_wrist (581 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_23-12_40_44
+Passed checks:
+  [OK] OK: timestamps.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: gripper_command.pt
+  [OK] OK: ee_pos.pt
+  [OK] OK: joint_pos.pt
+  [OK] OK: joint_vel.pt
+  [OK] OK: external_joint_torque.pt
+  [OK] OK: gripper_state.pt
+  [OK] OK: external_wrench.pt
+  [OK] OK: gripper_current.pt
+  [OK] Sensor folder has content: zed_left (616 files)
+  [OK] Sensor folder has content: zed_right (616 files)
+  [OK] Sensor folder has content: zed_wrist (616 files)
+Failed checks:
+  None
+Episode result: PASSED.
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_11_43
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_11_43/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_11_43/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_12_10
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_12_10/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_12_10/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_16_41
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_16_41/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_16_41/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_18_48
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_18_48/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_18_48/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_20_56
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_20_56/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_20_56/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_23_53
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_23_53/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_23_53/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_26_17
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_26_17/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_26_17/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_47_35
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_47_35/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_47_35/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_48_08
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_48_08/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_48_08/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_48_37
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_48_37/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_48_37/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_49_07
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_49_07/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_49_07/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_49_35
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_49_35/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_49_35/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_50_02
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_50_02/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_50_02/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_51_32
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_51_32/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_51_32/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_52_11
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_52_11/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_52_11/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_53_02
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_53_02/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_53_02/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_55_54
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_55_54/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_55_54/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_57_55
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_57_55/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_57_55/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_58_36
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_58_36/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-16_58_36/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_00_17
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_00_17/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_00_17/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_01_11
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_01_11/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_01_11/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_05_02
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_05_02/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_05_02/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_05_52
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_05_52/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_05_52/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_07_02
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_07_02/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_07_02/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_08_42
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_08_42/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_08_42/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_13_02
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_13_02/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_13_02/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_14_03
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_14_03/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_14_03/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_30_19
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_30_19/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_30_19/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_31_15
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_31_15/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_31_15/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_36_01
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_36_01/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_36_01/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_43_18
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_43_18/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_43_18/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_45_50
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_45_50/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_24-17_45_50/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_06_56
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_06_56/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_06_56/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_10_44
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_10_44/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_10_44/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_14_07
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_14_07/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_14_07/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_17_29
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_17_29/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_17_29/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_18_51
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_18_51/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_18_51/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_19_50
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_19_50/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_19_50/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_22_42
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_22_42/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_22_42/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_24_22
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_24_22/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_24_22/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_25_31
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_25_31/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_25_31/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_35_32
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_35_32/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_35_32/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_37_24
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_37_24/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_37_24/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_38_57
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_38_57/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_38_57/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_43_19
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_43_19/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_43_19/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_46_34
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_46_34/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_46_34/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_48_59
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_48_59/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_48_59/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_52_31
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_52_31/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_52_31/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_56_28
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_56_28/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_56_28/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_59_50
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_59_50/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-15_59_50/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_01_04
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_01_04/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_01_04/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_05_13
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_05_13/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_05_13/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_24_09
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_24_09/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_24_09/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_25_08
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_25_08/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_25_08/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_29_05
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_29_05/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_29_05/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_57_51
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_57_51/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-16_57_51/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checking episode folder: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-17_00_55
+Passed checks:
+  None
+Failed checks:
+  [FAIL] Missing file: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-17_00_55/timestamps.pt
+  [FAIL] Could not find leader directory with expected .pt files
+  [FAIL] Could not find follower directory with expected .pt files
+  [FAIL] Missing sensors directory: /home/irl-admin/new_data_collection/new_scarf_40hz/2026_03_25-17_00_55/sensors
+Episode result: FAILED with 4 issue(s).
+
+Checked 127 episode(s). Total issues found: 228.

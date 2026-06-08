@@ -1,0 +1,194 @@
+Episode: /home/irl-admin/new_data_collection/replay_demo_test/2026_04_25-13_10_21
+  timestamps.pt:
+    timestamps.pt: 2175
+  FrankaPanda:
+    ee_pos.pt: 2175
+    external_joint_torque.pt: 2175
+    external_wrench.pt: 2175
+    gripper_current.pt: 2175
+    gripper_state.pt: 2175
+    joint_pos.pt: 2175
+    joint_vel.pt: 2175
+  Traj:
+    gripper_state.pt: 2133
+    joint_pos.pt: 2133
+  expected robot-state length: 2175
+  sensors:
+    zed_left: 544 image(s)
+    zed_right: 544 image(s)
+    zed_wrist: 544 image(s)
+  result: FAIL
+    [FAIL] Traj/gripper_state.pt length 2133 != 2175
+    [FAIL] Traj/joint_pos.pt length 2133 != 2175
+
+Episode: /home/irl-admin/new_data_collection/replay_demo_test/2026_04_25-13_25_32
+  timestamps.pt:
+    timestamps.pt: 1586
+  FrankaPanda:
+    ee_pos.pt: 1586
+    external_joint_torque.pt: 1586
+    external_wrench.pt: 1586
+    gripper_current.pt: 1586
+    gripper_state.pt: 1586
+    joint_pos.pt: 1586
+    joint_vel.pt: 1586
+  Traj:
+    gripper_state.pt: 2133
+    joint_pos.pt: 2133
+  expected robot-state length: 1586
+  sensors:
+    zed_left: 397 image(s)
+    zed_right: 397 image(s)
+    zed_wrist: 397 image(s)
+  result: FAIL
+    [FAIL] Traj/gripper_state.pt length 2133 != 1586
+    [FAIL] Traj/joint_pos.pt length 2133 != 1586
+
+Episode: /home/irl-admin/new_data_collection/replay_demo_test/2026_04_25-13_26_28
+  timestamps.pt:
+    timestamps.pt: 2096
+  FrankaPanda:
+    ee_pos.pt: 2096
+    external_joint_torque.pt: 2096
+    external_wrench.pt: 2096
+    gripper_current.pt: 2096
+    gripper_state.pt: 2096
+    joint_pos.pt: 2096
+    joint_vel.pt: 2096
+  Traj:
+    gripper_state.pt: 2133
+    joint_pos.pt: 2133
+  expected robot-state length: 2096
+  sensors:
+    zed_left: 524 image(s)
+    zed_right: 524 image(s)
+    zed_wrist: 524 image(s)
+  result: FAIL
+    [FAIL] Traj/gripper_state.pt length 2133 != 2096
+    [FAIL] Traj/joint_pos.pt length 2133 != 2096
+
+Episode: /home/irl-admin/new_data_collection/replay_demo_test/2026_04_25-13_28_38
+  timestamps.pt:
+    timestamps.pt: 506
+  FrankaPanda:
+    ee_pos.pt: 506
+    external_joint_torque.pt: 506
+    external_wrench.pt: 506
+    gripper_current.pt: 506
+    gripper_state.pt: 506
+    joint_pos.pt: 506
+    joint_vel.pt: 506
+  Traj:
+    gripper_state.pt: 2133
+    joint_pos.pt: 2133
+  expected robot-state length: 506
+  sensors:
+    zed_left: 127 image(s)
+    zed_right: 127 image(s)
+    zed_wrist: 127 image(s)
+  result: FAIL
+    [FAIL] Traj/gripper_state.pt length 2133 != 506
+    [FAIL] Traj/joint_pos.pt length 2133 != 506
+
+Episode: /home/irl-admin/new_data_collection/replay_demo_test/2026_04_25-13_29_03
+  timestamps.pt:
+    timestamps.pt: 2900
+  FrankaPanda:
+    ee_pos.pt: 2900
+    external_joint_torque.pt: 2900
+    external_wrench.pt: 2900
+    gripper_current.pt: 2900
+    gripper_state.pt: 2900
+    joint_pos.pt: 2900
+    joint_vel.pt: 2900
+  Traj:
+    gripper_state.pt: 2133
+    joint_pos.pt: 2133
+  expected robot-state length: 2900
+  sensors:
+    zed_left: 725 image(s)
+    zed_right: 725 image(s)
+    zed_wrist: 725 image(s)
+  result: FAIL
+    [FAIL] Traj/gripper_state.pt length 2133 != 2900
+    [FAIL] Traj/joint_pos.pt length 2133 != 2900
+
+Episode: /home/irl-admin/new_data_collection/replay_demo_test/2026_04_25-13_29_58
+  timestamps.pt:
+    timestamps.pt: 1612
+  FrankaPanda:
+    ee_pos.pt: 1612
+    external_joint_torque.pt: 1612
+    external_wrench.pt: 1612
+    gripper_current.pt: 1612
+    gripper_state.pt: 1612
+    joint_pos.pt: 1612
+    joint_vel.pt: 1612
+  Traj:
+    gripper_state.pt: 2133
+    joint_pos.pt: 2133
+  expected robot-state length: 1612
+  sensors:
+    zed_left: 404 image(s)
+    zed_right: 404 image(s)
+    zed_wrist: 404 image(s)
+  result: FAIL
+    [FAIL] Traj/gripper_state.pt length 2133 != 1612
+    [FAIL] Traj/joint_pos.pt length 2133 != 1612
+
+Episode: /home/irl-admin/new_data_collection/replay_demo_test/2026_04_25-13_35_23
+  timestamps.pt:
+    timestamps.pt: 1983
+  FrankaPanda:
+    ee_pos.pt: 1983
+    external_joint_torque.pt: 1983
+    external_wrench.pt: 1983
+    gripper_current.pt: 1983
+    gripper_state.pt: 1983
+    joint_pos.pt: 1983
+    joint_vel.pt: 1983
+  Traj:
+    gripper_state.pt: 1918
+    joint_pos.pt: 1918
+  expected robot-state length: 1983
+  sensors:
+    zed_left: 496 image(s)
+    zed_right: 496 image(s)
+    zed_wrist: 496 image(s)
+  result: FAIL
+    [FAIL] Traj/gripper_state.pt length 1918 != 1983
+    [FAIL] Traj/joint_pos.pt length 1918 != 1983
+
+Episode: /home/irl-admin/new_data_collection/replay_demo_test/2026_04_25-13_36_07
+  sensors:
+    zed_left: 955 image(s)
+    zed_right: 955 image(s)
+    zed_wrist: 955 image(s)
+  result: FAIL
+    [FAIL] missing timestamps.pt
+    [FAIL] could not determine robot-state length
+
+Episode: /home/irl-admin/new_data_collection/replay_demo_test/2026_04_25-13_38_31
+  timestamps.pt:
+    timestamps.pt: 1973
+  FrankaPanda:
+    ee_pos.pt: 1973
+    external_joint_torque.pt: 1973
+    external_wrench.pt: 1973
+    gripper_current.pt: 1973
+    gripper_state.pt: 1973
+    joint_pos.pt: 1973
+    joint_vel.pt: 1973
+  Traj:
+    gripper_state.pt: 1918
+    joint_pos.pt: 1918
+  expected robot-state length: 1973
+  sensors:
+    zed_left: 494 image(s)
+    zed_right: 494 image(s)
+    zed_wrist: 494 image(s)
+  result: FAIL
+    [FAIL] Traj/gripper_state.pt length 1918 != 1973
+    [FAIL] Traj/joint_pos.pt length 1918 != 1973
+
+Checked 9 episode(s). Failed episodes: 9.

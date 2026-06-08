@@ -1,0 +1,313 @@
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_17_53
+  target length from FrankaPanda/joint_pos.pt: 2073
+  Traj/joint_pos.pt: 2073 -> 2073 (unchanged)
+  Traj/gripper_state.pt: 2073 -> 2073 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_18_40
+  target length from FrankaPanda/joint_pos.pt: 1799
+  Traj/joint_pos.pt: 1799 -> 1799 (unchanged)
+  Traj/gripper_state.pt: 1799 -> 1799 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_22_23
+  target length from FrankaPanda/joint_pos.pt: 1719
+  Traj/joint_pos.pt: 1719 -> 1719 (unchanged)
+  Traj/gripper_state.pt: 1719 -> 1719 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_25_26
+  target length from FrankaPanda/joint_pos.pt: 1708
+  Traj/joint_pos.pt: 1708 -> 1708 (unchanged)
+  Traj/gripper_state.pt: 1708 -> 1708 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_28_57
+  target length from FrankaPanda/joint_pos.pt: 1985
+  Traj/joint_pos.pt: 1985 -> 1985 (unchanged)
+  Traj/gripper_state.pt: 1985 -> 1985 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_32_37
+  target length from FrankaPanda/joint_pos.pt: 1997
+  Traj/joint_pos.pt: 1997 -> 1997 (unchanged)
+  Traj/gripper_state.pt: 1997 -> 1997 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_33_17
+  target length from FrankaPanda/joint_pos.pt: 2058
+  Traj/joint_pos.pt: 2058 -> 2058 (unchanged)
+  Traj/gripper_state.pt: 2058 -> 2058 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_33_55
+  target length from FrankaPanda/joint_pos.pt: 1982
+  Traj/joint_pos.pt: 1982 -> 1982 (unchanged)
+  Traj/gripper_state.pt: 1982 -> 1982 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_39_28
+  target length from FrankaPanda/joint_pos.pt: 1800
+  Traj/joint_pos.pt: 1800 -> 1800 (unchanged)
+  Traj/gripper_state.pt: 1800 -> 1800 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_40_08
+  target length from FrankaPanda/joint_pos.pt: 1632
+  Traj/joint_pos.pt: 1632 -> 1632 (unchanged)
+  Traj/gripper_state.pt: 1632 -> 1632 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_41_25
+  target length from FrankaPanda/joint_pos.pt: 1940
+  Traj/joint_pos.pt: 1940 -> 1940 (unchanged)
+  Traj/gripper_state.pt: 1940 -> 1940 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_43_44
+  target length from FrankaPanda/joint_pos.pt: 1780
+  Traj/joint_pos.pt: 1780 -> 1780 (unchanged)
+  Traj/gripper_state.pt: 1780 -> 1780 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_53_07
+  target length from FrankaPanda/joint_pos.pt: 2221
+  Traj/joint_pos.pt: 2221 -> 2221 (unchanged)
+  Traj/gripper_state.pt: 2221 -> 2221 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_54_47
+  target length from FrankaPanda/joint_pos.pt: 2207
+  Traj/joint_pos.pt: 2207 -> 2207 (unchanged)
+  Traj/gripper_state.pt: 2207 -> 2207 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-14_59_03
+  target length from FrankaPanda/joint_pos.pt: 2020
+  Traj/joint_pos.pt: 2020 -> 2020 (unchanged)
+  Traj/gripper_state.pt: 2020 -> 2020 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_01_36
+  target length from FrankaPanda/joint_pos.pt: 1955
+  Traj/joint_pos.pt: 1955 -> 1955 (unchanged)
+  Traj/gripper_state.pt: 1955 -> 1955 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_02_24
+  target length from FrankaPanda/joint_pos.pt: 2335
+  Traj/joint_pos.pt: 2335 -> 2335 (unchanged)
+  Traj/gripper_state.pt: 2335 -> 2335 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_03_16
+  target length from FrankaPanda/joint_pos.pt: 2023
+  Traj/joint_pos.pt: 2023 -> 2023 (unchanged)
+  Traj/gripper_state.pt: 2023 -> 2023 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_08_16
+  target length from FrankaPanda/joint_pos.pt: 1974
+  Traj/joint_pos.pt: 1974 -> 1974 (unchanged)
+  Traj/gripper_state.pt: 1974 -> 1974 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_09_39
+  target length from FrankaPanda/joint_pos.pt: 2239
+  Traj/joint_pos.pt: 2239 -> 2239 (unchanged)
+  Traj/gripper_state.pt: 2239 -> 2239 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_10_39
+  target length from FrankaPanda/joint_pos.pt: 2239
+  Traj/joint_pos.pt: 2239 -> 2239 (unchanged)
+  Traj/gripper_state.pt: 2239 -> 2239 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_16_45
+  target length from FrankaPanda/joint_pos.pt: 1963
+  Traj/joint_pos.pt: 1963 -> 1963 (unchanged)
+  Traj/gripper_state.pt: 1963 -> 1963 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_18_17
+  target length from FrankaPanda/joint_pos.pt: 1903
+  Traj/joint_pos.pt: 1903 -> 1903 (unchanged)
+  Traj/gripper_state.pt: 1903 -> 1903 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_18_55
+  target length from FrankaPanda/joint_pos.pt: 2024
+  Traj/joint_pos.pt: 2024 -> 2024 (unchanged)
+  Traj/gripper_state.pt: 2024 -> 2024 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_21_46
+  target length from FrankaPanda/joint_pos.pt: 1860
+  Traj/joint_pos.pt: 1860 -> 1860 (unchanged)
+  Traj/gripper_state.pt: 1860 -> 1860 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_26_26
+  target length from FrankaPanda/joint_pos.pt: 1991
+  Traj/joint_pos.pt: 1991 -> 1991 (unchanged)
+  Traj/gripper_state.pt: 1991 -> 1991 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_26_59
+  target length from FrankaPanda/joint_pos.pt: 1951
+  Traj/joint_pos.pt: 1951 -> 1951 (unchanged)
+  Traj/gripper_state.pt: 1951 -> 1951 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_31_12
+  target length from FrankaPanda/joint_pos.pt: 1891
+  Traj/joint_pos.pt: 1891 -> 1891 (unchanged)
+  Traj/gripper_state.pt: 1891 -> 1891 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_37_17
+  target length from FrankaPanda/joint_pos.pt: 2270
+  Traj/joint_pos.pt: 2270 -> 2270 (unchanged)
+  Traj/gripper_state.pt: 2270 -> 2270 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_47_33
+  target length from FrankaPanda/joint_pos.pt: 2027
+  Traj/joint_pos.pt: 2027 -> 2027 (unchanged)
+  Traj/gripper_state.pt: 2027 -> 2027 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_48_06
+  target length from FrankaPanda/joint_pos.pt: 2078
+  Traj/joint_pos.pt: 2078 -> 2078 (unchanged)
+  Traj/gripper_state.pt: 2078 -> 2078 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_48_38
+  target length from FrankaPanda/joint_pos.pt: 1987
+  Traj/joint_pos.pt: 1987 -> 1987 (unchanged)
+  Traj/gripper_state.pt: 1987 -> 1987 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_49_49
+  target length from FrankaPanda/joint_pos.pt: 1904
+  Traj/joint_pos.pt: 1904 -> 1904 (unchanged)
+  Traj/gripper_state.pt: 1904 -> 1904 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-15_59_45
+  target length from FrankaPanda/joint_pos.pt: 1861
+  Traj/joint_pos.pt: 1861 -> 1861 (unchanged)
+  Traj/gripper_state.pt: 1861 -> 1861 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_01_40
+  target length from FrankaPanda/joint_pos.pt: 2107
+  Traj/joint_pos.pt: 2107 -> 2107 (unchanged)
+  Traj/gripper_state.pt: 2107 -> 2107 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_03_01
+  target length from FrankaPanda/joint_pos.pt: 1902
+  Traj/joint_pos.pt: 1902 -> 1902 (unchanged)
+  Traj/gripper_state.pt: 1902 -> 1902 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_04_42
+  target length from FrankaPanda/joint_pos.pt: 1764
+  Traj/joint_pos.pt: 1764 -> 1764 (unchanged)
+  Traj/gripper_state.pt: 1764 -> 1764 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_20_00
+  target length from FrankaPanda/joint_pos.pt: 1998
+  Traj/joint_pos.pt: 1998 -> 1998 (unchanged)
+  Traj/gripper_state.pt: 1998 -> 1998 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_20_43
+  target length from FrankaPanda/joint_pos.pt: 2423
+  Traj/joint_pos.pt: 2423 -> 2423 (unchanged)
+  Traj/gripper_state.pt: 2423 -> 2423 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_21_23
+  target length from FrankaPanda/joint_pos.pt: 2562
+  Traj/joint_pos.pt: 2562 -> 2562 (unchanged)
+  Traj/gripper_state.pt: 2562 -> 2562 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_28_23
+  target length from FrankaPanda/joint_pos.pt: 2060
+  Traj/joint_pos.pt: 2060 -> 2060 (unchanged)
+  Traj/gripper_state.pt: 2060 -> 2060 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_45_02
+  target length from FrankaPanda/joint_pos.pt: 2108
+  Traj/joint_pos.pt: 2108 -> 2108 (unchanged)
+  Traj/gripper_state.pt: 2108 -> 2108 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_47_33
+  target length from FrankaPanda/joint_pos.pt: 2133
+  Traj/joint_pos.pt: 2133 -> 2133 (unchanged)
+  Traj/gripper_state.pt: 2133 -> 2133 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_55_51
+  target length from FrankaPanda/joint_pos.pt: 2102
+  Traj/joint_pos.pt: 2102 -> 2102 (unchanged)
+  Traj/gripper_state.pt: 2102 -> 2102 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-16_57_24
+  target length from FrankaPanda/joint_pos.pt: 2093
+  Traj/joint_pos.pt: 2093 -> 2093 (unchanged)
+  Traj/gripper_state.pt: 2093 -> 2093 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-17_09_12
+  target length from FrankaPanda/joint_pos.pt: 1867
+  Traj/joint_pos.pt: 1867 -> 1867 (unchanged)
+  Traj/gripper_state.pt: 1867 -> 1867 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-17_14_56
+  target length from FrankaPanda/joint_pos.pt: 1904
+  Traj/joint_pos.pt: 1904 -> 1904 (unchanged)
+  Traj/gripper_state.pt: 1904 -> 1904 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-17_17_22
+  target length from FrankaPanda/joint_pos.pt: 1969
+  Traj/joint_pos.pt: 1969 -> 1969 (unchanged)
+  Traj/gripper_state.pt: 1969 -> 1969 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-17_24_04
+  target length from FrankaPanda/joint_pos.pt: 1959
+  Traj/joint_pos.pt: 1959 -> 1959 (unchanged)
+  Traj/gripper_state.pt: 1959 -> 1959 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-17_24_47
+  target length from FrankaPanda/joint_pos.pt: 2014
+  Traj/joint_pos.pt: 2014 -> 2014 (unchanged)
+  Traj/gripper_state.pt: 2014 -> 2014 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-17_25_19
+  target length from FrankaPanda/joint_pos.pt: 1907
+  Traj/joint_pos.pt: 1907 -> 1907 (unchanged)
+  Traj/gripper_state.pt: 1907 -> 1907 (unchanged)
+  result: OK, already matched
+
+Episode: /home/irl-admin/new_data_collection/socket_25_100hz/2026_04_25-17_48_55
+  target length from FrankaPanda/joint_pos.pt: 2108
+  Traj/joint_pos.pt: 2108 -> 2108 (unchanged)
+  Traj/gripper_state.pt: 2108 -> 2108 (unchanged)
+  result: OK, already matched
+
+Mode: DRY RUN. Checked 52 episode(s). Changed/needs change: 0. Failed: 0.

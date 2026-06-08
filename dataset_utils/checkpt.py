@@ -1,6 +1,6 @@
 import torch
 torch.set_printoptions(threshold=torch.inf,sci_mode=False)
-pt = torch.load("/home/irl-admin/new_data_collection/new_scarf_100hz_cam_25hz/2026_03_27-19_24_42/FrankaPanda/joint_pos.pt")
+pt = torch.load("/home/irl-admin/new_data_collection/human_demo_test/2026_04_25-12_12_31/FrankaPanda/gripper_current.pt")
 # print(pt)
-with open("qs.txt","w") as f:
+with open("current.txt","w") as f:
     f.write(str(pt))

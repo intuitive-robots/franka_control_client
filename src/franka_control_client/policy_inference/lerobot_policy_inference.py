@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -84,7 +86,10 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         self.policy, self.preprocessor, self.postprocessor = self._load_policy_stack()
 
         self._expected_image_shapes = self._get_expected_image_shapes()
-        self._expected_state_dim = self._get_expected_state_dim()
+        self._expected_state_dim = self._get_expected_feature_dim("observation.state")
+        self._expected_force_torque_dim = self._get_expected_feature_dim(
+            "observation.force_torque"
+        )
 
         # Auto-hook control start/stop to inference events.
         self.register_start_infering_event(self.control_pair.start_control_pair)
@@ -102,6 +107,49 @@ class LeRobotPolicyInference(PolicyInferenceManager):
             cli_args.append(f"--dataset.root={self.cfg.dataset_path}")
         if self.cfg.policy_dtype:
             cli_args.append(f"--policy.dtype={self.cfg.policy_dtype}")
+
+        checkpoint_path = Path(self.cfg.checkpoint_path)
+        train_config_path = checkpoint_path / "train_config.json"
+        if train_config_path.exists():
+            with train_config_path.open("r") as f:
+                train_config = json.load(f)
+            config_changed = False
+            dataset_cfg = train_config.get("dataset")
+            if isinstance(dataset_cfg, dict) and "return_uint8" in dataset_cfg:
+                dataset_cfg.pop("return_uint8", None)
+                config_changed = True
+
+            policy_cfg = train_config.get("policy")
+            if isinstance(policy_cfg, dict) and policy_cfg.get("type") == "beso":
+                from lerobot.policies.beso.configuration_beso import BESOConfig
+
+                active_beso_fields = set(BESOConfig.__dataclass_fields__.keys())
+                if (
+                    policy_cfg.get("vision_backbone") == "dinov3"
+                    and "jepa_checkpoint_path" not in active_beso_fields
+                ):
+                    raise RuntimeError(
+                        "This checkpoint requires a DinoV3/JEPA-enabled BESO "
+                        "implementation, but the active LeRobot BESOConfig only "
+                        "supports the ResNet BESO variant. Use the LeRobot "
+                        "checkout/environment that trained this checkpoint, or "
+                        "switch checkpoint_path to a model compatible with the "
+                        "active LeRobot version."
+                    )
+
+            if config_changed:
+                with tempfile.TemporaryDirectory() as tmp_dir:
+                    compatible_config_path = Path(tmp_dir) / "train_config.json"
+                    with compatible_config_path.open("w") as f:
+                        json.dump(train_config, f, indent=4)
+                    pyzlc.info(
+                        "Loaded train_config through a temporary compatibility "
+                        "copy for the active LeRobot version."
+                    )
+                    return TrainPipelineConfig.from_pretrained(
+                        pretrained_name_or_path=compatible_config_path,
+                        cli_args=cli_args,
+                    )
 
         train_cfg = TrainPipelineConfig.from_pretrained(
             pretrained_name_or_path=self.cfg.checkpoint_path,
@@ -198,12 +246,12 @@ class LeRobotPolicyInference(PolicyInferenceManager):
                     shapes[key] = (shape[0], shape[1], shape[2])
         return shapes
 
-    def _get_expected_state_dim(self) -> Optional[int]:
-        """Get expected state dimension from policy config."""
+    def _get_expected_feature_dim(self, feature_key: str) -> Optional[int]:
+        """Get expected vector dimension from policy config."""
         input_feats = getattr(self.train_cfg.policy, "input_features", None)
-        if isinstance(input_feats, dict) and "observation.state" in input_feats:
+        if isinstance(input_feats, dict) and feature_key in input_feats:
             try:
-                shape = input_feats["observation.state"].shape
+                shape = input_feats[feature_key].shape
                 if len(shape) >= 1:
                     return int(shape[-1])
             except Exception:
@@ -232,7 +280,9 @@ class LeRobotPolicyInference(PolicyInferenceManager):
 
     def _build_observation(self) -> Dict[str, Any]:
         """Build observation dict from hardware data."""
-        state_vec = self._build_state_vector()
+        arm_state = self.arm_wrapper.capture_step()
+        grip_state = self.gripper_wrapper.capture_step()
+        state_vec = self._build_state_vector(arm_state, grip_state)
         images = self._build_images()
         
         state = np.asarray(state_vec, dtype=np.float32)
@@ -249,6 +299,18 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         observation: Dict[str, Any] = {
             "observation.state": torch.from_numpy(state),
         }
+
+        force_torque = self._build_force_torque_vector(arm_state, grip_state)
+        if force_torque is not None:
+            observation["observation.force_torque"] = (
+                torch.from_numpy(force_torque).unsqueeze(0)
+            )
+        elif self._expected_force_torque_dim is not None:
+            raise ValueError(
+                "Policy expects observation.force_torque, but the current "
+                "arm/gripper state is missing one of: tau_ext_hat_filtered, "
+                "O_F_ext_hat_K, gripper current."
+            )
 
         if not isinstance(images, dict):
             raise ValueError("'images' must be a dict keyed by camera name.")
@@ -290,8 +352,7 @@ class LeRobotPolicyInference(PolicyInferenceManager):
 
         return observation
 
-    def _build_state_vector(self) -> np.ndarray:
-        arm_state = self.arm_wrapper.capture_step()
+    def _build_state_vector(self, arm_state: Any, grip_state: Any) -> np.ndarray:
         q = None
         if isinstance(arm_state, dict):
             if "q" in arm_state:
@@ -301,7 +362,6 @@ class LeRobotPolicyInference(PolicyInferenceManager):
         if q is None or q.size != 7:
             raise ValueError("Arm state missing valid joint positions.")
 
-        grip_state = self.gripper_wrapper.capture_step()
         gripper_val = None
         if isinstance(grip_state, dict):
             if "width" in grip_state:
@@ -316,6 +376,33 @@ class LeRobotPolicyInference(PolicyInferenceManager):
             raise ValueError("Gripper state missing value.")
 
         return np.concatenate([q, np.asarray([gripper_val], dtype=np.float32)])
+
+    def _build_force_torque_vector(
+        self, arm_state: Any, grip_state: Any
+    ) -> Optional[np.ndarray]:
+        if self._expected_force_torque_dim is None:
+            return None
+        if not isinstance(arm_state, dict) or not isinstance(grip_state, dict):
+            return None
+
+        joint_torque = arm_state.get("tau_ext_hat_filtered")
+        external_wrench = arm_state.get("O_F_ext_hat_K")
+        gripper_current = grip_state.get("current")
+        if joint_torque is None or external_wrench is None or gripper_current is None:
+            return None
+
+        tau = np.asarray(joint_torque, dtype=np.float32).reshape(-1)
+        wrench = np.asarray(external_wrench, dtype=np.float32).reshape(-1)
+        current = np.asarray([gripper_current], dtype=np.float32).reshape(-1)
+        force_torque = np.concatenate([tau, wrench, current]).astype(
+            np.float32, copy=False
+        )
+        if force_torque.size != self._expected_force_torque_dim:
+            raise ValueError(
+                "Invalid force_torque dimension: "
+                f"expected {self._expected_force_torque_dim}, got {force_torque.size}."
+            )
+        return force_torque
 
     def _build_images(self) -> Dict[str, Any]:
         images: Dict[str, Any] = {}
@@ -428,16 +515,15 @@ class LeRobotPolicyInference(PolicyInferenceManager):
                 f"Expected action_chunk to have shape (B, T, D) or (B, D), got {tuple(action_chunk.shape)}"
             )
 
-        batch_size, chunk_size, action_dim = action_chunk.shape
-        action_dim_expected = 8  # 7 joints + 1 gripper
-        post_action_chunk = torch.zeros((batch_size, chunk_size, action_dim_expected), dtype=torch.float32)
+        batch_size, chunk_size, _ = action_chunk.shape
+        processed_actions = []
         for chunk_idx in range(chunk_size):
             single_action = action_chunk[:, chunk_idx, :]
-            single_action = single_action[:, :8]
             processed_action = self.postprocessor(single_action)
             # pyzlc.info(f"Processed action chunk {chunk_idx}: {processed_action.float().cpu().numpy()}")
-            post_action_chunk[:, chunk_idx, :] = processed_action
+            processed_actions.append(processed_action.float())
 
+        post_action_chunk = torch.stack(processed_actions, dim=1)
         post_action_chunk = post_action_chunk.float().cpu().numpy()
         # for idx in range(len(post_action_chunk)):
         #     pyzlc.info(f"Postprocessed action chunk for batch {idx}: {post_action_chunk[idx]}")

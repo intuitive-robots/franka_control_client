@@ -101,8 +101,8 @@ class CartesianPolicyPandaControlPair(ControlPair):
     def update_action(self, action: np.ndarray) -> None:
         """Update the latest action used by the control loop."""
         arr = np.asarray(action, dtype=np.float64).reshape(-1)
-        if arr.size < 8:
-            raise ValueError(f"Expected action size >= 8, got {arr.size}")
+        if arr.size < 7:
+            raise ValueError(f"Expected action size >= 7, got {arr.size}")
         with self._action_lock:
             self._latest_action = arr
 
@@ -119,9 +119,9 @@ class CartesianPolicyPandaControlPair(ControlPair):
                 f"Expected action chunk shape (B, T, D), (T, D), or (D,), got {chunk.shape}"
             )
 
-        if chunk.shape[-1] < 8:
+        if chunk.shape[-1] < 7:
             raise ValueError(
-                f"Expected action size >= 8, got {chunk.shape[-1]}"
+                f"Expected action size >= 7, got {chunk.shape[-1]}"
             )
         if chunk.shape[0] < 1 or chunk.shape[1] < 1:
             raise ValueError(
@@ -319,6 +319,9 @@ class CartesianPolicyPandaControlPair(ControlPair):
         cartesian_pos = np.asarray(action[:7], dtype=np.float32)
         # print(f"Received action: cartesian_pos={cartesian_pos}, gripper_cmd={action[7]:.3f}")
         cartesian_pos = self._send_waypoint_command(cartesian_pos)
+
+        if action.size < 8:
+            return
 
         # Gripper command
         gripper_cmd = float(action[-1])

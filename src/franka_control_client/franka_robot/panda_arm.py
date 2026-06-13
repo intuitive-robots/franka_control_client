@@ -235,7 +235,7 @@ class RemotePandaArm(RemoteDevice):
 
         Args:
             pos (tuple of 3 floats): translation (x, y, z).
-            rot (tuple of 3 floats): orientation (euler angles).
+            rot (tuple of 4 floats): orientation quaternion (x, y, z, w).
         Raises:
             CommandError: If packing or command execution fails.
         """

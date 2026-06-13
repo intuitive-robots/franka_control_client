@@ -14,9 +14,8 @@ from franka_control_client.policy_inference.irl_wrapper import (
     PandaArmDataWrapper,
     RobotiqGripperDataWrapper,
 )
-from franka_control_client.policy_inference.lerobot_policy_inference import (
-    LeRobotPolicyInference,
-    LeRobotPolicyInferenceConfig,
+from franka_control_client.policy_inference.remote_policy_inference import (
+    RemotePolicyInference,
 )
 from franka_control_client.robotiq_gripper.robotiq_gripper import (
     RemoteRobotiqGripper,
@@ -24,6 +23,9 @@ from franka_control_client.robotiq_gripper.robotiq_gripper import (
 
 
 if __name__ == "__main__":
+    POLICY_FPS = 4
+    CONTROL_HZ = 4
+
     pyzlc.init(
         "policy_inference",
         "192.168.1.1",
@@ -31,48 +33,53 @@ if __name__ == "__main__":
         group_port=7730,
     )
 
-    # Checkpoint path from eval_config.yaml
-    checkpoint_path = "/home/irl-admin/jakub/models/beso_dinov3_roboarena224_ee_fork/checkpoints/002100/pretrained_model"
-    task = "" #"Pick up the bell pepper and place it in the bowl."
-    dataset_path = "/home/irl-admin/jakub/dataset/pick_up_spoon"
-    
-    follower = PandaRobotiq(
-        "PandaRobotiq",
-        RemotePandaArm("FrankaPanda"),
-        RemoteRobotiqGripper("FrankaPanda"),
-    )
-    control_pair = CartesianPolicyPandaControlPair(
-        follower.panda_arm, follower.robotiq_gripper, 50
-    )
-
-    # Camera capture interval matches inference frequency (30 Hz = 0.033s)
-    camera_left = ImageDataWrapper(
-        CameraDevice("zed_left", preview=False), capture_interval=0.033, hw_name="zed_left"
-    )
-    camera_wrist = ImageDataWrapper(
-        CameraDevice("zed_wrist", preview=False), capture_interval=0.033, hw_name="zed_wrist"
-    )
-
-    data_collectors: List[IRL_HardwareDataWrapper] = []
-    data_collectors.append(camera_left)
-    data_collectors.append(camera_wrist)
-    data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
-    data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
-
-    inference_cfg = LeRobotPolicyInferenceConfig(
-        checkpoint_path=checkpoint_path,
-        task=task,
-        fps=4,
-        device="cuda",
-        dataset_path=dataset_path,
-    )
-    inference_manager = LeRobotPolicyInference(
-        data_collectors=data_collectors,
-        control_pair=control_pair,
-        cfg=inference_cfg,
-    )
-    
     try:
+        task = "" #"Pick up the bell pepper and place it in the bowl."
+        policy_server_host = "127.0.0.1"
+        policy_server_port = 8765
+
+        follower = PandaRobotiq(
+            "PandaRobotiq",
+            RemotePandaArm("FrankaPanda"),
+            RemoteRobotiqGripper("FrankaPanda"),
+        )
+        control_pair = CartesianPolicyPandaControlPair(
+            follower.panda_arm,
+            follower.robotiq_gripper,
+            CONTROL_HZ,
+            action_rotation_mode="euler",
+            action_pose_mode="delta",
+            action_gripper_mode="absolute",
+        )
+
+        camera_left = ImageDataWrapper(
+            CameraDevice("zed_left", preview=False, final_size=(256, 256)),
+            capture_interval=1.0 / POLICY_FPS,
+            hw_name="zed_left",
+        )
+        camera_wrist = ImageDataWrapper(
+            CameraDevice("zed_wrist", preview=False, final_size=(256, 256)),
+            capture_interval=1.0 / POLICY_FPS,
+            hw_name="zed_wrist",
+        )
+
+        data_collectors: List[IRL_HardwareDataWrapper] = []
+        data_collectors.append(camera_left)
+        data_collectors.append(camera_wrist)
+        data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
+        data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
+
+        inference_manager = RemotePolicyInference(
+            data_collectors=data_collectors,
+            control_pair=control_pair,
+            task=task,
+            fps=POLICY_FPS,
+            server_host=policy_server_host,
+            server_port=policy_server_port,
+            state_mode="ee_euler_gripper",
+            expected_image_shape=(256, 256, 3),
+        )
+
         inference_manager.run()
     finally:
         pyzlc.shutdown()

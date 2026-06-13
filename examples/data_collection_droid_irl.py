@@ -64,12 +64,12 @@ if __name__ == "__main__":
     data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
     data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
     # name = time.strftim  e("%Y%m%d_%H%M%S", time.localtime())
-    task = "pick_up_knife" #battery_100hz" #insert_blue_bird_100hz_cam_25hz
+    task = "test" #battery_100hz" #insert_blue_bird_100hz_cam_25hz
     data_collection_manager = IRLDataCollection(
         data_collectors, 
         f"/home/irl-admin/new_data_collection/{task}", 
         task, 
-        fps=4,
+        fps=20,
         control_pair=control_pair
     )
     control_pair.control_reset()

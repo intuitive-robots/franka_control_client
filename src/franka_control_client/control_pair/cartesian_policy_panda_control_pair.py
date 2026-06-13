@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import pyzlc
 from collections import deque
+from scipy.spatial.transform import Rotation as R
 
 from .control_pair import ControlPair
 from ..franka_robot.panda_arm import ControlMode, RemotePandaArm
@@ -34,7 +35,12 @@ class CartesianPolicyPandaControlPair(ControlPair):
     """
     Apply policy actions to a Panda arm with a gripper.
 
-    Action semantics: [x, y, z, qx, qy, qz, qw, gripper] (cartesian pose + gripper).
+    Action semantics are selected by action_rotation_mode:
+    - "quat": [x, y, z, qx, qy, qz, qw, gripper]
+    - "euler": [x, y, z, roll, pitch, yaw, gripper]
+
+    action_pose_mode selects whether the pose values are absolute targets or
+    deltas from the current end-effector pose.
     Gripper value is normalized in [0, 1]. It is scaled to device range.
     Includes velocity and acceleration limiting for safety.
     """
@@ -44,11 +50,21 @@ class CartesianPolicyPandaControlPair(ControlPair):
         panda_arm: RemotePandaArm,
         gripper: Union[RemotePandaGripper, RemoteRobotiqGripper],
         control_hz: float = DEFAULT_CONTROL_HZ,
+        action_rotation_mode: str = "quat",
+        action_pose_mode: str = "absolute",
+        action_gripper_mode: str = "absolute",
     ) -> None:
         super().__init__()
         self.panda_arm = panda_arm
         self.gripper = gripper
         self.control_hz = float(control_hz)
+        self.action_rotation_mode = self._normalize_action_rotation_mode(
+            action_rotation_mode
+        )
+        self.action_pose_mode = self._normalize_action_pose_mode(action_pose_mode)
+        self.action_gripper_mode = self._normalize_action_gripper_mode(
+            action_gripper_mode
+        )
         self._action_lock = (
             threading.Lock()
         )  # only one of the update_action and control_step visit latest_action at the same time
@@ -61,6 +77,8 @@ class CartesianPolicyPandaControlPair(ControlPair):
         self._last_gripper_binary: Optional[int] = None
         self._gripper_toggle_window_start_ts: float = time.time()
         self._gripper_toggle_count: int = 0
+        self._active_delta_target_pose: Optional[np.ndarray] = None
+        self._active_delta_gripper_cmd: Optional[float] = None
 
         # Velocity limiting state
         self._last_cartesian_pos: Optional[np.ndarray] = None
@@ -96,6 +114,159 @@ class CartesianPolicyPandaControlPair(ControlPair):
             )
             return None
         return cartesian_pose
+
+    @staticmethod
+    def _normalize_cartesian_quat(cartesian_pose: np.ndarray) -> np.ndarray:
+        pose = np.asarray(cartesian_pose, dtype=np.float32).reshape(-1).copy()
+        if pose.size != 7:
+            raise ValueError(f"Expected cartesian pose size 7, got {pose.size}")
+        quat_norm = float(np.linalg.norm(pose[3:7]))
+        if quat_norm < 1e-8:
+            raise ValueError("Cannot normalize zero-length cartesian quaternion.")
+        pose[3:7] = pose[3:7] / quat_norm
+        return pose
+
+    @staticmethod
+    def _normalize_action_rotation_mode(action_rotation_mode: str) -> str:
+        mode = action_rotation_mode.lower()
+        if mode in ("quat", "quaternion"):
+            return "quat"
+        if mode in ("euler", "ee_euler", "ee_euler_gripper"):
+            return "euler"
+        raise ValueError(
+            "action_rotation_mode must be 'quat'/'quaternion' or "
+            f"'euler'/'ee_euler_gripper', got {action_rotation_mode!r}"
+        )
+
+    @staticmethod
+    def _normalize_action_pose_mode(action_pose_mode: str) -> str:
+        mode = action_pose_mode.lower()
+        if mode in ("absolute", "abs"):
+            return "absolute"
+        if mode in ("delta", "relative"):
+            return "delta"
+        raise ValueError(
+            "action_pose_mode must be 'absolute'/'abs' or 'delta'/'relative', "
+            f"got {action_pose_mode!r}"
+        )
+
+    @staticmethod
+    def _normalize_action_gripper_mode(action_gripper_mode: str) -> str:
+        mode = action_gripper_mode.lower()
+        if mode in ("absolute", "abs", "binary"):
+            return "absolute"
+        if mode in ("delta", "relative"):
+            return "delta"
+        raise ValueError(
+            "action_gripper_mode must be 'absolute'/'abs' or 'delta'/'relative', "
+            f"got {action_gripper_mode!r}"
+        )
+
+    def _action_to_cartesian_pose(self, action: np.ndarray) -> np.ndarray:
+        action = np.asarray(action, dtype=np.float32).reshape(-1)
+        if self.action_rotation_mode == "quat":
+            if action.size < 7:
+                raise ValueError(
+                    f"Expected quaternion action size >= 7, got {action.size}"
+                )
+            return action[:7].copy()
+
+        if action.size < 6:
+            raise ValueError(f"Expected euler action size >= 6, got {action.size}")
+        pos = action[:3]
+        euler = action[3:6]
+        quat = R.from_euler("xyz", euler).as_quat().astype(np.float32)
+        return np.concatenate([pos, quat]).astype(np.float32, copy=False)
+
+    def _delta_action_to_cartesian_pose(self, action: np.ndarray) -> np.ndarray:
+        action = np.asarray(action, dtype=np.float32).reshape(-1)
+        if action.size < 6:
+            raise ValueError(f"Expected delta action size >= 6, got {action.size}")
+
+        base_pose = self._active_delta_target_pose
+        if base_pose is None:
+            base_pose = self._last_cartesian_pos
+        if base_pose is None:
+            base_pose = self._get_current_cartesian_pose()
+        if base_pose is None:
+            raise ValueError("Current cartesian pose unavailable for delta action.")
+        base_pose = self._normalize_cartesian_quat(base_pose)
+
+        delta_pos = action[:3]
+        delta_rot = action[3:6]
+        target_pos = base_pose[:3] + delta_pos
+
+        if self.action_rotation_mode == "euler":
+            current_euler = R.from_quat(base_pose[3:7]).as_euler("xyz")
+            target_quat = R.from_euler("xyz", current_euler + delta_rot).as_quat()
+        else:
+            target_quat = (
+                R.from_rotvec(delta_rot) * R.from_quat(base_pose[3:7])
+            ).as_quat()
+
+        return np.concatenate([target_pos, target_quat]).astype(np.float32, copy=False)
+
+    def _get_gripper_action(self, action: np.ndarray) -> Optional[float]:
+        min_size = 7 if self.action_rotation_mode == "euler" else 8
+        if action.size < min_size:
+            return None
+        return float(action[-1])
+
+    def _get_gripper_target(self, action_value: float) -> float:
+        if self.action_gripper_mode == "absolute":
+            return float(np.clip(action_value, 0.0, 1.0))
+
+        current = 0.0
+        if isinstance(self.gripper, RemoteRobotiqGripper):
+            state = self.gripper.current_state
+            if state is not None:
+                current = float(state.get("position", 0.0))
+            elif self._last_gripper_cmd is not None:
+                current = float(self._last_gripper_cmd)
+        else:
+            state = self.gripper.current_state
+            max_width = 0.0
+            if state is not None:
+                current = float(state.get("width", 0.0))
+                max_width = float(state.get("max_width", 0.0))
+            if max_width > 0.0:
+                current = current / max_width
+
+        return float(np.clip(current + action_value, 0.0, 1.0))
+
+    def _send_gripper_command(self, gripper_cmd: float) -> None:
+        gripper_cmd = float(np.clip(gripper_cmd, 0.0, 1.0))
+        if isinstance(self.gripper, RemoteRobotiqGripper):
+            if (
+                self._last_gripper_cmd is None
+                or abs(gripper_cmd - self._last_gripper_cmd) > GRIPPER_DEADBAND
+            ):
+                self.gripper.send_grasp_command(
+                    position=gripper_cmd,
+                    speed=GRIPPER_SPEED,
+                    force=GRIPPER_FORCE,
+                    blocking=False,
+                )
+                self._last_gripper_cmd = gripper_cmd
+            return
+
+        max_width = None
+        state = self.gripper.current_state
+        if state is not None:
+            max_width = float(state.get("max_width", 0.0))
+        if max_width is None or max_width <= 0.0:
+            width = gripper_cmd
+        else:
+            width = gripper_cmd * max_width
+        self.gripper.send_gripper_command(width=width, speed=0.1)
+
+    def _get_latest_action_once(self) -> Optional[np.ndarray]:
+        with self._action_lock:
+            if self._latest_action is None:
+                return None
+            action = self._latest_action.copy()
+            self._latest_action = None
+            return action
 
     # using by policy side to update the latest action, and control loop will read the latest action and execute it
     def update_action(self, action: np.ndarray) -> None:
@@ -169,6 +340,8 @@ class CartesianPolicyPandaControlPair(ControlPair):
         self._gripper_toggle_count = 0
         self._gripper_toggle_window_start_ts = time.time()
         self._last_cartesian_pos = self._get_current_cartesian_pose()
+        self._active_delta_target_pose = None
+        self._active_delta_gripper_cmd = None
         pyzlc.info("Action state reset for new episode")
 
     def _generate_waypoints_within_limits(
@@ -240,6 +413,7 @@ class CartesianPolicyPandaControlPair(ControlPair):
             raise ValueError(
                 f"Expected 7 cartesian targets, got {cartesian_waypoints.size}"
             )
+        cartesian_waypoints = self._normalize_cartesian_quat(cartesian_waypoints)
 
         if self._last_cartesian_pos is None:
             current_cartesian_pos = self._get_current_cartesian_pose()
@@ -271,6 +445,7 @@ class CartesianPolicyPandaControlPair(ControlPair):
             if len(waypoints) > 0
             else cartesian_waypoints.copy()
         )
+        cartesian_cmd = self._normalize_cartesian_quat(cartesian_cmd)
         self.panda_arm.send_cartesian_pose_command(
             cartesian_cmd[:3], cartesian_cmd[3:7]
         )
@@ -309,6 +484,10 @@ class CartesianPolicyPandaControlPair(ControlPair):
             self.gripper.send_gripper_command(width=0.0, speed=0.1)
 
     def control_step(self) -> None:
+        if self.action_pose_mode == "delta":
+            self._control_step_delta()
+            return
+
         # start_time = time.perf_counter()
         # action = self._get_latest_action()
         action = self._get_latest_action_from_chunk()
@@ -316,42 +495,49 @@ class CartesianPolicyPandaControlPair(ControlPair):
             pyzlc.sleep(1.0 / self.control_hz)
             return
 
-        cartesian_pos = np.asarray(action[:7], dtype=np.float32)
-        # print(f"Received action: cartesian_pos={cartesian_pos}, gripper_cmd={action[7]:.3f}")
+        cartesian_pos = self._action_to_cartesian_pose(action)
+        # print(f"Received action: cartesian_pos={cartesian_pos}, gripper_cmd={action[-1]:.3f}")
         cartesian_pos = self._send_waypoint_command(cartesian_pos)
 
-        if action.size < 8:
+        gripper_action = self._get_gripper_action(action)
+        if gripper_action is None:
             return
 
         # Gripper command
-        gripper_cmd = float(action[-1])
-        gripper_cmd = 1 if gripper_cmd >= 0.5 else 0
+        gripper_cmd = self._get_gripper_target(gripper_action)
         action[-1] = gripper_cmd
 
-        if isinstance(self.gripper, RemoteRobotiqGripper):
-            if (
-                self._last_gripper_cmd is None
-                or abs(gripper_cmd - self._last_gripper_cmd) > GRIPPER_DEADBAND
-            ):
-                self.gripper.send_grasp_command(
-                    position=gripper_cmd,
-                    speed=GRIPPER_SPEED,
-                    force=GRIPPER_FORCE,
-                    blocking=False,
-                )
-                self._last_gripper_cmd = gripper_cmd
-        else:
-            max_width = None
-            state = self.gripper.current_state
-            if state is not None:
-                max_width = float(state.get("max_width", 0.0))
-            if max_width is None or max_width <= 0.0:
-                width = gripper_cmd
-            else:
-                width = gripper_cmd * max_width
-            self.gripper.send_gripper_command(width=width, speed=0.1)
+        self._send_gripper_command(gripper_cmd)
         # End_time = time.perf_counter()
         # print(f"command took {End_time - start_time:.3f} seconds")
+
+    def _control_step_delta(self) -> None:
+        action = self._get_latest_action_once()
+        if action is not None:
+            self._active_delta_target_pose = self._delta_action_to_cartesian_pose(action)
+            gripper_action = self._get_gripper_action(action)
+            if gripper_action is not None:
+                self._active_delta_gripper_cmd = self._get_gripper_target(
+                    gripper_action
+                )
+            now = time.time()
+            if now - self._last_action_log_ts >= ACTION_LOG_INTERVAL_S:
+                pyzlc.info(
+                    "Cartesian delta action: "
+                    f"dpos=[{', '.join(f'{x:.4f}' for x in action[:3])}], "
+                    f"drot=[{', '.join(f'{x:.4f}' for x in action[3:6])}], "
+                    f"target_pos=[{', '.join(f'{x:.4f}' for x in self._active_delta_target_pose[:3])}], "
+                    f"gripper={self._active_delta_gripper_cmd}"
+                )
+                self._last_action_log_ts = now
+
+        if self._active_delta_target_pose is None:
+            pyzlc.sleep(1.0 / self.control_hz)
+            return
+
+        self._send_waypoint_command(self._active_delta_target_pose)
+        if self._active_delta_gripper_cmd is not None:
+            self._send_gripper_command(self._active_delta_gripper_cmd)
 
     def _log_action_debug(
         self, joint_pos: np.ndarray, gripper_cmd: float

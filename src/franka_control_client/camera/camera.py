@@ -33,10 +33,14 @@ class CameraDevice(RemoteDevice):
         assert (
             latest_msg is not None
         ), f"No image data received from camera device '{self._name}'."
-        self.size: Tuple[int, int] = (
-            latest_msg["height"],
-            latest_msg["width"],
-        )
+        if self.final_size is None:
+            self.size: Tuple[int, int] = (
+                latest_msg["height"],
+                latest_msg["width"],
+            )
+        else:
+            width, height = self.final_size
+            self.size = (height, width)
 
     def get_image(self) -> Optional[np.ndarray]:
         """Get the latest RGB image from the camera."""

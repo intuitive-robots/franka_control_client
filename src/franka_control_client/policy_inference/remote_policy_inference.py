@@ -38,7 +38,7 @@ class RemotePolicyInference(PolicyInferenceManager):
         fps: int = 4,
         server_host: str = "127.0.0.1",
         server_port: int = 8765,
-        request_timeout_s: float = 30.0,
+        request_timeout_s: Optional[float] = 30.0,
         state_mode: str = "ee_euler_gripper",
         include_force_torque: bool = True,
         expected_image_shape: Optional[tuple[int, int, int]] = None,
@@ -51,6 +51,7 @@ class RemotePolicyInference(PolicyInferenceManager):
         goal_pos_tol: float = 0.02,
         goal_rot_tol: float = 0.1,
         goal_gripper_tol: float = 0.1,
+        fresh_frame_timeout_s: float = 1.0,
     ) -> None:
         super().__init__(task=task, fps=fps)
         self.data_collectors = data_collectors
@@ -70,9 +71,16 @@ class RemotePolicyInference(PolicyInferenceManager):
         self.goal_pos_tol = goal_pos_tol
         self.goal_rot_tol = goal_rot_tol
         self.goal_gripper_tol = goal_gripper_tol
+        # Max time to wait for a camera frame newer than the one used in the
+        # previous step, so each observation reflects the latest scene state
+        # (i.e. the effect of the previous action) instead of a stale frame.
+        self.fresh_frame_timeout_s = fresh_frame_timeout_s
         self._goal_state: Optional[np.ndarray] = None
         self._last_state_vector: Optional[np.ndarray] = None
         self._last_action_log_ts = 0.0
+        # Timestamp of the camera frame used for each camera in the previous
+        # observation, keyed by hw_name. Used to wait for a newer frame.
+        self._last_frame_ts: Dict[str, float] = {}
 
         self.cameras: List[ImageDataWrapper] = []
         self.arm_wrapper: Optional[PandaArmDataWrapper] = None
@@ -183,6 +191,7 @@ class RemotePolicyInference(PolicyInferenceManager):
             )
 
         for cam in self.cameras:
+            self._wait_for_fresh_frame(cam)
             frame = cam.capture_step()
             if frame is None:
                 continue
@@ -194,11 +203,59 @@ class RemotePolicyInference(PolicyInferenceManager):
                     f"Expected {cam.hw_name} image shape "
                     f"{self.expected_image_shape}, got {tuple(frame.shape)}."
                 )
+            ts = cam.camera_device.last_timestamp
+            if ts is not None:
+                self._last_frame_ts[cam.hw_name] = ts
             observation[self._camera_observation_key(cam.hw_name)] = np.ascontiguousarray(
                 frame
             )
 
+        self._save_sent_images(observation)
+
         return observation
+
+    def _wait_for_fresh_frame(self, cam: ImageDataWrapper) -> None:
+        """Block until the camera has a frame newer than the one used in the
+        previous observation, so the new scene state (the effect of the last
+        action) is visible. Bounded by ``fresh_frame_timeout_s``; on timeout we
+        proceed with whatever frame is available and warn."""
+        prev_ts = self._last_frame_ts.get(cam.hw_name)
+        if prev_ts is None:
+            return
+        deadline = time.time() + self.fresh_frame_timeout_s
+        while True:
+            ts = cam.camera_device.peek_timestamp()
+            if ts is not None and ts > prev_ts:
+                return
+            if time.time() >= deadline:
+                pyzlc.warn(
+                    f"No new {cam.hw_name} frame within "
+                    f"{self.fresh_frame_timeout_s:.2f}s; using a possibly stale "
+                    "frame for this observation."
+                )
+                return
+            time.sleep(0.001)
+
+    def _save_sent_images(self, observation: Dict[str, Any]) -> None:
+        """Dump the camera frames from every observation we send to the server,
+        overwriting the previous frame each time (constant filename per camera).
+        The arrays are saved as-is with PIL (no color conversion), interpreting
+        the buffer directly as RGB. The files therefore show exactly the
+        bytes/channel order sent to the server: if the frames are actually BGR,
+        red and blue will appear swapped here.
+        """
+        from PIL import Image
+
+        out_dir = Path("sent_images")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for cam in self.cameras:
+            key = self._camera_observation_key(cam.hw_name)
+            frame = observation.get(key)
+            if frame is None:
+                continue
+            path = out_dir / f"{cam.hw_name}.png"
+            Image.fromarray(np.asarray(frame, dtype=np.uint8)).save(path)
+            pyzlc.info(f"Saved sent image for {cam.hw_name} to {path.resolve()}")
 
     def _extract_action(self, response: Dict[str, Any]) -> np.ndarray:
         action = np.asarray(response["action"], dtype=np.float32)
@@ -308,6 +365,7 @@ class RemotePolicyInference(PolicyInferenceManager):
         self.client.reset()
         self._load_goal()
         self.control_pair.reset_action()
+        self._last_frame_ts.clear()
         super()._start_infering()
 
     def _load_goal(self) -> None:

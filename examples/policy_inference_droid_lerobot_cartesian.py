@@ -23,8 +23,8 @@ from franka_control_client.robotiq_gripper.robotiq_gripper import (
 
 
 if __name__ == "__main__":
-    POLICY_FPS = 4
-    CONTROL_HZ = 4
+    POLICY_FPS = 50
+    CONTROL_HZ = 50
 
     pyzlc.init(
         "policy_inference",
@@ -43,17 +43,17 @@ if __name__ == "__main__":
             RemotePandaArm("FrankaPanda"),
             RemoteRobotiqGripper("FrankaPanda"),
         )
-        # Start/reset configuration: joint_pos of frame 44 from
-        # /home/irl-admin/new_data_collection/test/normal/FrankaPanda
+        # Start/reset configuration: joint_pos of frame 105 from
+        # /home/irl-admin/new_data_collection/test/2026_06_16-08_56_39/FrankaPanda
         # When 'r' (reset) is pressed the robot moves to this joint position.
         START_JOINT_POSITION = (
-            0.6750149061002512,
-            0.4222197860492414,
-            -0.03944874225685044,
-            -2.022621321649053,
-            0.12141276441349791,
-            2.50813035289513,
-            -1.0234377879344367,
+            0.5177174113466025,
+            0.3531982815893073,
+            0.10890358011644215,
+            -2.049610618091363,
+            -0.056924680449064076,
+            2.4857384326739114,
+            -0.8929762131281559,
         )
 
         control_pair = CartesianPolicyPandaControlPair(
@@ -71,12 +71,12 @@ if __name__ == "__main__":
         )
 
         camera_left = ImageDataWrapper(
-            CameraDevice("zed_left", preview=False, final_size=(256, 256)),
+            CameraDevice("zed_left", preview=True, final_size=(256, 256)),
             capture_interval=1.0 / POLICY_FPS,
             hw_name="zed_left",
         )
         camera_wrist = ImageDataWrapper(
-            CameraDevice("zed_wrist", preview=False, final_size=(256, 256)),
+            CameraDevice("zed_wrist", preview=True, final_size=(256, 256)),
             capture_interval=1.0 / POLICY_FPS,
             hw_name="zed_wrist",
         )
@@ -94,6 +94,10 @@ if __name__ == "__main__":
             fps=POLICY_FPS,
             server_host=policy_server_host,
             server_port=policy_server_port,
+            # None disables the request timeout: the client waits indefinitely
+            # for the server's response (the first inference can be slow to warm
+            # up). Key presses stay responsive because infer runs in a worker.
+            request_timeout_s=None,
             state_mode="ee_euler_gripper",
             expected_image_shape=(256, 256, 3),
             # The valpa server ignores force/torque, so don't send it.

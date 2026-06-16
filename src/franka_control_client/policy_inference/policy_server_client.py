@@ -41,11 +41,13 @@ class PolicyServerClient:
         self,
         host: str = "127.0.0.1",
         port: int = 8765,
-        timeout_s: float = 30.0,
+        timeout_s: Optional[float] = 30.0,
     ) -> None:
         self.host = host
         self.port = int(port)
-        self.timeout_s = float(timeout_s)
+        # None disables the socket timeout: recv() then blocks until the server
+        # answers (useful when the first inference takes a long time to warm up).
+        self.timeout_s = None if timeout_s is None else float(timeout_s)
         self._sock: Optional[socket.socket] = None
         self._lock = threading.Lock()
 

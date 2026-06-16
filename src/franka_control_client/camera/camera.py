@@ -41,12 +41,23 @@ class CameraDevice(RemoteDevice):
         else:
             width, height = self.final_size
             self.size = (height, width)
+        # Timestamp of the frame returned by the most recent get_image() call.
+        self.last_timestamp: Optional[float] = None
+
+    def peek_timestamp(self) -> Optional[float]:
+        """Return the timestamp of the latest available frame without decoding
+        it. Used to wait for a genuinely new frame to arrive."""
+        frame: Optional[CameraFrame] = self.image_subscriber.get_latest()
+        if frame is None:
+            return None
+        return float(frame["timestamp"])
 
     def get_image(self) -> Optional[np.ndarray]:
         """Get the latest RGB image from the camera."""
         frame: Optional[CameraFrame] = self.image_subscriber.get_latest()
         if frame is None:
             raise ValueError("No image data received from camera device.")
+        self.last_timestamp = float(frame["timestamp"])
         image_array = np.frombuffer(frame["rgb_data"], dtype=np.uint8)
         image_array = image_array.reshape(
             (frame["height"], frame["width"], frame["channels"])

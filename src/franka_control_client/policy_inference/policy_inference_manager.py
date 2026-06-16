@@ -78,6 +78,7 @@ class PolicyInferenceManager(abc.ABC):
         self.task = task
         self.fps = fps
         self.last_timestamp = None
+        self._kp: Optional[NonBlockingKeyPress] = None
         self._ui_console = UIConsole()
         self._start_infering_event = VoidEvent()
         self._stop_infering_event = VoidEvent()
@@ -147,6 +148,7 @@ class PolicyInferenceManager(abc.ABC):
         self._on_state_enter(self._state_machine.state)
         try:
             with NonBlockingKeyPress() as kp:
+                self._kp = kp
                 while self._state_machine.state != PolicyInferenceState.EXITING:
                     key = kp.get_data()
                     if key:

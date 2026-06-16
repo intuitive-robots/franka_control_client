@@ -36,20 +36,38 @@ if __name__ == "__main__":
     try:
         task = "" #"Pick up the bell pepper and place it in the bowl."
         policy_server_host = "127.0.0.1"
-        policy_server_port = 8765
+        policy_server_port = 8766  # must match valpa_roboarena_policy_server.py --port
 
         follower = PandaRobotiq(
             "PandaRobotiq",
             RemotePandaArm("FrankaPanda"),
             RemoteRobotiqGripper("FrankaPanda"),
         )
+        # Start/reset configuration: joint_pos of frame 44 from
+        # /home/irl-admin/new_data_collection/test/normal/FrankaPanda
+        # When 'r' (reset) is pressed the robot moves to this joint position.
+        START_JOINT_POSITION = (
+            0.6750149061002512,
+            0.4222197860492414,
+            -0.03944874225685044,
+            -2.022621321649053,
+            0.12141276441349791,
+            2.50813035289513,
+            -1.0234377879344367,
+        )
+
         control_pair = CartesianPolicyPandaControlPair(
             follower.panda_arm,
             follower.robotiq_gripper,
             CONTROL_HZ,
             action_rotation_mode="euler",
             action_pose_mode="delta",
-            action_gripper_mode="absolute",
+            # The valpa server returns a gripper *delta* (closedness), not an
+            # absolute target. See compute_new_pose: new = clip(current + d, 0, 1).
+            action_gripper_mode="delta",
+            home_joint_position=START_JOINT_POSITION,
+            # Close the gripper when moving to the start/reset pose.
+            home_gripper_position=1.0,
         )
 
         camera_left = ImageDataWrapper(
@@ -78,6 +96,24 @@ if __name__ == "__main__":
             server_port=policy_server_port,
             state_mode="ee_euler_gripper",
             expected_image_shape=(256, 256, 3),
+            # The valpa server ignores force/torque, so don't send it.
+            include_force_torque=False,
+            # The valpa server reads exactly these two image keys:
+            #   observation.images.image  -> external/side camera
+            #   observation.images.image2 -> wrist camera
+            camera_key_map={
+                "zed_left": "observation.images.image",
+                "zed_wrist": "observation.images.image2",
+            },
+            # Goal-conditioned server: goal images (+ optional goal state) are
+            # loaded from this directory at the start of each episode and sent
+            # via set_goal. Expected layout:
+            #   /home/irl-admin/jakub/goal_images/left.png   (external/side cam)
+            #   /home/irl-admin/jakub/goal_images/wrist.png  (wrist cam)
+            #   /home/irl-admin/jakub/goal_images/state.npy  (optional 7-D goal
+            #       state [x, y, z, roll, pitch, yaw, gripper]; enables the
+            #       goal-reached auto-stop)
+            goal_dir="/home/irl-admin/jakub/goal_images",
         )
 
         inference_manager.run()

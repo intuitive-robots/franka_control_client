@@ -69,7 +69,7 @@ if __name__ == "__main__":
         data_collectors, 
         f"/home/irl-admin/new_data_collection/{task}", 
         task, 
-        fps=20,
+        fps=4,
         control_pair=control_pair
     )
     control_pair.control_reset()

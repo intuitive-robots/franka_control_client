@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import threading
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import cv2
 import numpy as np
 import pyzlc
 from scipy.spatial.transform import Rotation as R
@@ -18,7 +21,11 @@ from .irl_wrapper import (
     PandaGripperDataWrapper,
     RobotiqGripperDataWrapper,
 )
-from .policy_inference_manager import PolicyInferenceManager
+from .policy_inference_manager import (
+    PolicyInferenceEvent,
+    PolicyInferenceManager,
+    PolicyInferenceState,
+)
 from .policy_server_client import PolicyServerClient
 
 
@@ -35,6 +42,15 @@ class RemotePolicyInference(PolicyInferenceManager):
         state_mode: str = "ee_euler_gripper",
         include_force_torque: bool = True,
         expected_image_shape: Optional[tuple[int, int, int]] = None,
+        camera_key_map: Optional[Dict[str, str]] = None,
+        goal_dir: Optional[str] = None,
+        goal_left_filename: str = "left.png",
+        goal_wrist_filename: str = "wrist.png",
+        goal_state_filename: str = "state.npy",
+        goal_instruction: str = "goal",
+        goal_pos_tol: float = 0.02,
+        goal_rot_tol: float = 0.1,
+        goal_gripper_tol: float = 0.1,
     ) -> None:
         super().__init__(task=task, fps=fps)
         self.data_collectors = data_collectors
@@ -45,6 +61,17 @@ class RemotePolicyInference(PolicyInferenceManager):
         self.state_mode = state_mode
         self.include_force_torque = include_force_torque
         self.expected_image_shape = expected_image_shape
+        self.camera_key_map = camera_key_map
+        self.goal_dir = goal_dir
+        self.goal_left_filename = goal_left_filename
+        self.goal_wrist_filename = goal_wrist_filename
+        self.goal_state_filename = goal_state_filename
+        self.goal_instruction = goal_instruction
+        self.goal_pos_tol = goal_pos_tol
+        self.goal_rot_tol = goal_rot_tol
+        self.goal_gripper_tol = goal_gripper_tol
+        self._goal_state: Optional[np.ndarray] = None
+        self._last_state_vector: Optional[np.ndarray] = None
         self._last_action_log_ts = 0.0
 
         self.cameras: List[ImageDataWrapper] = []
@@ -75,7 +102,18 @@ class RemotePolicyInference(PolicyInferenceManager):
     def _infer_step(self) -> None:
         start_time = time.perf_counter()
         observation = self._build_observation_payload()
-        response = self.client.infer(observation)
+
+        if self._goal_reached(self._last_state_vector):
+            pyzlc.info("Goal state reached; stopping episode.")
+            self._state_machine.trigger(PolicyInferenceEvent.SAVE)
+            return
+
+        response = self._infer_interruptible(observation)
+        # The user pressed 'd'/'s'/'q' while we were waiting for the server, so
+        # we already left the INFERING state. Drop the (now stale) action.
+        if response is None:
+            return
+
         action = self._extract_action(response)
         self.control_pair.update_action(action)
 
@@ -93,12 +131,49 @@ class RemotePolicyInference(PolicyInferenceManager):
         if sleep_time > 0.001:
             time.sleep(sleep_time)
 
+    def _infer_interruptible(self, observation: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Send the inference request in a background thread so key presses
+        (e.g. 'd' to discard) are handled immediately instead of only after the
+        server returns its action.
+
+        Returns the server response, or ``None`` if a key press moved us out of
+        the INFERING state while we were waiting (the request is left to drain
+        in the background and its action is discarded).
+        """
+        result: Dict[str, Any] = {}
+
+        def _worker() -> None:
+            try:
+                result["response"] = self.client.infer(observation)
+            except Exception as exc:  # noqa: BLE001
+                result["error"] = exc
+
+        worker = threading.Thread(target=_worker, daemon=True)
+        worker.start()
+
+        while worker.is_alive():
+            if self._kp is not None:
+                key = self._kp.get_data()
+                if key:
+                    self._handle_keypress(key)
+                    if self._state_machine.state != PolicyInferenceState.INFERING:
+                        return None
+            time.sleep(0.001)
+
+        worker.join()
+        if "error" in result:
+            raise result["error"]
+        return result.get("response")
+
     def _build_observation_payload(self) -> Dict[str, Any]:
         arm_state = self.arm_wrapper.capture_step()
         grip_state = self.gripper_wrapper.capture_step()
 
+        state_vector = self._build_state_vector(arm_state, grip_state)
+        self._last_state_vector = state_vector
+
         observation: Dict[str, Any] = {
-            "observation.state": self._build_state_vector(arm_state, grip_state),
+            "observation.state": state_vector,
             "task": self.task,
         }
 
@@ -211,6 +286,14 @@ class RemotePolicyInference(PolicyInferenceManager):
         return force_torque.astype(np.float32, copy=False)
 
     def _camera_observation_key(self, hw_name: str) -> str:
+        if self.camera_key_map is not None:
+            if hw_name not in self.camera_key_map:
+                raise ValueError(
+                    f"Camera '{hw_name}' has no entry in camera_key_map "
+                    f"{sorted(self.camera_key_map)}; cannot map it to a server "
+                    "observation key."
+                )
+            return self.camera_key_map[hw_name]
         camera_key_map = {
             "zed_left": "observation.images.left",
             "left": "observation.images.left",
@@ -223,8 +306,79 @@ class RemotePolicyInference(PolicyInferenceManager):
 
     def _start_infering(self) -> None:
         self.client.reset()
+        self._load_goal()
         self.control_pair.reset_action()
         super()._start_infering()
+
+    def _load_goal(self) -> None:
+        """Load goal images (and optional goal state) from disk and send them
+        to the server via set_goal. The VALPA server is goal-conditioned and
+        rejects infer requests until a goal has been set."""
+        self._goal_state = None
+        if self.goal_dir is None:
+            pyzlc.warn(
+                "No goal_dir configured; skipping set_goal. The goal-conditioned "
+                "server will reject inference until a goal is set."
+            )
+            return
+
+        goal_path = Path(self.goal_dir)
+        left = self._read_goal_image(goal_path / self.goal_left_filename)
+        wrist = self._read_goal_image(goal_path / self.goal_wrist_filename)
+        self.client.set_goal(left, wrist, instruction=self.goal_instruction)
+        pyzlc.info(f"Goal images set from {goal_path}")
+
+        state_file = goal_path / self.goal_state_filename
+        if state_file.exists():
+            goal_state = np.asarray(np.load(state_file), dtype=np.float32).reshape(-1)
+            if goal_state.size < 7:
+                raise ValueError(
+                    f"Goal state {state_file} must have at least 7 values "
+                    f"[x, y, z, roll, pitch, yaw, gripper], got {goal_state.size}."
+                )
+            self._goal_state = goal_state[:7]
+            pyzlc.info(
+                "Goal state loaded for reached-check: "
+                f"[{', '.join(f'{x:.4f}' for x in self._goal_state)}]"
+            )
+        else:
+            pyzlc.warn(
+                f"No goal state file at {state_file}; goal-reached auto-stop "
+                "is disabled (will run until you press 's'/'d')."
+            )
+
+    def _read_goal_image(self, path: Path) -> np.ndarray:
+        if not path.exists():
+            raise FileNotFoundError(f"Goal image not found: {path}")
+        img_bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
+        if img_bgr is None:
+            raise ValueError(f"Failed to read goal image: {path}")
+        img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+        if self.expected_image_shape is not None:
+            h, w = self.expected_image_shape[0], self.expected_image_shape[1]
+            if img.shape[0] != h or img.shape[1] != w:
+                img = cv2.resize(img, (w, h))
+        return np.ascontiguousarray(img.astype(np.uint8))
+
+    def _goal_reached(self, state: Optional[np.ndarray]) -> bool:
+        if self._goal_state is None or state is None:
+            return False
+        state = np.asarray(state, dtype=np.float32).reshape(-1)
+        if state.size < 7:
+            return False
+        pos_err = float(np.linalg.norm(state[:3] - self._goal_state[:3]))
+        rot_err = float(
+            (
+                R.from_euler("xyz", state[3:6]).inv()
+                * R.from_euler("xyz", self._goal_state[3:6])
+            ).magnitude()
+        )
+        grip_err = abs(float(state[6]) - float(self._goal_state[6]))
+        return (
+            pos_err <= self.goal_pos_tol
+            and rot_err <= self.goal_rot_tol
+            and grip_err <= self.goal_gripper_tol
+        )
 
     def _save_episode(self) -> None:
         self._stop_infering()

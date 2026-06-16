@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import time
 import traceback
-from typing import Optional, Union
+from typing import Optional, Sequence, Union
 
 import numpy as np
 import torch
@@ -53,11 +53,24 @@ class CartesianPolicyPandaControlPair(ControlPair):
         action_rotation_mode: str = "quat",
         action_pose_mode: str = "absolute",
         action_gripper_mode: str = "absolute",
+        home_joint_position: Optional[Sequence[float]] = None,
+        home_gripper_position: float = 0.0,
     ) -> None:
         super().__init__()
         self.panda_arm = panda_arm
         self.gripper = gripper
         self.control_hz = float(control_hz)
+        if home_joint_position is None:
+            self.home_joint_position = tuple(DEFAULT_POSITION)
+        else:
+            home = tuple(float(x) for x in home_joint_position)
+            if len(home) != 7:
+                raise ValueError(
+                    f"home_joint_position must have 7 joint values, got {len(home)}"
+                )
+            self.home_joint_position = home
+        # Gripper closedness used by go_home/reset: 0.0 = fully open, 1.0 = closed.
+        self.home_gripper_position = float(np.clip(home_gripper_position, 0.0, 1.0))
         self.action_rotation_mode = self._normalize_action_rotation_mode(
             action_rotation_mode
         )
@@ -183,11 +196,16 @@ class CartesianPolicyPandaControlPair(ControlPair):
         if action.size < 6:
             raise ValueError(f"Expected delta action size >= 6, got {action.size}")
 
-        base_pose = self._active_delta_target_pose
+        # The policy delta is relative to the pose that was sent in the
+        # observation, i.e. the current *measured* end-effector pose. Base the
+        # delta on the live arm state (not the previously commanded target) so
+        # deltas don't accumulate command drift. Fall back to the last command
+        # only if the live state is momentarily unavailable.
+        base_pose = self._get_current_cartesian_pose()
+        if base_pose is None:
+            base_pose = self._active_delta_target_pose
         if base_pose is None:
             base_pose = self._last_cartesian_pos
-        if base_pose is None:
-            base_pose = self._get_current_cartesian_pose()
         if base_pose is None:
             raise ValueError("Current cartesian pose unavailable for delta action.")
         base_pose = self._normalize_cartesian_quat(base_pose)
@@ -197,8 +215,12 @@ class CartesianPolicyPandaControlPair(ControlPair):
         target_pos = base_pose[:3] + delta_pos
 
         if self.action_rotation_mode == "euler":
-            current_euler = R.from_quat(base_pose[3:7]).as_euler("xyz")
-            target_quat = R.from_euler("xyz", current_euler + delta_rot).as_quat()
+            # Compose the euler delta in the base frame: R_new = R_delta @ R_current.
+            # This matches the model's training convention (compute_new_pose),
+            # which builds rotation matrices from euler "xyz" and pre-multiplies.
+            target_quat = (
+                R.from_euler("xyz", delta_rot) * R.from_quat(base_pose[3:7])
+            ).as_quat()
         else:
             target_quat = (
                 R.from_rotvec(delta_rot) * R.from_quat(base_pose[3:7])
@@ -471,17 +493,25 @@ class CartesianPolicyPandaControlPair(ControlPair):
         )
 
     def go_home(self) -> None:
-        self.panda_arm.move_franka_arm_to_joint_position(DEFAULT_POSITION)
-        # Open the gripper
+        self.panda_arm.move_franka_arm_to_joint_position(self.home_joint_position)
+        # Drive the gripper to the configured home closedness
+        # (0.0 = open, 1.0 = closed).
+        gripper_cmd = float(np.clip(self.home_gripper_position, 0.0, 1.0))
         if isinstance(self.gripper, RemoteRobotiqGripper):
             self.gripper.send_grasp_command(
-                position=0.0,
+                position=gripper_cmd,
                 speed=GRIPPER_SPEED,
                 force=GRIPPER_FORCE,
                 blocking=True,
             )
         else:
-            self.gripper.send_gripper_command(width=0.0, speed=0.1)
+            max_width = 0.0
+            state = self.gripper.current_state
+            if state is not None:
+                max_width = float(state.get("max_width", 0.0))
+            width = (1.0 - gripper_cmd) * max_width if max_width > 0.0 else 0.0
+            self.gripper.send_gripper_command(width=width, speed=0.1)
+        self._last_gripper_cmd = gripper_cmd
 
     def control_step(self) -> None:
         if self.action_pose_mode == "delta":

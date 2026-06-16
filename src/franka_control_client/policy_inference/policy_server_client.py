@@ -74,6 +74,23 @@ class PolicyServerClient:
     def reset(self) -> dict[str, Any]:
         return self.request({"type": "reset"})
 
+    def set_goal(
+        self,
+        goal_image: Any,
+        goal_image_wrist: Any,
+        instruction: str = "goal",
+        run_idx: Optional[int] = None,
+    ) -> dict[str, Any]:
+        return self.request(
+            {
+                "type": "set_goal",
+                "goal_image": goal_image,
+                "goal_image_wrist": goal_image_wrist,
+                "instruction": instruction,
+                "run_idx": run_idx,
+            }
+        )
+
     def infer(self, observation: dict[str, Any]) -> dict[str, Any]:
         return self.request({"type": "infer", "observation": observation})
 

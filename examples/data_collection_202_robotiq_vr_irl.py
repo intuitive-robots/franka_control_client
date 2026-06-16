@@ -63,10 +63,10 @@ if __name__ == "__main__":
     data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
     data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
     name = time.strftime("%Y%m%d_%H%M%S", time.localtime())
-    task = "all_obs_Put_the_yellow_cuboid_into_the_red_bowl"
+    task = "lemon_table_plate"
     data_collection_manager = IRLDataCollection(
         data_collectors, 
-        f"/media/jjiang/Intenso Ext/all/{task}", 
+        f"/home/jjiang/jing/dataset/{task}", 
         task, 
         fps=20,
         control_pair=control_pair

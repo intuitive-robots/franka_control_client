@@ -92,6 +92,12 @@ class CartesianPolicyPandaControlPair(ControlPair):
         self._gripper_toggle_count: int = 0
         self._active_delta_target_pose: Optional[np.ndarray] = None
         self._active_delta_gripper_cmd: Optional[float] = None
+        # Full cartesian target [x, y, z, qx, qy, qz, qw] of the action the
+        # control loop is currently executing. Reset to None by update_action
+        # when a new action arrives and re-set by the control loop once it picks
+        # that action up, so callers can tell when the arm has a fresh target to
+        # chase and whether it has reached it.
+        self._active_target_pose: Optional[np.ndarray] = None
 
         # Velocity limiting state
         self._last_cartesian_pos: Optional[np.ndarray] = None
@@ -105,6 +111,20 @@ class CartesianPolicyPandaControlPair(ControlPair):
             if self._lastest_command is not None:
                 return np.append(self._lastest_command.copy(), self._last_gripper_cmd)
             return None
+
+    def get_active_target_pose(self) -> Optional[np.ndarray]:
+        """Return the full cartesian target [x, y, z, qx, qy, qz, qw] of the
+        action the control loop is currently executing, or None if no action has
+        been picked up since the last update_action (the loop hasn't processed it
+        yet)."""
+        with self._command_lock:
+            if self._active_target_pose is None:
+                return None
+            return self._active_target_pose.copy()
+
+    def get_current_cartesian_pose(self) -> Optional[np.ndarray]:
+        """Return the live measured end-effector pose [x, y, z, qx, qy, qz, qw]."""
+        return self._get_current_cartesian_pose()
 
     def clear_lastest_command(self) -> None:
         with self._command_lock:
@@ -298,6 +318,11 @@ class CartesianPolicyPandaControlPair(ControlPair):
             raise ValueError(f"Expected action size >= 7, got {arr.size}")
         with self._action_lock:
             self._latest_action = arr
+        # Invalidate the published target: the control loop will re-publish it
+        # once it picks up this new action, so a settle-wait can tell when the
+        # arm is chasing the *new* target rather than the previous one.
+        with self._command_lock:
+            self._active_target_pose = None
 
     # using by policy side to update the latest action_chunk, and control loop will read the latest action and execute it
     def update_action_chunk(self, action_chunk: np.ndarray) -> None:
@@ -364,6 +389,8 @@ class CartesianPolicyPandaControlPair(ControlPair):
         self._last_cartesian_pos = self._get_current_cartesian_pose()
         self._active_delta_target_pose = None
         self._active_delta_gripper_cmd = None
+        with self._command_lock:
+            self._active_target_pose = None
         pyzlc.info("Action state reset for new episode")
 
     def _generate_waypoints_within_limits(
@@ -527,6 +554,8 @@ class CartesianPolicyPandaControlPair(ControlPair):
 
         cartesian_pos = self._action_to_cartesian_pose(action)
         # print(f"Received action: cartesian_pos={cartesian_pos}, gripper_cmd={action[-1]:.3f}")
+        with self._command_lock:
+            self._active_target_pose = cartesian_pos.copy()
         cartesian_pos = self._send_waypoint_command(cartesian_pos)
 
         gripper_action = self._get_gripper_action(action)
@@ -545,6 +574,8 @@ class CartesianPolicyPandaControlPair(ControlPair):
         action = self._get_latest_action_once()
         if action is not None:
             self._active_delta_target_pose = self._delta_action_to_cartesian_pose(action)
+            with self._command_lock:
+                self._active_target_pose = self._active_delta_target_pose.copy()
             gripper_action = self._get_gripper_action(action)
             if gripper_action is not None:
                 self._active_delta_gripper_cmd = self._get_gripper_target(

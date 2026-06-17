@@ -71,12 +71,12 @@ if __name__ == "__main__":
         )
 
         camera_left = ImageDataWrapper(
-            CameraDevice("zed_left", preview=True, final_size=(256, 256)),
+            CameraDevice("zed_left", preview=False, final_size=(256, 256)),
             capture_interval=1.0 / POLICY_FPS,
             hw_name="zed_left",
         )
         camera_wrist = ImageDataWrapper(
-            CameraDevice("zed_wrist", preview=True, final_size=(256, 256)),
+            CameraDevice("zed_wrist", preview=False, final_size=(256, 256)),
             capture_interval=1.0 / POLICY_FPS,
             hw_name="zed_wrist",
         )

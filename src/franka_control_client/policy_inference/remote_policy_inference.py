@@ -52,6 +52,9 @@ class RemotePolicyInference(PolicyInferenceManager):
         goal_rot_tol: float = 0.1,
         goal_gripper_tol: float = 0.1,
         fresh_frame_timeout_s: float = 1.0,
+        action_settle_timeout_s: float = 1.0,
+        action_settle_pos_tol: float = 0.01,
+        action_settle_rot_tol: float = 0.05,
     ) -> None:
         super().__init__(task=task, fps=fps)
         self.data_collectors = data_collectors
@@ -75,6 +78,14 @@ class RemotePolicyInference(PolicyInferenceManager):
         # previous step, so each observation reflects the latest scene state
         # (i.e. the effect of the previous action) instead of a stale frame.
         self.fresh_frame_timeout_s = fresh_frame_timeout_s
+        # After sending an action we block until the arm has reached the
+        # commanded pose (so the next observation is captured *after* the action
+        # has been executed, never mid-motion), bounded by
+        # action_settle_timeout_s. The timeout is the worst-case fixed wait when
+        # the motion doesn't fully converge or the target is unknown.
+        self.action_settle_timeout_s = action_settle_timeout_s
+        self.action_settle_pos_tol = action_settle_pos_tol
+        self.action_settle_rot_tol = action_settle_rot_tol
         self._goal_state: Optional[np.ndarray] = None
         self._last_state_vector: Optional[np.ndarray] = None
         self._last_action_log_ts = 0.0
@@ -135,9 +146,11 @@ class RemotePolicyInference(PolicyInferenceManager):
                 f"in {elapsed:.3f}s"
             )
             self._last_action_log_ts = now
-        sleep_time = max(0.0, (1.0 / self.fps) - elapsed)
-        if sleep_time > 0.001:
-            time.sleep(sleep_time)
+
+        # Wait until the arm has actually executed the action before looping
+        # back to capture the next observation, so the policy sees the effect of
+        # its own action instead of a frame taken mid-motion.
+        self._wait_for_action_executed()
 
     def _infer_interruptible(self, observation: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Send the inference request in a background thread so key presses
@@ -172,6 +185,50 @@ class RemotePolicyInference(PolicyInferenceManager):
         if "error" in result:
             raise result["error"]
         return result.get("response")
+
+    def _wait_for_action_executed(self) -> bool:
+        """Block until the arm has reached the pose commanded by the action we
+        just sent, so the next observation reflects the executed action. Bounded
+        by ``action_settle_timeout_s`` (the worst-case fixed wait when the target
+        is unknown or the motion doesn't fully converge within tolerance).
+
+        Returns ``False`` if a key press moved us out of the INFERING state while
+        waiting (the caller should drop the step); ``True`` otherwise.
+        """
+        deadline = time.time() + self.action_settle_timeout_s
+        target = self.control_pair.get_active_target_pose()
+        while time.time() < deadline:
+            # Stay responsive to key presses (e.g. 'd'/'s'/'q') during the wait.
+            if self._kp is not None:
+                key = self._kp.get_data()
+                if key:
+                    self._handle_keypress(key)
+                    if self._state_machine.state != PolicyInferenceState.INFERING:
+                        return False
+            if target is None:
+                # The control loop hasn't picked up the new action yet; keep
+                # polling until it publishes the target it is now chasing.
+                target = self.control_pair.get_active_target_pose()
+            else:
+                current = self.control_pair.get_current_cartesian_pose()
+                if current is not None and self._pose_reached(current, target):
+                    return True
+            time.sleep(0.005)
+        return True
+
+    def _pose_reached(self, current: np.ndarray, target: np.ndarray) -> bool:
+        current = np.asarray(current, dtype=np.float32).reshape(-1)
+        target = np.asarray(target, dtype=np.float32).reshape(-1)
+        if current.size < 7 or target.size < 7:
+            return False
+        pos_err = float(np.linalg.norm(current[:3] - target[:3]))
+        rot_err = float(
+            (R.from_quat(current[3:7]).inv() * R.from_quat(target[3:7])).magnitude()
+        )
+        return (
+            pos_err <= self.action_settle_pos_tol
+            and rot_err <= self.action_settle_rot_tol
+        )
 
     def _build_observation_payload(self) -> Dict[str, Any]:
         arm_state = self.arm_wrapper.capture_step()

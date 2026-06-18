@@ -32,6 +32,8 @@
 
 from __future__ import annotations
 
+import json
+import re
 import time
 from typing import List, Optional, Tuple
 
@@ -125,9 +127,19 @@ class StarVLAServerInference(PolicyInferenceManager):
             server_meta,
             self.action_chunk_size,
         )
+        if not server_meta.get("cot_generate_at_inference", False):
+            pyzlc.warning(
+                "Server metadata reports cot_generate_at_inference=false; explicit CoT text may be unavailable."
+            )
 
         self._action_chunk: Optional[np.ndarray] = None  # (T, 8) cached chunk
         self._chunk_step: int = 0
+        self._latest_cot_text: Optional[str] = None
+        self._latest_trace_points: List[Tuple[float, float]] = []
+        self._latest_obs_images: List[np.ndarray] = []
+        self._prediction_count: int = 0
+        self._last_prediction_ts: Optional[float] = None
+        self._viz_window_name = "StarVLA CoT Viz"
 
         self.register_start_infering_event(self.control_pair.start_control_pair)
         self.register_stop_infering_event(self.control_pair.stop_control_pair)
@@ -151,6 +163,7 @@ class StarVLAServerInference(PolicyInferenceManager):
                 frame = np.frombuffer(frame["rgb_data"], dtype=np.uint8).reshape(h, w, c).copy()
             frame = cv2.resize(frame, self.image_size, interpolation=cv2.INTER_AREA)
             images.append(frame)
+        self._latest_obs_images = [np.array(image, copy=True) for image in images]
         return images
 
     def _build_state(self) -> Optional[np.ndarray]:
@@ -200,6 +213,7 @@ class StarVLAServerInference(PolicyInferenceManager):
 
             self._action_chunk = np.asarray(response["data"]["actions"][0], dtype=np.float32)  # (T, 8)
             self._chunk_step = 0
+            self._update_cot_state(response.get("data", {}))
             pyzlc.info("Received chunk shape=%s  chunk[0]=%s", self._action_chunk.shape, self._action_chunk[0])
 
         action = self._action_chunk[self._chunk_step]  # (8,) absolute EEF
@@ -213,9 +227,208 @@ class StarVLAServerInference(PolicyInferenceManager):
             pyzlc.error("Failed to apply action: %s", exc)
 
         elapsed = time.perf_counter() - start
+        self._render_visualization()
         sleep_time = max(0.0, (1.0 / self.fps) - elapsed)
         if sleep_time > 0.001:
             time.sleep(sleep_time)
+
+    def _update_cot_state(self, response_data: dict) -> None:
+        self._prediction_count += 1
+        self._last_prediction_ts = time.time()
+        self._latest_trace_points = []
+
+        cot_text = response_data.get("cot_text")
+        if isinstance(cot_text, list):
+            cot_text = cot_text[0] if cot_text else None
+        if not isinstance(cot_text, str):
+            self._latest_cot_text = None
+            return
+
+        cot_text = " ".join(cot_text.split())
+        self._latest_trace_points = self._extract_trace_points(cot_text)
+        if not cot_text:
+            self._latest_cot_text = None
+            return
+
+        if cot_text != self._latest_cot_text:
+            self._ui_console.log(f"[CoT] {cot_text}")
+        self._latest_cot_text = cot_text
+
+    @staticmethod
+    def _extract_trace_points(cot_text: str) -> List[Tuple[float, float]]:
+        points: List[Tuple[float, float]] = []
+
+        for match in re.finditer(r"<\|trace\|>(.*?)<\|/trace\|>", cot_text):
+            try:
+                payload = json.loads(match.group(1))
+            except json.JSONDecodeError:
+                continue
+            trace_2d = payload.get("trace_2d")
+            if isinstance(trace_2d, list):
+                for point in trace_2d:
+                    parsed = StarVLAServerInference._coerce_xy_pair(point)
+                    if parsed is not None:
+                        points.append(parsed)
+            if points:
+                return points
+
+        for match in re.finditer(r"<\|point\|>(.*?)<\|/point\|>", cot_text):
+            try:
+                payload = json.loads(match.group(1))
+            except json.JSONDecodeError:
+                continue
+            parsed = StarVLAServerInference._coerce_xy_pair(payload.get("point_2d"))
+            if parsed is not None:
+                points.append(parsed)
+        if points:
+            return points
+
+        for match in re.finditer(r"\[\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]", cot_text):
+            points.append((float(match.group(1)), float(match.group(2))))
+        return points
+
+    @staticmethod
+    def _coerce_xy_pair(value: object) -> Optional[Tuple[float, float]]:
+        if not isinstance(value, (list, tuple)) or len(value) < 2:
+            return None
+        try:
+            return float(value[0]), float(value[1])
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _denormalize_point(
+        point: Tuple[float, float],
+        width: int,
+        height: int,
+    ) -> Tuple[int, int]:
+        x, y = point
+        scale = 1000.0
+        if max(abs(x), abs(y)) <= 1.5:
+            scale = 1.0
+        x_px = int(round(np.clip(x / scale, 0.0, 1.0) * max(width - 1, 1)))
+        y_px = int(round(np.clip(y / scale, 0.0, 1.0) * max(height - 1, 1)))
+        return x_px, y_px
+
+    @staticmethod
+    def _wrap_text(text: str, max_chars: int) -> List[str]:
+        if not text:
+            return []
+        words = text.split()
+        lines: List[str] = []
+        current = ""
+        for word in words:
+            candidate = word if not current else f"{current} {word}"
+            if len(candidate) <= max_chars:
+                current = candidate
+            else:
+                if current:
+                    lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+        return lines
+
+    def _render_visualization(self) -> None:
+        if not self._latest_obs_images:
+            return
+
+        image_tiles = [cv2.cvtColor(image, cv2.COLOR_RGB2BGR) for image in self._latest_obs_images]
+        annotated_tiles: List[np.ndarray] = []
+        for idx, tile in enumerate(image_tiles):
+            canvas = np.array(tile, copy=True)
+            cv2.putText(
+                canvas,
+                f"cam {idx}",
+                (10, 24),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (255, 255, 255),
+                2,
+                cv2.LINE_AA,
+            )
+            cv2.putText(
+                canvas,
+                f"cam {idx}",
+                (10, 24),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (30, 30, 30),
+                1,
+                cv2.LINE_AA,
+            )
+            annotated_tiles.append(canvas)
+
+        if annotated_tiles and self._latest_trace_points:
+            overlay = annotated_tiles[0]
+            denorm_points = [
+                self._denormalize_point(point, overlay.shape[1], overlay.shape[0])
+                for point in self._latest_trace_points
+            ]
+            if len(denorm_points) >= 2:
+                cv2.polylines(
+                    overlay,
+                    [np.asarray(denorm_points, dtype=np.int32)],
+                    False,
+                    (0, 220, 255),
+                    2,
+                    cv2.LINE_AA,
+                )
+            for point_idx, (x_px, y_px) in enumerate(denorm_points):
+                radius = 6 if point_idx in (0, len(denorm_points) - 1) else 4
+                color = (0, 255, 0) if point_idx == 0 else (0, 220, 255)
+                if point_idx == len(denorm_points) - 1:
+                    color = (0, 120, 255)
+                cv2.circle(overlay, (x_px, y_px), radius, color, -1, lineType=cv2.LINE_AA)
+                cv2.circle(overlay, (x_px, y_px), radius + 2, (20, 20, 20), 1, lineType=cv2.LINE_AA)
+
+        image_panel = np.hstack(annotated_tiles)
+        sidebar_width = 460
+        sidebar = np.full((image_panel.shape[0], sidebar_width, 3), 24, dtype=np.uint8)
+
+        y = 32
+        for header in (
+            "StarVLA CoT Viewer",
+            f"Predictions: {self._prediction_count}",
+            f"Chunk step: {self._chunk_step}/{self.action_chunk_size}",
+            f"Trace points: {len(self._latest_trace_points)}",
+        ):
+            cv2.putText(sidebar, header, (16, y), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (230, 230, 230), 2, cv2.LINE_AA)
+            y += 30
+
+        if self._last_prediction_ts is not None:
+            age_s = max(0.0, time.time() - self._last_prediction_ts)
+            cv2.putText(
+                sidebar,
+                f"Last prediction: {age_s:.1f}s ago",
+                (16, y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.55,
+                (180, 180, 180),
+                1,
+                cv2.LINE_AA,
+            )
+            y += 32
+
+        cv2.putText(sidebar, "Task", (16, y), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (120, 200, 255), 2, cv2.LINE_AA)
+        y += 28
+        for line in self._wrap_text(self.task, max_chars=40):
+            cv2.putText(sidebar, line, (16, y), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (235, 235, 235), 1, cv2.LINE_AA)
+            y += 24
+
+        y += 12
+        cv2.putText(sidebar, "CoT", (16, y), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (120, 200, 255), 2, cv2.LINE_AA)
+        y += 28
+        cot_text = self._latest_cot_text or "No explicit CoT returned yet."
+        for line in self._wrap_text(cot_text, max_chars=40):
+            cv2.putText(sidebar, line, (16, y), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (235, 235, 235), 1, cv2.LINE_AA)
+            y += 22
+            if y > sidebar.shape[0] - 24:
+                break
+
+        canvas = np.hstack([image_panel, sidebar])
+        cv2.imshow(self._viz_window_name, canvas)
+        cv2.waitKey(1)
 
     # ------------------------------------------------------------------
     # State machine hooks
@@ -224,6 +437,8 @@ class StarVLAServerInference(PolicyInferenceManager):
     def _start_infering(self) -> None:
         self._action_chunk = None
         self._chunk_step = 0
+        self._latest_cot_text = None
+        self._latest_trace_points = []
         self.control_pair.reset_action()
         super()._start_infering()
 
@@ -250,6 +465,10 @@ class StarVLAServerInference(PolicyInferenceManager):
     def _close(self) -> None:
         try:
             self.client.close()
+        except Exception:
+            pass
+        try:
+            cv2.destroyWindow(self._viz_window_name)
         except Exception:
             pass
         super()._close()

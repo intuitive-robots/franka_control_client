@@ -641,12 +641,12 @@ def create_lerobot_dataset(
 def main():
     # Configuration - modify these variables as needed
     repo_id = (
-        "ZhuoyueLLL/insert_blue_bird_100hz_cam_25hz"  # HF repo id (e.g. user/dataset). Required if push_to_hub=True
+        "pepper_100hz_cam_25hz"  # HF repo id (e.g. user/dataset). Required if push_to_hub=True
     )
     # raw_dir = Path(f"/home/irl-admin/new_data_collection/{repo_id}")
-    raw_dir = Path(f"/home/irl-admin/new_data_collection/insert_blue_bird_100hz_cam_25hz")
+    raw_dir = Path(f"/home/irl-admin/new_data_collection/pepper_100hz_cam_25hz")
     local_dir = Path(
-        f"/home/irl-admin/new_data_collection/lerobot_data/{repo_id}"
+        f"/home/irl-admin/new_data_collection/lerobot_meta/pepper_100hz_cam_25hz"
     )
     push_to_hub = False
     follower_subdir = (
@@ -678,7 +678,7 @@ def main():
     # The script looks up the parent dir name of an episode and matches the key
     # in the following directory to identify the correct task instruction
     task_instruction_mapping = {
-        "insert_blue_bird_100hz_cam_25hz": "pick up the blue bird and insert it into the base.",
+        "pepper_100hz_cam_25hz": "pick up the green pepper and place it in the red bowl.",
     }
 
     create_lerobot_dataset(

@@ -12,7 +12,7 @@ CONTROL_HZ: float = 500
 GRIPPER_DEADBAND: float = 1e-3
 DEFAULT_POSITION = [0.0, 0.0, 0.0, -2.15, 0.0, 2.15, 0.0]
 DEFAULT_POSITION2 = [-0.30406295828651964, -0.10313557727047261, -0.17526436078783472, -2.1124992416113964, -0.03802868800288364, 2.001340827254022, -0.46061141536409717]
-
+DEFAULT_POSITION3 = [-0.0776, 0.5898, 0.0743, -1.7098, -0.0104, 2.6200, -1.4712]
 class MQ3PandaControlPair(ControlPair):
     def __init__(self, leader: MQ3Controller, follower: PandaRobotiq) -> None:
         super().__init__()
@@ -42,7 +42,7 @@ class MQ3PandaControlPair(ControlPair):
         )
         self.follower.robotiq_gripper.open()
         self.follower.panda_arm.move_franka_arm_to_joint_position(
-            DEFAULT_POSITION2
+            DEFAULT_POSITION3
         )
         self.leader.reset()
 

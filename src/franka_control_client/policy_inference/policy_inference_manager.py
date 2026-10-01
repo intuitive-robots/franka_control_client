@@ -21,6 +21,7 @@ class PolicyInferenceEvent(str, Enum):
     DISCARD = "discard"
     STAND_BY = "stand_by"
     RESET_ARM = "reset_arm"
+    RESET_ARM_RAISED = "reset_arm_raised"
     QUIT = "quit"
 
 
@@ -133,6 +134,12 @@ class PolicyInferenceManager(abc.ABC):
             PolicyInferenceState.WAITING,
             action=self._reset_arm,
         )
+        self._state_machine.register_transition(
+            PolicyInferenceState.WAITING,
+            PolicyInferenceEvent.RESET_ARM_RAISED,
+            PolicyInferenceState.WAITING,
+            action=self._reset_arm_raised,
+        )
 
     def register_start_infering_event(
         self, handler: Callable[[], None]
@@ -183,15 +190,35 @@ class PolicyInferenceManager(abc.ABC):
             self._state_machine.trigger(PolicyInferenceEvent.QUIT)
         elif key == "r":
             self._state_machine.trigger(PolicyInferenceEvent.RESET_ARM)
+        elif key == "u":
+            self._state_machine.trigger(PolicyInferenceEvent.RESET_ARM_RAISED)
+        elif key == "o":
+            self._command_gripper("open_gripper", "Opening gripper.")
+        elif key == "p":
+            self._command_gripper("close_gripper", "Closing gripper.")
+
+    def _command_gripper(self, method_name: str, message: str) -> None:
+        control_pair = getattr(self, "control_pair", None)
+        command = getattr(control_pair, method_name, None)
+        if command is None:
+            self._ui_console.log(
+                f"Gripper control not supported by {type(control_pair).__name__}."
+            )
+            return
+        self._ui_console.log(message)
+        command()
 
     def _on_state_enter(self, state: PolicyInferenceState) -> None:
         if state == PolicyInferenceState.WAITING:
             self._ui_console.update_hint(
-                "Press 'n' to start infering, 'r' to reset arm, or 'q' to quit"
+                "Press 'n' to start infering, 'r' to reset arm, 'u' to reset 20cm "
+                "above the start position, 'o' to open gripper, 'p' to close "
+                "gripper, or 'q' to quit"
             )
         elif state == PolicyInferenceState.INFERING:
             self._ui_console.update_hint(
-                "Infering... Press 's' to save, 'd' to discard, or 'q' to quit"
+                "Infering... Press 'o' to open gripper, 'p' to close gripper, "
+                "'s' to save, 'd' to discard, or 'q' to quit"
             )
         elif state == PolicyInferenceState.STOPPED:
             self._ui_console.update_hint("Infering stopped. Resetting...")
@@ -227,6 +254,10 @@ class PolicyInferenceManager(abc.ABC):
     @abc.abstractmethod
     def _reset_arm(self) -> None:
         raise NotImplementedError
+
+    def _reset_arm_raised(self) -> None:
+        """Reset to the raised start position; not supported by every manager."""
+        self._ui_console.log("Raised reset is not supported here.")
 
     def _reset_to_waiting(self) -> None:
         #todo:inferencer

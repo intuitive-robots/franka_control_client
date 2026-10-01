@@ -13,6 +13,9 @@ from scipy.spatial.transform import Rotation as R
 
 from .control_pair import ControlPair
 from ..franka_robot.panda_arm import ControlMode, RemotePandaArm
+from ..franka_robot.panda_kinematics import (
+    joint_position_with_cartesian_offset,
+)
 from ..franka_robot.panda_gripper import RemotePandaGripper
 from ..robotiq_gripper.robotiq_gripper import RemoteRobotiqGripper
 
@@ -25,6 +28,12 @@ ACTION_LOG_INTERVAL_S: float = 0.5
 GRIPPER_TOGGLE_WARN_WINDOW_S: float = 3.0
 GRIPPER_TOGGLE_WARN_COUNT: int = 6
 DEFAULT_POSITION = (0.0, 0.0, 0.0, -2.15, 0.0, 2.15, 0.0)
+GRIPPER_OPEN_POSITION: float = 0.0
+GRIPPER_CLOSE_POSITION: float = 1.0
+# Second (raised) home pose: same orientation as the home pose, 20 cm higher.
+DEFAULT_RAISED_HOME_OFFSET = (0.0, 0.0, 0.20)
+# None = leave the gripper untouched when moving to the raised home pose.
+DEFAULT_RAISED_HOME_GRIPPER_POSITION: Optional[float] = None
 
 # Calculate velocity limits using the standard approach from training
 VELOCITY_LIMITS = np.array([[-4 * np.pi / 2, 4 * np.pi / 2]] * 7).T / 32
@@ -55,6 +64,10 @@ class CartesianPolicyPandaControlPair(ControlPair):
         action_gripper_mode: str = "absolute",
         home_joint_position: Optional[Sequence[float]] = None,
         home_gripper_position: float = 0.0,
+        raised_home_offset: Sequence[float] = DEFAULT_RAISED_HOME_OFFSET,
+        raised_home_gripper_position: Optional[
+            float
+        ] = DEFAULT_RAISED_HOME_GRIPPER_POSITION,
     ) -> None:
         super().__init__()
         self.panda_arm = panda_arm
@@ -71,6 +84,20 @@ class CartesianPolicyPandaControlPair(ControlPair):
             self.home_joint_position = home
         # Gripper closedness used by go_home/reset: 0.0 = fully open, 1.0 = closed.
         self.home_gripper_position = float(np.clip(home_gripper_position, 0.0, 1.0))
+        # Cartesian offset (x, y, z) of the raised home pose used by go_home_raised.
+        offset = tuple(float(x) for x in raised_home_offset)
+        if len(offset) != 3:
+            raise ValueError(
+                f"raised_home_offset must have 3 values, got {len(offset)}"
+            )
+        self.raised_home_offset = offset
+        # None keeps the gripper where it is when moving to the raised home pose.
+        self.raised_home_gripper_position = (
+            None
+            if raised_home_gripper_position is None
+            else float(np.clip(raised_home_gripper_position, 0.0, 1.0))
+        )
+        self._raised_home_joints: Optional[np.ndarray] = None
         self.action_rotation_mode = self._normalize_action_rotation_mode(
             action_rotation_mode
         )
@@ -523,13 +550,45 @@ class CartesianPolicyPandaControlPair(ControlPair):
         self.panda_arm.move_franka_arm_to_joint_position(self.home_joint_position)
         # Drive the gripper to the configured home closedness
         # (0.0 = open, 1.0 = closed).
-        gripper_cmd = float(np.clip(self.home_gripper_position, 0.0, 1.0))
+        self.set_gripper_position(self.home_gripper_position)
+
+    def raised_home_joint_position(self) -> np.ndarray:
+        """Joint angles of the home pose shifted by raised_home_offset.
+
+        The orientation is kept, so any fixed tool offset cancels out and the
+        gripper ends up exactly raised_home_offset away from the home pose.
+        """
+        if self._raised_home_joints is None:
+            self._raised_home_joints = joint_position_with_cartesian_offset(
+                self.home_joint_position, self.raised_home_offset
+            )
+            pyzlc.info(
+                f"Raised home joint position: "
+                f"{np.round(self._raised_home_joints, 4).tolist()}"
+            )
+        return self._raised_home_joints
+
+    def go_home_raised(self) -> None:
+        """Move to the home pose shifted by raised_home_offset (default: 20 cm up).
+
+        The gripper is driven to raised_home_gripper_position, or left exactly
+        as it is when that is None (the default).
+        """
+        self.panda_arm.move_franka_arm_to_joint_position(
+            self.raised_home_joint_position()
+        )
+        if self.raised_home_gripper_position is not None:
+            self.set_gripper_position(self.raised_home_gripper_position)
+
+    def set_gripper_position(self, position: float, blocking: bool = True) -> None:
+        """Drive the gripper to a closedness in [0, 1] (0.0 = open, 1.0 = closed)."""
+        gripper_cmd = float(np.clip(position, 0.0, 1.0))
         if isinstance(self.gripper, RemoteRobotiqGripper):
             self.gripper.send_grasp_command(
                 position=gripper_cmd,
                 speed=GRIPPER_SPEED,
                 force=GRIPPER_FORCE,
-                blocking=True,
+                blocking=blocking,
             )
         else:
             max_width = 0.0
@@ -539,6 +598,12 @@ class CartesianPolicyPandaControlPair(ControlPair):
             width = (1.0 - gripper_cmd) * max_width if max_width > 0.0 else 0.0
             self.gripper.send_gripper_command(width=width, speed=0.1)
         self._last_gripper_cmd = gripper_cmd
+
+    def open_gripper(self) -> None:
+        self.set_gripper_position(GRIPPER_OPEN_POSITION, blocking=False)
+
+    def close_gripper(self) -> None:
+        self.set_gripper_position(GRIPPER_CLOSE_POSITION, blocking=False)
 
     def control_step(self) -> None:
         if self.action_pose_mode == "delta":

@@ -28,6 +28,7 @@ class FollowerData:
             self.tau_ext_hat_filtered_list = []
             self.gripper_state_list = []
             self.O_F_ext_hat_K_list = []
+            self.tau_J_list = []
             self.gripper_current_list = []
 
         # def append(self):
@@ -54,7 +55,8 @@ class FollowerData:
                 torch.stack(self.tau_ext_hat_filtered_list),
                 torch.stack(self.gripper_state_list),
                 torch.stack(self.O_F_ext_hat_K_list ),
-                torch.stack(self.gripper_current_list)
+                torch.stack(self.gripper_current_list),
+                torch.stack(self.tau_J_list)
             ]
             paths = [
                 # path / "timestamp_ms.pt",
@@ -67,7 +69,8 @@ class FollowerData:
                 path / "external_joint_torque.pt",
                 path / "gripper_state.pt",
                 path / "external_wrench.pt",
-                path / "gripper_current.pt"
+                path / "gripper_current.pt",
+                path / "joint_torque.pt"
             ]
 
             for d, p in zip(tensor_lists, paths):
@@ -251,6 +254,7 @@ class IRLDataCollection(DataCollectionManager):
         self.follower_robot_data.dq_list.append(to_tensor(follower_arm_state["dq"]))
         self.follower_robot_data.tau_ext_hat_filtered_list.append(to_tensor(follower_arm_state["tau_ext_hat_filtered"]))
         self.follower_robot_data.O_F_ext_hat_K_list.append(to_tensor(follower_arm_state["O_F_ext_hat_K"]))
+        self.follower_robot_data.tau_J_list.append(to_tensor(follower_arm_state["tau_J"]))
         #follower gripper
         self.follower_robot_data.gripper_state_list.append(to_tensor(follower_gripper_state["position"]))
         self.follower_robot_data.gripper_current_list.append(to_tensor(follower_gripper_state["current"]))

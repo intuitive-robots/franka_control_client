@@ -42,6 +42,7 @@ class PandaArmState(TypedDict):
     tau_ext_hat_filtered: List[float]
     O_F_ext_hat_K: List[float]
     K_F_ext_hat_K: List[float]
+    tau_J: List[float]
 
 
 class JointPositionCommand(TypedDict):

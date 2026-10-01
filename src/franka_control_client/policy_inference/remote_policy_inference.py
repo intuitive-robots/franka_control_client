@@ -509,6 +509,25 @@ class RemotePolicyInference(PolicyInferenceManager):
         if hasattr(self.control_pair, "go_home"):
             self.control_pair.go_home()
 
+    def _reset_arm_raised(self) -> None:
+        """Move to the start position raised by the configured offset (20 cm up).
+
+        The gripper is left as it is unless the control pair was configured with
+        a raised_home_gripper_position. Only available in WAITING state, i.e.
+        while the control pair is not running.
+        """
+        if not hasattr(self.control_pair, "go_home_raised"):
+            self._ui_console.log(
+                f"Raised reset not supported by {type(self.control_pair).__name__}."
+            )
+            return
+        self._ui_console.log("Moving 20cm above the start position...")
+        try:
+            self.control_pair.go_home_raised()
+            self._ui_console.log("Arm raised.")
+        except Exception as exc:
+            self._ui_console.log(f"Failed to reset arm: {exc}")
+
     def _close(self) -> None:
         self.client.close()
         super()._close()

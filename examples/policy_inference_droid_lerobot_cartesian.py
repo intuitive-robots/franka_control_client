@@ -46,6 +46,8 @@ if __name__ == "__main__":
         # Start/reset configuration: joint_pos of frame 105 from
         # /home/irl-admin/new_data_collection/test/2026_06_16-08_56_39/FrankaPanda
         # When 'r' (reset) is pressed the robot moves to this joint position.
+        # 'u' moves to the same pose 20 cm higher and leaves the gripper as it
+        # is, 'o'/'p' open/close the gripper manually.
         START_JOINT_POSITION = (
             0.5177174113466025,
             0.3531982815893073,
@@ -68,6 +70,12 @@ if __name__ == "__main__":
             home_joint_position=START_JOINT_POSITION,
             # Close the gripper when moving to the start/reset pose.
             home_gripper_position=1.0,
+            # Second reset pose ('u'): same pose and orientation, 20 cm higher
+            # in the base frame. The joint angles are derived from
+            # START_JOINT_POSITION via IK (panda_kinematics).
+            raised_home_offset=(0.0, 0.0, 0.22),
+            # None: keep the gripper exactly as it is when moving up.
+            raised_home_gripper_position=None,
         )
 
         camera_left = ImageDataWrapper(

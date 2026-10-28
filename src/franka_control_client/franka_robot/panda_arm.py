@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TypedDict, Sequence, List, Optional
+from typing import NotRequired, TypedDict, Sequence, List, Optional
 import pyzlc
 import numpy as np
 
@@ -14,6 +14,8 @@ from ..core.remote_device import RemoteDevice
 class ControlMode(str, Enum):
     IDLE = "Idle"
     HybridJointImpedance = "HybridJointImpedance"
+    # same controller, soft gains for contact-rich tasks (hybrid_joint_impedance_compliant_controller.yaml)
+    HybridJointImpedanceCompliant = "HybridJointImpedanceCompliant"
     HybridJointExtTorqueImpedance = "HybridJointExtTorqueImpedance"
     OSC = "OSC"
     CartesianImpedance = "CartesianImpedance"
@@ -50,6 +52,7 @@ class JointPositionCommand(TypedDict):
     """
 
     pos: List[float]  # 7 joint angles in radians
+    vel: NotRequired[List[float]]  # optional feed-forward joint velocities in rad/s
 
 
 class JointTorqueCommand(TypedDict):
@@ -58,6 +61,14 @@ class JointTorqueCommand(TypedDict):
     """
 
     tau: List[float]  # 7 joint torques in Nm
+
+
+class EEWrenchCommand(TypedDict):
+    """
+    Feed-forward wrench at the flange, added by the HybridJointImpedance modes.
+    """
+
+    wrench: List[float]  # fx, fy, fz [N], tx, ty, tz [Nm] in the base frame
 
 
 class CartesianPoseCommand(TypedDict):
@@ -112,6 +123,9 @@ class RemotePandaArm(RemoteDevice):
         )
         self.joint_torque_publisher = pyzlc.Publisher(
             f"{robot_name}/joint_torque_command"
+        )
+        self.ee_wrench_publisher = pyzlc.Publisher(
+            f"{robot_name}/ee_wrench_command"
         )
 
     def connect(self) -> None:
@@ -209,11 +223,15 @@ class RemotePandaArm(RemoteDevice):
         raise NotImplementedError
 
     def send_joint_position_command(
-        self, joint_positions: Sequence[float]
+        self,
+        joint_positions: Sequence[float],
+        joint_velocities: Optional[Sequence[float]] = None,
     ) -> None:
         """
         Send a joint position command to the Franka arm.
         Accepts tuple, list, numpy array, or torch tensor (no type checking).
+        joint_velocities is an optional feed-forward velocity [rad/s]; the hybrid joint
+        controllers use it as damping reference and to extrapolate between commands.
         """
         if not self._enable_publishers:
             raise RuntimeError(
@@ -223,19 +241,29 @@ class RemotePandaArm(RemoteDevice):
         # print(f"Sending joint position command: {arr}")
         if arr.size != 7:
             raise ValueError(f"Expected 7 joint angles, got {arr.size}")
-        self.joint_position_publisher.publish(
-            JointPositionCommand(pos=arr.tolist())
-        )
+        cmd = JointPositionCommand(pos=arr.tolist())
+        if joint_velocities is not None:
+            vel = np.asarray(joint_velocities, dtype=np.float64).reshape(-1)
+            if vel.size != 7:
+                raise ValueError(f"Expected 7 joint velocities, got {vel.size}")
+            cmd["vel"] = vel.tolist()
+        self.joint_position_publisher.publish(cmd)
 
     def send_cartesian_pose_command(
-        self, pos: Sequence[float], rot: Sequence[float]
+        self,
+        pos: Sequence[float],
+        rot: Sequence[float],
+        pos_vel: Optional[Sequence[float]] = None,
+        rot_vel: Optional[Sequence[float]] = None,
     ) -> None:
         """
         Send a Cartesian pose command to the Franka arm.
 
         Args:
             pos (tuple of 3 floats): translation (x, y, z).
-            rot (tuple of 3 floats): orientation (euler angles).
+            rot (tuple of 4 floats): orientation quaternion (x, y, z, w).
+            pos_vel (tuple of 3 floats): optional feed-forward linear velocity [m/s], base frame.
+            rot_vel (tuple of 3 floats): optional feed-forward angular velocity [rad/s], base frame.
         Raises:
             CommandError: If packing or command execution fails.
         """
@@ -249,12 +277,18 @@ class RemotePandaArm(RemoteDevice):
             raise ValueError(
                 f"Expected 3 position values and 4 orientation values, got {pos_arr.size} and {rot_arr.size}"
             )
+        pos_vel_arr = np.zeros(3) if pos_vel is None else np.asarray(pos_vel, dtype=np.float64).reshape(-1)
+        rot_vel_arr = np.zeros(3) if rot_vel is None else np.asarray(rot_vel, dtype=np.float64).reshape(-1)
+        if pos_vel_arr.size != 3 or rot_vel_arr.size != 3:
+            raise ValueError(
+                f"Expected 3 linear and 3 angular velocity values, got {pos_vel_arr.size} and {rot_vel_arr.size}"
+            )
         self.cartesian_pose_publisher.publish(
             CartesianPoseCommand(
                 pos=pos_arr.tolist(),
                 rot=rot_arr.tolist(),
-                pos_vel=[0, 0, 0],
-                rot_vel=[0, 0, 0],
+                pos_vel=pos_vel_arr.tolist(),
+                rot_vel=rot_vel_arr.tolist(),
             )
         )
 
@@ -296,3 +330,19 @@ class RemotePandaArm(RemoteDevice):
         self.joint_torque_publisher.publish(
             JointTorqueCommand(tau=arr.tolist())
         )
+
+    def send_ee_wrench_command(self, wrench: Sequence[float]) -> None:
+        """
+        Send a feed-forward wrench at the flange (fx, fy, fz [N], tx, ty, tz [Nm], base frame).
+        The HybridJointImpedance modes add it as J^T * wrench on top of the impedance, limited to
+        max_ee_force / max_ee_torque of the controller config. It is dropped when no new command
+        arrives within ee_wrench_timeout (0.1 s), so keep sending it while it should act.
+        """
+        if not self._enable_publishers:
+            raise RuntimeError(
+                "Publishers disabled for this RemotePandaArm instance."
+            )
+        arr = np.asarray(wrench, dtype=np.float64).reshape(-1)
+        if arr.size != 6:
+            raise ValueError(f"Expected 6 wrench values, got {arr.size}")
+        self.ee_wrench_publisher.publish(EEWrenchCommand(wrench=arr.tolist()))

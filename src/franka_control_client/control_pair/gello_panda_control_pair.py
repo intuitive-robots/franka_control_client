@@ -10,14 +10,24 @@ GRIPPER_SPEED = 0.7
 GRIPPER_FORCE= 0.3
 CONTROL_HZ: float = 500
 GRIPPER_DEADBAND: float = 1e-3
+# send the GELLO joint velocity along with the position (proxy: velocity_feedforward in the controller yaml)
+USE_VELOCITY_FEEDFORWARD: bool = True
 CONTROL_MODE: ControlMode = ControlMode.HybridJointImpedance
 
 class GelloPandControlPair(ControlPair):
-    def __init__(self, leader: RemoteGello, follower: PandaRobotiq) -> None:
+    def __init__(
+        self,
+        leader: RemoteGello,
+        follower: PandaRobotiq,
+        control_mode: ControlMode = CONTROL_MODE,
+    ) -> None:
         super().__init__()
         self.leader = leader
         self.follower = follower
         self._last_gripper_cmd: Optional[float] = None
+        self._last_seq: Optional[int] = None
+        # HybridJointImpedance (stiff) or HybridJointImpedanceCompliant (contact-rich tasks)
+        self.control_mode = control_mode
     
     def control_reset(self)-> None:
         leader_arm_state = self.leader.current_state["gello_arm_state"]
@@ -50,9 +60,20 @@ class GelloPandControlPair(ControlPair):
         leader_arm_state = self.leader.current_state["gello_arm_state"]
         if leader_arm_state is None:
             return
-        self.follower.panda_arm.send_joint_position_command(
-            np.asarray(leader_arm_state["joint_state"], dtype=np.float64).reshape(-1)
-        )
+        seq = leader_arm_state.get("seq")
+        if seq is None:
+            # older gello node without sample numbers: resend the latest state every step
+            self.follower.panda_arm.send_joint_position_command(
+                np.asarray(leader_arm_state["joint_state"], dtype=np.float64).reshape(-1)
+            )
+        elif seq != self._last_seq:
+            # forward each GELLO sample once: the proxy extrapolates along joint_velocity
+            # from the time a command arrives, resending the same sample would restart that
+            self._last_seq = seq
+            self.follower.panda_arm.send_joint_position_command(
+                np.asarray(leader_arm_state["joint_state"], dtype=np.float64).reshape(-1),
+                leader_arm_state.get("joint_velocity") if USE_VELOCITY_FEEDFORWARD else None,
+            )
         leader_gripper_state = self.leader.current_state["gello_gripper_state"]
         if leader_gripper_state is None:
             return
@@ -90,7 +111,7 @@ class GelloPandControlPair(ControlPair):
             # pyzlc.info("Resetting...")
             # self.control_reset()
             # pyzlc.sleep(1)
-            self.follower.panda_arm.set_franka_arm_control_mode(CONTROL_MODE)
+            self.follower.panda_arm.set_franka_arm_control_mode(self.control_mode)
             while self.is_running:
                 self.control_step()
             self.control_end()

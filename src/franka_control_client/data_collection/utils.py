@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import threading
+import time
 import sys
 import select
 import tty
@@ -47,9 +49,19 @@ class UIConsole:
 
 class NonBlockingKeyPress(object):
     """
-    This class was copied and adapted from: https://stackoverflow.com/a/10079805
-    Note that this solution is sometimes confused when spamming a character and that there are problems with special characters such as arrow keys.
+    Non-blocking single key reader for a terminal in cbreak mode (adapted from
+    https://stackoverflow.com/a/10079805).
+
+    get_data() returns one lower-case key per press ("esc" for Escape) or False. Everything pending
+    is read at once, so a burst (spamming, key auto-repeat) counts as one press, the same key
+    within `repeat_s` is ignored, and escape sequences (arrow keys, ...) are dropped instead of
+    showing up as stray letters. Output is not flushed (tcflush on the tty also discarded logs).
     """
+
+    def __init__(self, repeat_s: float = 0.3):
+        self.repeat_s = repeat_s
+        self._last_key = None
+        self._last_time = 0.0
 
     def __enter__(self):
         self.old_settings = termios.tcgetattr(sys.stdin)
@@ -60,14 +72,25 @@ class NonBlockingKeyPress(object):
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_settings)
 
     def get_data(self):
-        if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
-            # Read one character
-            data = sys.stdin.read(1)
-            # Flush received but not read and written but not transmitted data
-            # This does no fully fix that the input is confused if a key is spammed
-            termios.tcflush(sys.stdin, termios.TCIOFLUSH)
-            return data
-        return False
+        fd = sys.stdin.fileno()
+        if not select.select([fd], [], [], 0)[0]:
+            return False
+        data = os.read(fd, 64).decode(errors="ignore")
+        if not data:
+            return False
+        if data[0] == "\x1b":
+            # a lone ESC is the Escape key, anything longer an escape sequence
+            key = "esc" if len(data) == 1 else None
+        else:
+            key = data[0].lower()
+        if key is None:
+            return False
+        now = time.monotonic()
+        if key == self._last_key and now - self._last_time < self.repeat_s:
+            self._last_time = now
+            return False
+        self._last_key, self._last_time = key, now
+        return key
 
 
 class VoidEvent:

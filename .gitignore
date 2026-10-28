@@ -177,3 +177,9 @@ cython_debug/
 .vscode/
 
 .outputs/
+# data collection output (examples/data_collection_droid_irl.py)
+recordings/
+
+# pixi environment
+.pixi/
+*_report.txt

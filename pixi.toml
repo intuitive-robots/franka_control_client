@@ -1,0 +1,41 @@
+# franka_control_client (data collection, policy inference) - replaces conda env `data_collect_client`
+[workspace]
+name = "franka-control-client"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = "3.12.*"
+
+[pypi-dependencies]
+franka-control-client = { path = ".", editable = true }
+lerobot = "==0.4.*"
+# CUDA 12.6 wheels (work with NVIDIA driver >= 525)
+torch = { version = "*", index = "https://download.pytorch.org/whl/cu126" }
+torchvision = { version = "*", index = "https://download.pytorch.org/whl/cu126" }
+pyzlc = "*"
+pyzmq = ">=26.4.0"
+# PyPI simpub 2.2.x is broken (missing simpub.simpubweb); use upstream main
+simpub = { git = "https://github.com/intuitive-robots/SimPublisher.git", rev = "c79b989bdd11a09244e6577e79fd110e19f03e5c" }
+numpy = "*"
+scipy = "*"
+matplotlib = "*"
+hydra-core = "*"
+omegaconf = "*"
+rerun-sdk = "*"
+tqdm = "*"
+pytest = ">=8.3.5"
+
+[tasks]
+policy-inference = "python examples/policy_inference_droid_lerobot_cartesian.py"
+data-collection = "python examples/data_collection_droid_irl.py --control-mode compliant"
+# kinesthetic teaching (hand guiding) -> robot replays the demo, both recorded; extra args are appended (--help)
+teach-replay = "python examples/teach_and_replay_droid_irl.py"
+# checks the Desk end-effector load against the mounted hardware (proxy must be running); extra args are appended
+ee-load-check = "python examples/check_ee_load.py"
+# follows a Cartesian test shape from the DROID home pose and plots desired vs. actual EE position
+ee-tracking-check = "python examples/check_ee_tracking.py"
+# passive: records GELLO and Panda during normal teleop, reports GELLO sample rate, lag and tracking error per joint
+teleop-tracking-check = "python examples/check_teleop_tracking.py"
+# passive: streams GELLO + Franka joint values (overlaid per joint) to a Rerun gRPC server (:9876); view remotely with `rerun rerun+http://localhost:9876/proxy` over an ssh tunnel
+gello-viz = "python examples/gello_rerun_viz.py"

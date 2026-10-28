@@ -5,8 +5,12 @@ import pyzlc
 import numpy as np
 import threading
 
-from digital_twin.models import RobotModelId
-from digital_twin.simulation.mirror import RobotMirror
+try:
+    from digital_twin.models import RobotModelId
+    from digital_twin.simulation.mirror import RobotMirror
+except ImportError:  # optional: MQ3 visualization is disabled without digital_twin
+    RobotModelId = None
+    RobotMirror = None
 from simpub.core import XRTrajectory
 
 from franka_control_client.control_pair.cartesian_policy_panda_control_pair import CartesianPolicyPandaControlPair
@@ -29,9 +33,13 @@ class MQ3TrajVisualLeRobotInference(LeRobotPolicyInference):
         cfg: LeRobotPolicyInferenceConfig,
     ) -> None:
         super().__init__(data_collectors, control_pair, cfg)
-        self.mirror = RobotMirror.from_model_id(
-            RobotModelId.FRANKA_PANDA_ROBOTIQ
-        )
+        self.mirror = None
+        if RobotMirror is not None:
+            self.mirror = RobotMirror.from_model_id(
+                RobotModelId.FRANKA_PANDA_ROBOTIQ
+            )
+        else:
+            pyzlc.warn("digital_twin not installed, MQ3 visualization disabled")
         self.last_chunk_traj: Optional[XRTrajectory] = None
         self.history_way_points = []
         self.history_traj: Optional[XRTrajectory] = None
@@ -40,7 +48,8 @@ class MQ3TrajVisualLeRobotInference(LeRobotPolicyInference):
         self.visualize_thread = threading.Thread(
             target=self._visualize_loop, daemon=True
         )
-        self.visualize_thread.start()
+        if self.mirror is not None:
+            self.visualize_thread.start()
 
     def _visualize_loop(self) -> None:
         while self.running:
@@ -155,7 +164,9 @@ class MQ3TrajVisualLeRobotInference(LeRobotPolicyInference):
                     "color": [0.0, 1.0, 0.0, 1.0],
                 }
             )
-        if self.last_chunk_traj is None:
+        if self.mirror is None:
+            pass
+        elif self.last_chunk_traj is None:
             self.last_chunk_traj = self.mirror._cavns.create_trajectory(
                 name="ee_trajectory", waypoints=way_points
             )

@@ -40,3 +40,7 @@ ee-tracking-check = "python examples/check_ee_tracking.py"
 teleop-tracking-check = "python examples/check_teleop_tracking.py"
 # passive: streams GELLO + Franka joint values (overlaid per joint) to a Rerun gRPC server (:9876); view remotely with `rerun rerun+http://localhost:9876/proxy` over an ssh tunnel
 gello-viz = "python examples/gello_rerun_viz.py"
+# Quest 3 WebXR teleop, no robot: serves the page on 127.0.0.1:8000 and prints the mapped EE target (docs/webxr_teleop.md)
+webxr-echo = "python examples/webxr_echo.py"
+# Quest 3 WebXR teleop data collection (Cartesian impedance, clutch on right grip); extra args are appended (--help)
+data-collection-webxr = "python examples/data_collection_droid_webxr_irl.py"

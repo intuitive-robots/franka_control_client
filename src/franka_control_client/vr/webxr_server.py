@@ -200,6 +200,7 @@ class WebXRServer:
                     self._connected = False
                     self._sample = None
                     self._rtt_ms = None
+                    self._arrivals.clear()
             log.info("WebXR client %d disconnected", conn_id)
         return ws
 

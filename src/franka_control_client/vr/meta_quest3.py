@@ -1,19 +1,12 @@
 from simpub import init_xr_node_manager, MetaQuest3
 from scipy.spatial.transform import Rotation as R
-from typing import List, Optional, TypedDict
+from typing import List, Optional
 import numpy as np
 import threading
 
 from ..core.remote_device import RemoteDevice
 from ..franka_robot.panda_arm import RemotePandaArm
-
-
-class MQ3ControlSignal(TypedDict):
-    pos: List[float]
-    rot: List[float]
-    pos_vel: List[float]
-    rot_vel: List[float]
-    gripper_width: float
+from .control_signal import MQ3ControlSignal
 
 
 class MQ3Controller(RemoteDevice):

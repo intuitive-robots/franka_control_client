@@ -3,7 +3,7 @@ import traceback
 from .control_pair import ControlPair
 from ..franka_robot.panda_arm import ControlMode
 from ..franka_robot.panda_robotiq import PandaRobotiq
-from ..vr.meta_quest3 import MQ3Controller
+from ..vr.control_signal import EEControlSource
 
 GRIPPER_SPEED = 0.7
 GRIPPER_FORCE = 0.3
@@ -12,7 +12,7 @@ GRIPPER_DEADBAND: float = 1e-3
 
 
 class MQ3PandaControlPair(ControlPair):
-    def __init__(self, leader: MQ3Controller, follower: PandaRobotiq) -> None:
+    def __init__(self, leader: EEControlSource, follower: PandaRobotiq) -> None:
         super().__init__()
         self.leader = leader
         self.follower = follower

@@ -11,7 +11,7 @@ from ..franka_robot.panda_arm import RemotePandaArm
 from ..franka_robot.panda_gripper import RemotePandaGripper
 from ..robotiq_gripper.robotiq_gripper import RemoteRobotiqGripper
 from ..gello.gello import RemoteGello
-from ..vr.meta_quest3 import MQ3Controller
+from ..vr.control_signal import EEControlSource
 
 
 class IRL_HardwareDataWrapper(abc.ABC):
@@ -241,7 +241,7 @@ class GelloDataWrapper(IRL_HardwareDataWrapper):
 class MQ3DataWrapper(IRL_HardwareDataWrapper):
     def __init__(
         self,
-        robot: MQ3Controller,
+        robot: EEControlSource,
         hw_name: str = "MQ3",
         hw_type: str = "leader_robot",
     ) -> None:

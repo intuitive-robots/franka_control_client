@@ -1,0 +1,34 @@
+{
+  "sim": true,
+  "gripper_type": "robotiq",
+  "cameras": [
+    {
+      "name": "zed_right",
+      "obs_key": "observation.images.external",
+      "send_to_policy": true
+    },
+    {
+      "name": "zed_wrist",
+      "obs_key": "observation.images.wrist",
+      "send_to_policy": true
+    }
+  ],
+  "control_pair": "joint",
+  "control_hz": 50.0,
+  "policy_host": "127.0.0.1",
+  "policy_port": 8767,
+  "policy_fps": 15.0,
+  "inference_mode": "sync",
+  "task": "put the marker in the cup",
+  "max_episode_s": 120.0,
+  "batch_name": "sim_test",
+  "batch_description": "Simulated robot + dummy policy smoke test",
+  "save_root": "eval_rollouts",
+  "save_lerobot": false,
+  "dataset_fps": 0.0,
+  "dataset_image_width": 0,
+  "dataset_image_height": 0,
+  "dataset_force_torque": true,
+  "dataset_use_videos": true,
+  "robot_type": "franka_panda"
+}

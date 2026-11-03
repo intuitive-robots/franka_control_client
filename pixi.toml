@@ -28,6 +28,12 @@ pytest = ">=8.3.5"
 
 [tasks]
 policy-inference = "python examples/policy_inference_droid_lerobot_cartesian.py"
+# GUI inference (robot PC): dashboard on http://localhost:8080, see docs/inference_gui.md
+inference-gui = "python -m franka_control_client.inference_gui.app --config configs/inference_gui.json"
+# same GUI with a simulated arm/gripper/cameras; pair it with `pixi run policy-server-dummy`
+inference-gui-sim = "python -m franka_control_client.inference_gui.app --config configs/inference_gui_sim.json"
+# policy PC side without a model (oscillates around the start pose); extra args are appended
+policy-server-dummy = "python -m franka_control_client.inference_gui.policy_server --policy dummy"
 data-collection = "python examples/data_collection_droid_irl.py --control-mode compliant"
 # kinesthetic teaching (hand guiding) -> robot replays the demo, both recorded; extra args are appended (--help)
 teach-replay = "python examples/teach_and_replay_droid_irl.py"

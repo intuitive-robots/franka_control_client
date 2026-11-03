@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Franka Inference</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f3f3f1;
+  --surface-1: #fcfcfb;
+  --surface-2: #f0efec;
+  --border: #dddcd7;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #7b7a74;
+  --grid: #e6e5e0;
+  --series-1: #2a78d6;   /* measured */
+  --series-2: #eb6834;   /* commanded / planned */
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+  --accent: #2a78d6;
+  --btn-text: #ffffff;
+  --shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #111110; --surface-1: #1a1a19; --surface-2: #232321; --border: #33332f;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86; --grid: #2a2a27;
+    --series-1: #3987e5; --series-2: #d95926; --accent: #3987e5; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111110; --surface-1: #1a1a19; --surface-2: #232321; --border: #33332f;
+  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86; --grid: #2a2a27;
+  --series-1: #3987e5; --series-2: #d95926; --accent: #3987e5; --shadow: none;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--text-primary);
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+button, input, select, textarea { font: inherit; color: inherit; }
+h2 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-secondary); margin: 0 0 10px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- header ---------- */
+header { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+  padding: 10px 16px; background: var(--surface-1); border-bottom: 1px solid var(--border); }
+header .title { font-weight: 700; font-size: 15px; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface-2); font-weight: 600; font-size: 12px; white-space: nowrap; }
+.badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+.badge[data-tone="good"] .dot { background: var(--good); }
+.badge[data-tone="warning"] .dot { background: var(--warning); }
+.badge[data-tone="critical"] .dot { background: var(--critical); }
+.badge[data-tone="info"] .dot { background: var(--accent); }
+.badge.sim { border-style: dashed; }
+header .spacer { flex: 1; }
+header .meta { color: var(--text-secondary); }
+
+/* ---------- layout ---------- */
+main { display: grid; grid-template-columns: 330px minmax(0, 1fr) 380px; gap: 12px; padding: 12px 16px 24px; }
+@media (max-width: 1400px) { main { grid-template-columns: 310px minmax(0, 1fr); } .col3 { grid-column: 1 / -1; } }
+@media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } }
+.col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.col3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; align-content: start; }
+@media (min-width: 1401px) { .col3 { display: flex; flex-direction: column; } }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px; box-shadow: var(--shadow); min-width: 0; }
+
+/* ---------- buttons ---------- */
+.btn { border: 1px solid var(--border); background: var(--surface-2); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-weight: 600; }
+.btn:hover:not(:disabled) { border-color: var(--text-muted); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--btn-text); }
+.btn.go { background: var(--good); border-color: var(--good); color: #fff; }
+.btn.danger { background: var(--critical); border-color: var(--critical); color: #fff; }
+.btn.big { padding: 12px 18px; font-size: 15px; border-radius: 10px; }
+.btn kbd { font: 11px ui-monospace, monospace; opacity: .8; margin-left: 6px; padding: 0 4px; border: 1px solid currentColor; border-radius: 3px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ---------- forms ---------- */
+details.section { border-top: 1px solid var(--border); padding: 8px 0; }
+details.section:first-of-type { border-top: 0; }
+details.section > summary { cursor: pointer; font-weight: 600; color: var(--text-secondary); list-style: none; padding: 2px 0; }
+details.section > summary::before { content: "▸ "; color: var(--text-muted); }
+details.section[open] > summary::before { content: "▾ "; }
+.field { display: grid; grid-template-columns: 1fr 1.15fr; gap: 8px; align-items: center; margin: 6px 0; }
+.field.wide { grid-template-columns: 1fr; gap: 3px; }
+.field label { color: var(--text-secondary); font-size: 12px; }
+.field input[type=text], .field input[type=number], .field select, .field textarea, .review input, .review textarea {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
+.field textarea, .review textarea { min-height: 54px; resize: vertical; }
+.field input:disabled, .field select:disabled, .field textarea:disabled { opacity: .55; }
+.hint { color: var(--text-muted); font-size: 11px; overflow-wrap: anywhere; min-width: 0; }
+.cam-row { display: grid; grid-template-columns: 1fr 1.3fr auto auto; gap: 6px; align-items: center; margin: 4px 0; }
+.cam-row input[type=text] { width: 100%; padding: 5px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
+.dirty-note { color: var(--serious); font-weight: 600; }
+
+/* ---------- run card ---------- */
+.run-top { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
+.timer { font-size: 28px; font-weight: 700; }
+.progress { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.progress > div { height: 100%; background: var(--accent); width: 0; transition: width .2s linear; }
+.task-line { color: var(--text-secondary); margin-top: 8px; overflow-wrap: anywhere; }
+.banner { margin-top: 10px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--critical); color: var(--text-primary); display: flex; gap: 8px; align-items: center; }
+.banner::before { content: "⚠"; color: var(--critical); font-weight: 700; }
+
+/* ---------- review ---------- */
+.review { border: 2px solid var(--warning); }
+.review .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 700px) { .review .grid2 { grid-template-columns: 1fr; } }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface-2); padding: 7px 12px; cursor: pointer; border-right: 1px solid var(--border); font-weight: 600; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--text-primary); color: var(--surface-1); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 12px; }
+.kv dt { color: var(--text-muted); } .kv dd { margin: 0; }
+
+/* ---------- tiles ---------- */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.tile .label { color: var(--text-secondary); font-size: 12px; }
+.tile .value { font-size: 24px; font-weight: 700; margin-top: 2px; }
+.tile .value small { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-left: 3px; }
+.tile .sub { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+.tile .flag { font-size: 11px; font-weight: 600; }
+.tile .flag.warn::before { content: "▲ "; color: var(--warning); }
+.tile .flag.ok::before { content: "● "; color: var(--good); }
+
+/* ---------- charts ---------- */
+.chart-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px; margin-bottom: 6px; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--text-secondary); font-size: 12px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 0; border-top: 2px solid; display: inline-block; }
+.legend i.dash { border-top-style: dashed; }
+.chart { position: relative; width: 100%; }
+.chart canvas { display: block; width: 100%; height: 100%; }
+.charts2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 1100px) { .charts2 { grid-template-columns: 1fr; } }
+.multiples { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 1100px) { .multiples { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.multiples .m-title { font-size: 12px; color: var(--text-secondary); display: flex; justify-content: space-between; }
+.tooltip { position: fixed; pointer-events: none; z-index: 50; background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.15); display: none; white-space: nowrap; }
+.tooltip .sw { display: inline-block; width: 10px; height: 2px; vertical-align: middle; margin-right: 6px; }
+
+/* ---------- robot ---------- */
+#arm3d { height: 300px; cursor: grab; touch-action: none; }
+.jbar { display: grid; grid-template-columns: 26px 1fr 64px; gap: 8px; align-items: center; margin: 4px 0; font-size: 12px; }
+.jbar .track { position: relative; height: 10px; background: var(--surface-2); border-radius: 5px; }
+.jbar .mark { position: absolute; top: -2px; width: 4px; height: 14px; border-radius: 2px; background: var(--series-1); transform: translateX(-2px); }
+.jbar .cmd { position: absolute; top: -4px; width: 2px; height: 18px; background: var(--series-2); transform: translateX(-1px); }
+.jbar .track.near { box-shadow: inset 0 0 0 1px var(--critical); }
+.jbar .val { text-align: right; color: var(--text-secondary); }
+.ee { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 10px; font-size: 12px; margin-top: 8px; }
+.ee div span { color: var(--text-muted); margin-right: 4px; }
+
+/* ---------- cameras ---------- */
+.cams { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin-top: 8px; }
+.cams figure { margin: 0; }
+.cams img { width: 100%; border-radius: 6px; background: var(--surface-2); aspect-ratio: 4 / 3; object-fit: contain; display: block; }
+.cams figcaption { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.switch { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; color: var(--text-secondary); font-size: 12px; }
+
+/* ---------- log & table ---------- */
+#log { height: 180px; overflow-y: auto; font: 12px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+#log .l-error { color: var(--critical); } #log .l-warn { color: var(--serious); }
+#log .ts { color: var(--text-muted); margin-right: 6px; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 12px; }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--text-secondary); font-weight: 600; }
+td.desc { min-width: 180px; max-width: 280px; color: var(--text-secondary); }
+td.num, th.num { white-space: nowrap; }
+.outcome { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+.outcome::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+.outcome.success::before { background: var(--good); } .outcome.partial::before { background: var(--warning); }
+.outcome.failure::before { background: var(--critical); }
+.toast { position: fixed; right: 16px; bottom: 16px; z-index: 60; max-width: 420px; padding: 10px 14px; border-radius: 8px;
+  background: var(--text-primary); color: var(--surface-1); box-shadow: 0 6px 20px rgba(0,0,0,.25); display: none; }
+.toast.err { background: var(--critical); color: #fff; }
+.offline { display: none; background: var(--critical); color: #fff; text-align: center; padding: 6px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="offline" id="offline">Lost connection to the robot PC dashboard server — retrying…</div>
+<header>
+  <span class="title">Franka Inference</span>
+  <span class="badge" id="stateBadge" data-tone=""><span class="dot"></span><span id="stateText">—</span></span>
+  <span class="badge" id="policyBadge" data-tone=""><span class="dot"></span><span id="policyText">policy —</span></span>
+  <span class="badge sim" id="simBadge" hidden>SIMULATION</span>
+  <span class="spacer"></span>
+  <span class="meta">Batch <b id="hdrBatch">—</b> · <span id="hdrCount">0</span> saved · <span id="hdrRate">—</span></span>
+  <button class="btn" id="btnConnect">Connect</button>
+</header>
+
+<main>
+  <!-- ======================= column 1: setup ======================= -->
+  <section class="col">
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:6px">
+        <h2 style="margin:0">Setup</h2>
+        <span id="dirtyNote" class="dirty-note" hidden>Unapplied changes</span>
+      </div>
+      <form id="cfgForm" autocomplete="off"></form>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary" id="btnApply">Apply settings</button>
+        <button class="btn" id="btnRevert">Revert</button>
+      </div>
+      <p class="hint" id="cfgHint" style="margin:8px 0 0">Settings are written back to the config file. Robot &amp; camera settings can only change while disconnected.</p>
+    </div>
+  </section>
+
+  <!-- ======================= column 2: run + monitor ======================= -->
+  <section class="col">
+    <div class="card">
+      <div class="run-top">
+        <div>
+          <h2 style="margin-bottom:2px">Rollout <span id="epIndex" class="num"></span></h2>
+          <div class="timer num" id="timer">0.0 s</div>
+        </div>
+        <div class="row">
+          <button class="btn go big" id="btnStart" disabled>Start<kbd>N</kbd></button>
+          <button class="btn big" id="btnStop" disabled>Stop<kbd>S</kbd></button>
+          <button class="btn big" id="btnHome" disabled>Home<kbd>H</kbd></button>
+          <button class="btn danger big" id="btnEstop" title="Stops the control loop and sets the arm to Idle. Not a replacement for the hardware e-stop.">Software stop<kbd>Esc</kbd></button>
+        </div>
+      </div>
+      <div class="progress"><div id="progress"></div></div>
+      <div class="task-line" id="taskLine"></div>
+      <div class="field wide" style="margin-top:10px">
+        <label for="preNotes">Rollout notes for the next rollout (optional; becomes its description)</label>
+        <textarea id="preNotes" placeholder="Scene setup for this rollout, e.g. cup on the left, marker rotated 90°…"></textarea>
+      </div>
+      <div class="banner" id="errBanner" hidden><span id="errText"></span><span class="spacer" style="flex:1"></span><button class="btn" id="btnClearErr">Dismiss</button></div>
+    </div>
+
+    <div class="card review" id="reviewCard" hidden>
+      <h2>Rollout finished — label and save</h2>
+      <div class="grid2">
+        <div>
+          <div class="field wide"><label for="rvName">Rollout name</label><input id="rvName" type="text"></div>
+          <div class="field wide"><label for="rvDesc">Description / notes</label><textarea id="rvDesc" placeholder="What happened? e.g. grasped on 2nd try, knocked cup over…"></textarea></div>
+          <div class="field wide"><label>Outcome</label>
+            <div class="seg" id="rvOutcome">
+              <button type="button" data-v="success">Success</button><button type="button" data-v="partial">Partial</button><button type="button" data-v="failure">Failure</button><button type="button" data-v="unlabeled" aria-pressed="true">Unlabeled</button>
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button class="btn primary" id="btnSave">Save rollout<kbd>Ctrl+Enter</kbd></button>
+            <button class="btn" id="btnDiscard">Discard</button>
+            <button class="btn" id="btnHome2">Home</button>
+          </div>
+        </div>
+        <dl class="kv num" id="rvSummary"></dl>
+      </div>
+    </div>
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="charts2">
+      <div class="card">
+        <div class="chart-head"><h2 style="margin:0">Inference latency (ms)</h2>
+          <div class="legend"><span><i style="border-color:var(--series-1)"></i>Round trip</span><span><i style="border-color:var(--series-2)"></i>Model (server)</span></div></div>
+        <div class="chart" style="height:170px"><canvas id="chLatency"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="chart-head"><h2 style="margin:0">Control loop rate (Hz)</h2>
+          <div class="legend"><span><i style="border-color:var(--series-1)"></i>Measured</span><span><i class="dash" style="border-color:var(--text-muted)"></i>Target</span></div></div>
+        <div class="chart" style="height:170px"><canvas id="chRate"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="chart-head"><h2 style="margin:0" id="trackTitle">Joint tracking — last 10 s</h2>
+        <div class="legend"><span><i style="border-color:var(--series-1)"></i>Measured</span><span><i style="border-color:var(--series-2)"></i>Commanded</span></div></div>
+      <div class="multiples" id="multiples"></div>
+    </div>
+
+    <div class="card">
+      <div class="chart-head"><h2 style="margin:0">Log</h2></div>
+      <div id="log"></div>
+    </div>
+  </section>
+
+  <!-- ======================= column 3: robot + cameras + rollouts ======================= -->
+  <section class="col3">
+    <div class="card">
+      <div class="chart-head"><h2 style="margin:0">Robot state</h2>
+        <div class="legend"><span><i style="border-color:var(--series-1)"></i>Measured</span><span><i class="dash" style="border-color:var(--series-2)"></i>Command / plan</span></div></div>
+      <div class="chart" id="arm3dWrap"><canvas id="arm3d"></canvas></div>
+      <div class="hint">Drag to orbit · scroll to zoom · double-click to reset</div>
+      <div id="jbars" style="margin-top:8px"></div>
+      <div class="ee num" id="eeBox"></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">Cameras</h2>
+        <label class="switch"><input type="checkbox" id="camToggle"> Show live view</label>
+      </div>
+      <div class="cams" id="cams"></div>
+      <div class="hint" id="camHint">Off by default to save bandwidth. Recording is independent of this toggle.</div>
+    </div>
+
+    <div class="card">
+      <div class="chart-head"><h2 style="margin:0">Saved rollouts — this batch</h2><span class="hint" id="batchDir"></span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Name</th><th>Outcome</th><th class="num">Dur.</th><th class="num">Lat. p50</th><th>LeRobot</th><th>Description</th><th></th></tr></thead>
+        <tbody id="epTable"><tr><td colspan="8" class="hint">No rollouts saved yet.</td></tr></tbody>
+      </table></div>
+      <details class="section" id="mergeBox" style="margin-top:10px;border-top:1px solid var(--border)">
+        <summary>Build merged LeRobot dataset</summary>
+        <div class="hint" style="margin:6px 0">Aggregates the rollouts of this batch that have a LeRobot episode into one dataset (e.g. for training). Uses the current outcome labels; <code>meta/rollouts.json</code> maps each episode to its rollout.</div>
+        <div class="row" id="mergeOutcomes">
+          <label class="switch"><input type="checkbox" value="success" checked> success</label>
+          <label class="switch"><input type="checkbox" value="partial"> partial</label>
+          <label class="switch"><input type="checkbox" value="failure"> failure</label>
+          <label class="switch"><input type="checkbox" value="unlabeled"> unlabeled</label>
+        </div>
+        <div class="field wide"><label for="mergeOut">Output folder</label><input id="mergeOut" type="text" placeholder="default: <batch>_dataset_<outcomes> next to the batch folder"></div>
+        <div class="row">
+          <label class="switch"><input type="checkbox" id="mergeOverwrite"> overwrite if it exists</label>
+          <span style="flex:1"></span>
+          <button class="btn primary" id="btnMerge">Build dataset</button>
+        </div>
+        <div class="hint" id="mergeStatus" style="margin-top:6px"></div>
+      </details>
+    </div>
+  </section>
+</main>
+
+<div class="tooltip" id="tooltip"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+// ======================================================================= utils
+const $ = (s, el = document) => el.querySelector(s);
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const fmt = (v, d = 1) => (v === null || v === undefined || !isFinite(v)) ? "—" : Number(v).toFixed(d);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+let toastTimer = null;
+function toast(msg, isErr = false) {
+  const t = $("#toast");
+  t.textContent = msg; t.className = "toast" + (isErr ? " err" : ""); t.style.display = "block";
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.style.display = "none"), isErr ? 6000 : 2500);
+}
+
+async function api(path, body) {
+  const res = await fetch(path, body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) throw new Error(data.error || res.statusText);
+  return data;
+}
+async function act(name, body = {}) {
+  try { const r = await api("/api/action/" + name, body); poll(true); return r; }
+  catch (e) { toast(e.message, true); return null; }
+}
+
+// ======================================================================= state
+const S = {
+  status: null, cfg: null, since: 0, logAfter: 0, dirty: false,
+  series: { state: [], ee: [], cmd: [], latency: [], rates: [] },
+  keep: { state: 12, ee: 12, cmd: 12, latency: 120, rates: 60 },
+  outcome: "unlabeled", reviewFor: null, camsOn: false, episodes: [],
+  view: { az: -0.9, el: 0.35, zoom: 1 },
+};
+
+// ======================================================================= config form
+const JOINT_LIMITS = [[-2.8973, 2.8973], [-1.7628, 1.7628], [-2.8973, 2.8973], [-3.0718, -0.0698], [-2.8973, 2.8973], [-0.0175, 3.7525], [-2.8973, 2.8973]];
+const FIELDS = [
+  { sec: "Evaluation batch", open: true, items: [
+    { k: "batch_name", l: "Batch name", t: "text", wide: true, h: "Folder under the save root; set it before the first rollout." },
+    { k: "batch_description", l: "Batch description", t: "textarea", wide: true },
+    { k: "task", l: "Task instruction (sent to policy)", t: "textarea", wide: true },
+    { k: "save_root", l: "Save root", t: "text" },
+    { k: "record_images", l: "Record camera video", t: "bool" },
+  ]},
+  { sec: "Control pair", open: true, items: [
+    { k: "control_pair", l: "Control pair", t: "select", o: [["joint", "Joint position (PolicyPandaControlPair)"], ["cartesian", "Cartesian pose (CartesianPolicyPandaControlPair)"]] },
+    { k: "control_hz", l: "Control frequency (Hz)", t: "number", step: 1 },
+  ]},
+  { sec: "Policy server", open: true, items: [
+    { k: "policy_host", l: "Host (policy PC)", t: "text" },
+    { k: "policy_port", l: "Port", t: "number", step: 1 },
+    { k: "policy_fps", l: "Chunk rate (Hz)", t: "number", step: 0.5, h: "Overridden by the server's health() if it reports fps." },
+    { k: "exec_steps", l: "Rows executed / chunk", t: "number", step: 1, h: "0 = use the server's value (or the whole chunk)." },
+    { k: "inference_mode", l: "Inference mode", t: "select", o: [["sync", "Sync — observe, infer, play"], ["async", "Async — infer while playing"]] },
+    { k: "request_timeout_s", l: "Request timeout (s)", t: "number", step: 1, h: "0 = wait forever." },
+  ]},
+  { sec: "LeRobot dataset", open: false, items: [
+    { k: "save_lerobot", l: "Save rollouts as LeRobot dataset", t: "bool", h: "One episode per rollout in <rollout>/lerobot/; merge them below the rollout table." },
+    { k: "dataset_fps", l: "Dataset rate (Hz)", t: "number", step: 1, h: "0 = the policy's chunk rate." },
+    { k: "dataset_image_width", l: "Image width (px)", t: "number", step: 1, h: "0 × 0 = camera resolution." },
+    { k: "dataset_image_height", l: "Image height (px)", t: "number", step: 1 },
+    { k: "dataset_force_torque", l: "Include observation.force_torque", t: "bool" },
+    { k: "dataset_use_videos", l: "Store images as video", t: "bool", h: "Off: lossless PNG frames (larger)." },
+    { k: "robot_type", l: "robot_type", t: "text" },
+  ]},
+  { sec: "Safety", open: false, items: [
+    { k: "max_first_step_jump_joint", l: "Max first-step jump (rad)", t: "number", step: 0.01 },
+    { k: "max_first_step_jump_cartesian", l: "Max first-step jump (m)", t: "number", step: 0.01 },
+    { k: "clip_joint_limits", l: "Clip to joint limits", t: "bool" },
+    { k: "max_episode_s", l: "Auto-stop after (s)", t: "number", step: 5, h: "0 = no limit." },
+  ]},
+  { sec: "Robot & network", open: false, conn: true, items: [
+    { k: "sim", l: "Simulated robot", t: "bool" },
+    { k: "robot_name", l: "Robot name", t: "text" },
+    { k: "gripper_type", l: "Gripper", t: "select", o: [["robotiq", "Robotiq"], ["panda", "Franka Hand"]] },
+    { k: "node_name", l: "pyzlc node name", t: "text" },
+    { k: "node_ip", l: "Robot PC IP", t: "text" },
+    { k: "group_name", l: "pyzlc group", t: "text" },
+    { k: "group_port", l: "Group port", t: "number", step: 1 },
+    { k: "state_record_hz", l: "State record rate (Hz)", t: "number", step: 1 },
+  ]},
+];
+const CONN_KEYS = new Set(["sim", "robot_name", "gripper_type", "node_name", "node_ip", "group_name", "group_port", "cameras"]);
+
+function buildForm() {
+  const form = $("#cfgForm");
+  let html = "";
+  for (const sec of FIELDS) {
+    html += `<details class="section" ${sec.open ? "open" : ""}><summary>${sec.sec}</summary>`;
+    for (const f of sec.items) {
+      const id = "f_" + f.k;
+      let input;
+      if (f.t === "textarea") input = `<textarea id="${id}" data-k="${f.k}"></textarea>`;
+      else if (f.t === "select") input = `<select id="${id}" data-k="${f.k}">${f.o.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("")}</select>`;
+      else if (f.t === "bool") input = `<input id="${id}" data-k="${f.k}" type="checkbox">`;
+      else input = `<input id="${id}" data-k="${f.k}" type="${f.t}" ${f.step ? `step="${f.step}"` : ""}>`;
+      html += `<div class="field ${f.wide ? "wide" : ""}"><label for="${id}">${esc(f.l)}</label><div>${input}${f.h ? `<div class="hint">${esc(f.h)}</div>` : ""}</div></div>`;
+    }
+    html += `</details>`;
+  }
+  html += `<details class="section"><summary>Cameras</summary>
+    <div class="hint" style="margin:4px 0">pyzlc camera name · observation key sent to the policy (blank = observation.images.&lt;name&gt;) · send to policy</div>
+    <div id="camRows"></div><button type="button" class="btn" id="btnAddCam" style="margin-top:6px">Add camera</button></details>`;
+  form.innerHTML = html;
+  form.addEventListener("input", () => setDirty(true));
+  form.addEventListener("change", () => setDirty(true));
+  form.addEventListener("submit", (e) => e.preventDefault());
+  $("#btnAddCam").addEventListener("click", () => { addCamRow({ name: "", obs_key: "", send_to_policy: true }); setDirty(true); });
+}
+function addCamRow(c) {
+  const row = document.createElement("div");
+  row.className = "cam-row";
+  row.innerHTML = `<input type="text" class="c-name" placeholder="zed_right" value="${esc(c.name)}">
+    <input type="text" class="c-key" placeholder="observation.images.…" value="${esc(c.obs_key)}">
+    <input type="checkbox" class="c-send" title="Send to policy" ${c.send_to_policy ? "checked" : ""}>
+    <button type="button" class="btn c-del" title="Remove">✕</button>`;
+  row.querySelector(".c-del").addEventListener("click", () => { row.remove(); setDirty(true); });
+  $("#camRows").appendChild(row);
+}
+function fillForm(cfg) {
+  for (const sec of FIELDS) for (const f of sec.items) {
+    const el = $("#f_" + f.k);
+    if (f.t === "bool") el.checked = !!cfg[f.k]; else el.value = cfg[f.k];
+  }
+  $("#camRows").innerHTML = "";
+  (cfg.cameras || []).forEach(addCamRow);
+  setDirty(false);
+}
+function readForm() {
+  const out = {};
+  for (const sec of FIELDS) for (const f of sec.items) {
+    const el = $("#f_" + f.k);
+    out[f.k] = f.t === "bool" ? el.checked : f.t === "number" ? Number(el.value) : el.value;
+  }
+  out.cameras = [...document.querySelectorAll("#camRows .cam-row")].map((r) => ({
+    name: r.querySelector(".c-name").value.trim(), obs_key: r.querySelector(".c-key").value.trim(), send_to_policy: r.querySelector(".c-send").checked,
+  })).filter((c) => c.name);
+  return out;
+}
+function setDirty(d) { S.dirty = d; $("#dirtyNote").hidden = !d; }
+function lockForm(st) {
+  const busy = ["running", "busy", "connecting"].includes(st.state);
+  const connected = st.connected;
+  for (const el of document.querySelectorAll("#cfgForm [data-k], #cfgForm .cam-row input, #cfgForm .cam-row button, #btnAddCam")) {
+    const k = el.dataset.k || "cameras";
+    el.disabled = busy || (connected && CONN_KEYS.has(k));
+  }
+  $("#btnApply").disabled = busy || !S.dirty;
+  $("#btnRevert").disabled = !S.dirty;
+}
+async function loadConfig() {
+  S.cfg = await api("/api/config");
+  fillForm(S.cfg);
+}
+$("#btnApply").addEventListener("click", async () => {
+  const update = readForm();
+  // Do not send unchanged connection fields while connected (server would reject).
+  try {
+    const r = await api("/api/config", update);
+    S.cfg = r.config; fillForm(S.cfg); toast("Settings applied"); loadEpisodes();
+  } catch (e) { toast(e.message, true); }
+});
+$("#btnRevert").addEventListener("click", () => S.cfg && fillForm(S.cfg));
+
+// ======================================================================= actions
+$("#btnConnect").addEventListener("click", () => {
+  if (!S.status) return;
+  if (S.dirty) { toast("Apply or revert your setting changes first.", true); return; }
+  act(S.status.connected ? "disconnect" : "connect");
+});
+$("#btnStart").addEventListener("click", startRollout);
+$("#btnStop").addEventListener("click", () => act("stop"));
+$("#btnHome").addEventListener("click", () => act("home"));
+$("#btnHome2").addEventListener("click", () => act("home"));
+$("#btnEstop").addEventListener("click", () => act("estop"));
+$("#btnClearErr").addEventListener("click", () => act("clear_error"));
+$("#btnSave").addEventListener("click", saveRollout);
+let discardArmed = 0;
+$("#btnDiscard").addEventListener("click", async () => {
+  const b = $("#btnDiscard");
+  if (Date.now() - discardArmed > 3000) { discardArmed = Date.now(); b.textContent = "Click again to discard"; setTimeout(() => (b.textContent = "Discard"), 3000); return; }
+  b.textContent = "Discard"; discardArmed = 0;
+  if (await act("discard")) toast("Rollout discarded");
+});
+for (const b of document.querySelectorAll("#rvOutcome button")) b.addEventListener("click", () => setOutcome(b.dataset.v));
+function setOutcome(v) { S.outcome = v; for (const b of document.querySelectorAll("#rvOutcome button")) b.setAttribute("aria-pressed", String(b.dataset.v === v)); }
+
+function startRollout() {
+  if (S.dirty) { toast("Apply or revert your setting changes first.", true); return; }
+  act("start", { notes: $("#preNotes").value });
+}
+async function saveRollout() {
+  const r = await act("save", { name: $("#rvName").value, description: $("#rvDesc").value, outcome: S.outcome });
+  if (r) { toast(S.cfg && S.cfg.save_lerobot ? "Saving rollout + LeRobot episode…" : "Saving rollout…"); $("#preNotes").value = ""; }
+}
+$("#btnMerge").addEventListener("click", async () => {
+  const outcomes = [...document.querySelectorAll("#mergeOutcomes input:checked")].map((i) => i.value);
+  if (!outcomes.length) { toast("Pick at least one outcome.", true); return; }
+  if (await act("export_dataset", { outcomes, output: $("#mergeOut").value, overwrite: $("#mergeOverwrite").checked })) toast("Merging…");
+});
+function renderDataset(st) {
+  const d = st.dataset || {};
+  const ex = d.export || {};
+  $("#btnMerge").disabled = ex.running || st.state === "running";
+  let msg = "";
+  if (ex.running) msg = "⏳ " + ex.message;
+  else if (ex.error) msg = "⚠ " + ex.error;
+  else if (ex.result) msg = `✓ ${ex.result.episodes} episodes → ${ex.result.output} (repo id ${ex.result.repo_id})`;
+  $("#mergeStatus").textContent = msg;
+  $("#mergeStatus").style.color = ex.error ? "var(--critical)" : "";
+}
+let lastState = null;
+document.addEventListener("keydown", (e) => {
+  const st = S.status && S.status.state;
+  if (e.key === "Escape") { e.preventDefault(); act("estop"); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && st === "review") { e.preventDefault(); saveRollout(); return; }
+  if (e.target.closest("input, textarea, select") || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === "n" && st === "idle") startRollout();
+  else if (k === "s" && st === "running") act("stop");
+  else if (k === "h" && (st === "idle" || st === "review")) act("home");
+});
+
+// ======================================================================= polling
+async function poll(once = false) {
+  try {
+    const st = await api(`/api/status?since=${S.since}&log_after=${S.logAfter}`);
+    $("#offline").style.display = "none";
+    ingest(st);
+    render(st);
+  } catch (e) {
+    $("#offline").style.display = "block";
+  }
+  if (!once) setTimeout(poll, 150);
+}
+function ingest(st) {
+  if (!S.since) S.since = st.now - 30;
+  for (const key of Object.keys(S.series)) {
+    const arr = S.series[key];
+    const lastT = arr.length ? arr[arr.length - 1][0] : -Infinity;
+    for (const row of st.telemetry.series[key] || []) if (row[0] > lastT) arr.push(row);
+    const cutoff = st.now - S.keep[key];
+    let i = 0; while (i < arr.length && arr[i][0] < cutoff) i++;
+    if (i) arr.splice(0, i);
+  }
+  S.since = st.now - 0.5;  // overlap a little; duplicates are dropped above
+  for (const l of st.logs) appendLog(l);
+}
+function appendLog(l) {
+  S.logAfter = Math.max(S.logAfter, l.seq);
+  const box = $("#log");
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
+  const div = document.createElement("div");
+  div.className = "l-" + l.level;
+  const ts = new Date(l.t * 1000).toLocaleTimeString();
+  div.innerHTML = `<span class="ts">${ts}</span>${esc(l.msg)}`;
+  box.appendChild(div);
+  while (box.childElementCount > 400) box.firstChild.remove();
+  if (atBottom) box.scrollTop = box.scrollHeight;
+}
+
+// ======================================================================= render
+const STATE_TONE = { disconnected: "", connecting: "info", idle: "info", running: "good", review: "warning", busy: "info", error: "critical" };
+const STATE_LABEL = { disconnected: "Disconnected", connecting: "Connecting…", idle: "Ready", running: "Running", review: "Review rollout", busy: "Busy", error: "Error" };
+
+function render(st) {
+  const prev = S.status; S.status = st;
+  const stName = st.state;
+  $("#stateBadge").dataset.tone = STATE_TONE[stName] || "";
+  $("#stateText").textContent = stName === "busy" && st.busy_label ? st.busy_label + "…" : STATE_LABEL[stName] || stName;
+  const pol = st.policy;
+  $("#policyBadge").dataset.tone = pol.connected ? "good" : st.connected ? "critical" : "";
+  $("#policyText").textContent = pol.connected ? `policy ${pol.health.policy && pol.health.policy.name ? pol.health.policy.name + " " : ""}connected` : st.connected ? "policy not connected" : "policy —";
+  $("#policyBadge").title = pol.error || JSON.stringify(pol.health);
+  $("#simBadge").hidden = !st.sim;
+  $("#btnConnect").textContent = st.connected ? "Disconnect" : "Connect";
+  $("#btnConnect").disabled = ["connecting", "running", "busy"].includes(stName);
+  if (st.connected && !pol.connected && ["idle", "review"].includes(stName)) {
+    $("#btnConnect").insertAdjacentElement("beforebegin", reconnectBtn());
+  } else if ($("#btnReconnect")) $("#btnReconnect").remove();
+
+  $("#btnStart").disabled = !(stName === "idle" && pol.connected);
+  $("#btnStop").disabled = stName !== "running";
+  $("#btnHome").disabled = !["idle", "review"].includes(stName);
+  $("#btnHome2").disabled = !["idle", "review"].includes(stName);
+  $("#btnEstop").disabled = !st.connected;
+
+  const err = st.error || (stName !== "running" && pol.error && st.connected ? "Policy server: " + pol.error : null);
+  $("#errBanner").hidden = !err; $("#errText").textContent = err || "";
+
+  // header
+  if (S.cfg) $("#hdrBatch").textContent = S.cfg.batch_name;
+  $("#preNotes").disabled = stName === "running" || stName === "review";
+
+  // timer
+  const ep = st.episode || {};
+  const maxS = S.cfg ? S.cfg.max_episode_s : 0;
+  const elapsed = stName === "running" ? ep.elapsed_s || 0 : ep.summary ? ep.summary.duration_s : 0;
+  $("#timer").textContent = fmt(elapsed, 1) + " s" + (maxS > 0 ? ` / ${maxS} s` : "");
+  $("#progress").style.width = maxS > 0 ? Math.min(100, (100 * elapsed) / maxS) + "%" : "0";
+  $("#epIndex").textContent = ep.index !== undefined ? "#" + ep.index : "";
+  $("#taskLine").textContent = S.cfg ? `Task: ${S.cfg.task || "(empty)"} · ${S.cfg.control_pair} pair @ ${S.cfg.control_hz} Hz · ${S.cfg.inference_mode} · chunk ${fmt(pol.fps, 1)} Hz × ${pol.exec_steps || "all"} rows` : "";
+
+  const ds = st.dataset || {};
+  if (ds.enabled) {
+    $("#taskLine").textContent += ds.lerobot_error ? ` · LeRobot dataset: unavailable (${ds.lerobot_error})`
+      : ds.recording ? ` · LeRobot: ${ds.frames ?? 0} frames @ ${fmt(ds.fps, 0)} Hz` : ` · LeRobot dataset on (${fmt(ds.fps, 0)} Hz)`;
+  }
+  // refresh the table when a background save finishes
+  if (lastState === "busy" && st.state !== "busy") loadEpisodes();
+  lastState = st.state;
+  renderDataset(st);
+  renderReview(st, prev);
+  renderTiles(st);
+  renderCharts(st);
+  renderRobot(st);
+  syncCameras(st);
+  lockForm(st);
+}
+function reconnectBtn() {
+  let b = $("#btnReconnect");
+  if (!b) { b = document.createElement("button"); b.id = "btnReconnect"; b.className = "btn"; b.textContent = "Reconnect policy"; b.addEventListener("click", () => act("reconnect_policy")); }
+  return b;
+}
+
+function renderReview(st, prev) {
+  const show = st.state === "review";
+  $("#reviewCard").hidden = !show;
+  if (!show) { S.reviewFor = null; return; }
+  const ep = st.episode;
+  if (S.reviewFor !== ep.id) {  // new rollout to label: reset the form once
+    S.reviewFor = ep.id;
+    $("#rvName").value = ep.default_name || "";
+    $("#rvDesc").value = ep.notes || "";
+    setOutcome("unlabeled");
+  }
+  const s = ep.summary || {};
+  const rows = [
+    ["Stop reason", ep.stop_reason || s.stop_reason], ["Duration", fmt(s.duration_s, 1) + " s"], ["Inference calls", s.n_inference_calls],
+    ["Latency p50 / p95", `${fmt(s.latency_ms_p50, 0)} / ${fmt(s.latency_ms_p95, 0)} ms`], ["Model p50", fmt(s.model_ms_p50, 0) + " ms"],
+    ["Control rate (mean)", fmt(s.control_hz_mean, 1) + " Hz"], ["Control dt p95", fmt(s.control_dt_ms_p95, 1) + " ms"],
+    ["Arm / gripper cmds", `${s.n_arm_commands ?? "—"} / ${s.n_gripper_commands ?? "—"}`], ["State samples", s.n_state_samples],
+  ];
+  $("#rvSummary").innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v ?? "—")}</dd>`).join("");
+}
+
+function tile(label, value, unit, sub, flag) {
+  return `<div class="tile"><div class="label">${label}</div><div class="value num">${value}<small>${unit}</small></div>
+    <div class="sub num">${sub || "&nbsp;"}</div>${flag ? `<div class="flag ${flag[0]}">${flag[1]}</div>` : ""}</div>`;
+}
+function renderTiles(st) {
+  const t = st.telemetry, r = t.rates, lat = t.latency_ms, mdl = t.model_ms, c = t.counters;
+  const running = st.state === "running";
+  const target = st.control.target_hz;
+  const ctrlOk = !running || r.control_hz >= 0.9 * target;
+  const expInfer = st.policy.exec_steps ? st.policy.fps / st.policy.exec_steps : null;
+  const net = lat.p50 !== null && mdl.p50 !== null ? lat.p50 - mdl.p50 : null;
+  const chunk = t.last_chunk;
+  $("#tiles").innerHTML = [
+    tile("Inference rate", fmt(r.infer_hz, 2), "Hz", expInfer ? `nominal ≤ ${fmt(expInfer, 2)} Hz` : "", null),
+    tile("Latency p50", fmt(lat.p50, 0), "ms", `p95 ${fmt(lat.p95, 0)} · max ${fmt(lat.max, 0)} ms`, null),
+    tile("Model / network", `${fmt(mdl.p50, 0)}<small>ms</small> / ${fmt(net, 0)}`, "ms", "server compute / transfer+overhead", null),
+    tile("Control loop", fmt(r.control_hz, 1), "Hz", `target ${fmt(target, 0)} Hz`, running ? (ctrlOk ? ["ok", "on target"] : ["warn", "below 90% of target"]) : null),
+    tile("Robot state stream", fmt(r.state_hz, 0), "Hz", `commands ${fmt(r.command_hz, 0)} /s`, null),
+    tile("Chunks", c.infer ?? 0, "", chunk ? `last: ${chunk.rows} rows, ran ${chunk.executed}${chunk.skipped ? `, skipped ${chunk.skipped}` : ""}` : "no chunk yet",
+      c.rejected_chunks ? ["warn", `${c.rejected_chunks} rejected`] : null),
+  ].join("");
+}
+
+// ======================================================================= charts
+const charts = new Map();  // canvas -> model for hover
+function setupCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+function niceTicks(lo, hi, n = 4) {
+  if (!(hi > lo)) { hi = lo + 1; }
+  const span = hi - lo, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => span / s <= n) || 10 * mag;
+  const ticks = []; for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) ticks.push(+v.toFixed(10));
+  return { ticks, step };
+}
+/** series: [{label, color, dash, pts:[[t, v], ...]}]; times relative to now (s, negative). */
+function lineChart(canvas, { series, window: win, now, yMin, yMax, unit = "", target = null, compact = false, digits = 2 }) {
+  const { ctx, w, h } = setupCanvas(canvas);
+  const pad = compact ? { l: 34, r: 6, t: 6, b: 16 } : { l: 40, r: 10, t: 8, b: 20 };
+  let lo = Infinity, hi = -Infinity;
+  for (const s of series) for (const [t, v] of s.pts) if (v !== null && t >= now - win) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  if (target !== null) { lo = Math.min(lo, target); hi = Math.max(hi, target); }
+  if (yMin !== undefined) lo = Math.min(yMin, lo === Infinity ? yMin : lo);
+  if (yMax !== undefined) hi = Math.max(yMax, hi === -Infinity ? yMax : hi);
+  if (lo === Infinity) { lo = 0; hi = 1; }
+  if (hi - lo < 1e-6) { lo -= 0.05 * Math.abs(lo || 1); hi += 0.05 * Math.abs(hi || 1); }
+  const padY = (hi - lo) * 0.08; if (yMin === undefined || lo < yMin) lo -= padY; hi += padY;
+  const X = (t) => pad.l + ((t - (now - win)) / win) * (w - pad.l - pad.r);
+  const Y = (v) => pad.t + (1 - (v - lo) / (hi - lo)) * (h - pad.t - pad.b);
+  ctx.font = "11px system-ui, sans-serif"; ctx.lineWidth = 1;
+  // grid + y labels
+  const { ticks } = niceTicks(lo, hi, compact ? 3 : 4);
+  ctx.strokeStyle = css("--grid"); ctx.fillStyle = css("--text-muted"); ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (const v of ticks) { const y = Math.round(Y(v)) + 0.5; ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke(); ctx.fillText(+v.toFixed(3) + "", pad.l - 5, y); }
+  // x labels (seconds ago)
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  const xStep = compact ? 5 : win <= 15 ? 2 : win <= 60 ? 10 : 30;
+  for (let s = 0; s <= win; s += xStep) { const x = X(now - s); ctx.fillText(s === 0 ? "now" : `−${s}s`, Math.min(Math.max(x, pad.l + 10), w - pad.r - 12), h - pad.b + 3); }
+  // target
+  if (target !== null) { ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = css("--text-muted"); ctx.beginPath(); ctx.moveTo(pad.l, Y(target)); ctx.lineTo(w - pad.r, Y(target)); ctx.stroke(); ctx.restore(); }
+  // lines
+  ctx.save(); ctx.beginPath(); ctx.rect(pad.l, pad.t, w - pad.l - pad.r, h - pad.t - pad.b); ctx.clip();
+  for (const s of series) {
+    ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.setLineDash(s.dash ? [5, 4] : []);
+    ctx.beginPath(); let pen = false;
+    for (const [t, v] of s.pts) { if (v === null) { pen = false; continue; } const x = X(t), y = Y(v); if (!pen) { ctx.moveTo(x, y); pen = true; } else ctx.lineTo(x, y); }
+    ctx.stroke();
+  }
+  ctx.restore();
+  const model = { series, X, Y, now, win, pad, w, h, unit, digits };
+  charts.set(canvas, model);
+  if (canvas._hoverX !== undefined) drawHover(canvas, model);
+}
+function drawHover(canvas, m) {
+  const ctx = canvas.getContext("2d");
+  const x = canvas._hoverX;
+  if (x < m.pad.l || x > m.w - m.pad.r) { $("#tooltip").style.display = "none"; return; }
+  const t = m.now - m.win + ((x - m.pad.l) / (m.w - m.pad.l - m.pad.r)) * m.win;
+  ctx.save(); ctx.strokeStyle = css("--text-muted"); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + 0.5, m.pad.t); ctx.lineTo(x + 0.5, m.h - m.pad.b); ctx.stroke();
+  let html = `<div class="num" style="color:var(--text-muted)">${fmt(m.now - t, 2)} s ago</div>`;
+  for (const s of m.series) {
+    let best = null, bd = Infinity;
+    for (const p of s.pts) { const d = Math.abs(p[0] - t); if (d < bd) { bd = d; best = p; } }
+    if (!best || best[1] === null || bd > Math.max(0.5, m.win / 50)) continue;
+    const px = m.X(best[0]), py = m.Y(best[1]);
+    ctx.fillStyle = s.color; ctx.strokeStyle = css("--surface-1"); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    html += `<div class="num"><span class="sw" style="background:${s.color}"></span>${s.label}: <b>${fmt(best[1], m.digits)}</b> ${m.unit}</div>`;
+  }
+  ctx.restore();
+  const tip = $("#tooltip"); tip.innerHTML = html; tip.style.display = "block";
+  const r = canvas.getBoundingClientRect();
+  // Sit on the far side of the cursor from the newest data (right edge).
+  const left = x > m.w / 2 ? r.left + x - tip.offsetWidth - 14 : r.left + x + 14;
+  tip.style.left = Math.max(8, Math.min(left, window.innerWidth - tip.offsetWidth - 8)) + "px"; tip.style.top = r.top + 8 + "px";
+}
+function attachHover(canvas, redraw) {
+  canvas.addEventListener("mousemove", (e) => { canvas._hoverX = e.offsetX; redraw(); });
+  canvas.addEventListener("mouseleave", () => { delete canvas._hoverX; $("#tooltip").style.display = "none"; redraw(); });
+}
+const col = (rows, i) => rows.map((r) => [r[0], r[i] === undefined ? null : r[i]]);
+
+const TRACK = { joint: ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "gripper"], cartesian: ["x", "y", "z", "qx", "qy", "qz", "qw", "gripper"] };
+let multiplesFor = null;
+function buildMultiples(kind) {
+  multiplesFor = kind;
+  $("#trackTitle").textContent = (kind === "joint" ? "Joint tracking (rad)" : "End-effector tracking (m, quat)") + " — last 10 s";
+  $("#multiples").innerHTML = TRACK[kind].map((n, i) => `<div><div class="m-title"><span>${n}</span><span class="num" id="mv${i}"></span></div>
+    <div class="chart" style="height:90px"><canvas id="mc${i}"></canvas></div></div>`).join("");
+  for (let i = 0; i < 8; i++) attachHover($("#mc" + i), () => S.status && renderCharts(S.status));
+}
+function renderCharts(st) {
+  const now = st.now, s = S.series;
+  const blue = css("--series-1"), orange = css("--series-2");
+  lineChart($("#chLatency"), { now, window: 60, unit: "ms", yMin: 0, digits: 1, series: [
+    { label: "Round trip", color: blue, pts: col(s.latency, 1) }, { label: "Model", color: orange, pts: col(s.latency, 2) }] });
+  lineChart($("#chRate"), { now, window: 60, unit: "Hz", yMin: 0, digits: 1, target: st.control.running ? st.control.target_hz : null, series: [
+    { label: "Control loop", color: blue, pts: col(s.rates, 1) }] });
+  const kind = st.control.pair;
+  if (multiplesFor !== kind) buildMultiples(kind);
+  for (let i = 0; i < 8; i++) {
+    let meas, cmd = [];
+    if (i === 7) meas = col(s.state, 8);
+    else if (kind === "joint") { meas = col(s.state, i + 1); cmd = col(s.cmd, i + 1); }
+    else { meas = col(s.ee, i + 1); cmd = col(s.cmd, i + 1); }
+    const series = [{ label: "Measured", color: blue, pts: meas }];
+    if (cmd.length) series.push({ label: "Commanded", color: orange, pts: cmd });
+    lineChart($("#mc" + i), { now, window: 10, compact: true, digits: 3, series, ...(i === 7 ? { yMin: 0, yMax: 1 } : {}) });
+    const last = meas.length ? meas[meas.length - 1][1] : null;
+    $("#mv" + i).textContent = fmt(last, 3);
+  }
+}
+attachHover($("#chLatency"), () => S.status && renderCharts(S.status));
+attachHover($("#chRate"), () => S.status && renderCharts(S.status));
+
+// ======================================================================= robot 3D
+const DH = [[0, 0.333, 0], [0, 0, -Math.PI / 2], [0, 0.316, Math.PI / 2], [0.0825, 0, Math.PI / 2], [-0.0825, 0.384, -Math.PI / 2], [0, 0, Math.PI / 2], [0.088, 0, Math.PI / 2]];
+function mdh(a, d, al, th) {
+  const ca = Math.cos(al), sa = Math.sin(al), ct = Math.cos(th), st = Math.sin(th);
+  return [[ct, -st, 0, a], [st * ca, ct * ca, -sa, -d * sa], [st * sa, ct * sa, ca, d * ca], [0, 0, 0, 1]];
+}
+function mul(A, B) { const C = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { let s = 0; for (let k = 0; k < 4; k++) s += A[i][k] * B[k][j]; C[i][j] = s; } return C; }
+function fk(q) {
+  let T = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
+  const pts = [[0, 0, 0]];
+  for (let i = 0; i < 7; i++) { T = mul(T, mdh(DH[i][0], DH[i][1], DH[i][2], q[i])); pts.push([T[0][3], T[1][3], T[2][3]]); }
+  T = mul(T, mdh(0, 0.107, 0, 0)); pts.push([T[0][3], T[1][3], T[2][3]]);
+  T = mul(T, mdh(0, 0.1034, 0, -Math.PI / 4)); pts.push([T[0][3], T[1][3], T[2][3]]);
+  return { pts, T };
+}
+function quatToR([x, y, z, w]) {
+  return [[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)], [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)], [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]];
+}
+function project(p, w, h) {
+  const { az, el, zoom } = S.view;
+  const x1 = Math.cos(az) * p[0] - Math.sin(az) * p[1];
+  const y1 = Math.sin(az) * p[0] + Math.cos(az) * p[1];
+  const sy = p[2] * Math.cos(el) - y1 * Math.sin(el);
+  const scale = (h / 1.25) * zoom;
+  return [w / 2 + x1 * scale - 0.15 * scale, h * 0.86 - sy * scale];
+}
+function renderArm(st) {
+  const canvas = $("#arm3d");
+  const { ctx, w, h } = setupCanvas(canvas);
+  const P = (p) => project(p, w, h);
+  // ground grid 1.2 m × 1.2 m, 0.1 m spacing
+  ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1;
+  for (let i = -4; i <= 8; i++) {
+    const a = P([i / 10, -0.6, 0]), b = P([i / 10, 0.6, 0]); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke();
+  }
+  for (let j = -6; j <= 6; j++) {
+    const a = P([-0.4, j / 10, 0]), b = P([0.8, j / 10, 0]); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke();
+  }
+  // base axes
+  const axes = [[[0.15, 0, 0], "x"], [[0, 0.15, 0], "y"], [[0, 0, 0.15], "z"]];
+  ctx.font = "11px system-ui, sans-serif"; ctx.fillStyle = css("--text-muted"); ctx.strokeStyle = css("--text-muted");
+  for (const [v, n] of axes) { const a = P([0, 0, 0]), b = P(v); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); ctx.fillText(n, b[0] + 3, b[1]); }
+
+  const robot = st.robot || {};
+  const blue = css("--series-1"), orange = css("--series-2"), surf = css("--surface-1");
+  const kind = st.control.pair;
+  // planned trajectory from the last chunk (orange dots)
+  const chunk = st.telemetry.last_chunk;
+  if (chunk && chunk.chunk && st.state === "running") {
+    const pts = chunk.chunk.map((row) => kind === "joint" ? fk(row.slice(0, 7)).pts[9] : row.slice(0, 3));
+    ctx.save(); ctx.setLineDash([4, 3]); ctx.strokeStyle = orange; ctx.lineWidth = 2; ctx.beginPath();
+    pts.forEach((p, i) => { const s = P(p); i ? ctx.lineTo(...s) : ctx.moveTo(...s); }); ctx.stroke(); ctx.restore();
+    ctx.fillStyle = orange; for (const p of pts) { const s = P(p); ctx.beginPath(); ctx.arc(s[0], s[1], 2.5, 0, 2 * Math.PI); ctx.fill(); }
+  }
+  // commanded ghost (joint mode) / commanded EE point (cartesian)
+  const cmd = S.series.cmd.length ? S.series.cmd[S.series.cmd.length - 1].slice(1) : null;
+  const cmdFresh = cmd && S.series.cmd[S.series.cmd.length - 1][0] > st.now - 1.0;
+  if (cmdFresh && kind === "joint") drawChain(ctx, fk(cmd).pts.map(P), orange, surf, true);
+  if (robot.q) {
+    const { pts, T } = fk(robot.q);
+    drawChain(ctx, pts.map(P), blue, surf, false);
+    // EE frame from the measured quaternion (falls back to FK)
+    const R = robot.ee_quat ? quatToR(robot.ee_quat) : [[T[0][0], T[0][1], T[0][2]], [T[1][0], T[1][1], T[1][2]], [T[2][0], T[2][1], T[2][2]]];
+    const o = robot.ee_pos || pts[9];
+    const names = ["x", "y", "z"];
+    ctx.lineWidth = 1.5; ctx.strokeStyle = css("--text-secondary"); ctx.fillStyle = css("--text-secondary");
+    for (let k = 0; k < 3; k++) {
+      const e = [o[0] + 0.07 * R[0][k], o[1] + 0.07 * R[1][k], o[2] + 0.07 * R[2][k]];
+      const a = P(o), b = P(e); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); ctx.fillText(names[k], b[0] + 2, b[1]);
+    }
+  } else {
+    ctx.fillStyle = css("--text-muted"); ctx.textAlign = "center"; ctx.fillText("No robot state — connect first", w / 2, h / 2);
+  }
+  if (cmdFresh && kind === "cartesian") {
+    const s = P(cmd.slice(0, 3)); ctx.fillStyle = orange; ctx.strokeStyle = surf; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(s[0], s[1], 5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+  }
+}
+function drawChain(ctx, pts, color, surf, ghost) {
+  ctx.save();
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  if (ghost) { ctx.setLineDash([6, 5]); ctx.lineWidth = 2; ctx.strokeStyle = color; ctx.globalAlpha = 0.9; }
+  else {  // surface halo then the link
+    ctx.lineWidth = 9; ctx.strokeStyle = surf; ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(...p) : ctx.moveTo(...p))); ctx.stroke();
+    ctx.lineWidth = 5; ctx.strokeStyle = color;
+  }
+  ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(...p) : ctx.moveTo(...p))); ctx.stroke();
+  if (!ghost) {
+    ctx.fillStyle = color; ctx.strokeStyle = surf; ctx.lineWidth = 2;
+    for (const p of pts.slice(0, 8)) { ctx.beginPath(); ctx.arc(p[0], p[1], 4, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+(function setupOrbit() {
+  const c = $("#arm3d"); let drag = null;
+  c.addEventListener("pointerdown", (e) => { drag = [e.clientX, e.clientY, S.view.az, S.view.el]; c.setPointerCapture(e.pointerId); c.style.cursor = "grabbing"; });
+  c.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    S.view.az = drag[2] - (e.clientX - drag[0]) * 0.01;
+    S.view.el = Math.max(-0.2, Math.min(1.4, drag[3] + (e.clientY - drag[1]) * 0.01));
+    S.status && renderArm(S.status);
+  });
+  c.addEventListener("pointerup", () => { drag = null; c.style.cursor = "grab"; });
+  c.addEventListener("wheel", (e) => { e.preventDefault(); S.view.zoom = Math.max(0.4, Math.min(3, S.view.zoom * (e.deltaY > 0 ? 0.9 : 1.1))); S.status && renderArm(S.status); }, { passive: false });
+  c.addEventListener("dblclick", () => { S.view = { az: -0.9, el: 0.35, zoom: 1 }; S.status && renderArm(S.status); });
+})();
+
+function renderRobot(st) {
+  renderArm(st);
+  const robot = st.robot || {};
+  const kind = st.control.pair;
+  const cmd = kind === "joint" && S.series.cmd.length ? S.series.cmd[S.series.cmd.length - 1] : null;
+  const cmdFresh = cmd && cmd[0] > st.now - 1.0;
+  let html = "";
+  for (let i = 0; i < 7; i++) {
+    const [lo, hi] = JOINT_LIMITS[i];
+    const q = robot.q ? robot.q[i] : null;
+    const pct = (v) => (100 * (v - lo)) / (hi - lo);
+    const near = q !== null && (q - lo < 0.1 || hi - q < 0.1);
+    html += `<div class="jbar"><span>q${i + 1}</span><div class="track ${near ? "near" : ""}" title="limits ${lo} … ${hi} rad${near ? " — near limit" : ""}">
+      ${q !== null ? `<div class="mark" style="left:${pct(q)}%"></div>` : ""}${cmdFresh ? `<div class="cmd" style="left:${pct(cmd[i + 1])}%"></div>` : ""}</div>
+      <span class="val num">${fmt(q, 3)}${near ? " ⚠" : ""}</span></div>`;
+  }
+  const g = robot.gripper;
+  html += `<div class="jbar"><span>grip</span><div class="track"><div class="mark" style="left:${g == null ? 0 : 100 * g}%"></div></div><span class="val num">${g == null ? "—" : fmt(100 * g, 0) + "% closed"}</span></div>`;
+  $("#jbars").innerHTML = html;
+  const p = robot.ee_pos, qu = robot.ee_quat;
+  $("#eeBox").innerHTML = p ? ["x", "y", "z"].map((n, i) => `<div><span>${n}</span>${fmt(p[i], 3)}</div>`).join("") + "<div></div>" +
+    ["qx", "qy", "qz", "qw"].map((n, i) => `<div><span>${n}</span>${fmt(qu[i], 3)}</div>`).join("") : "";
+}
+
+// ======================================================================= cameras
+let camNames = "";
+function syncCameras(st) {
+  const names = st.cameras || [];
+  const key = (S.camsOn ? "on:" : "off:") + names.join(",");
+  if (key === camNames) return;
+  camNames = key;
+  const box = $("#cams");
+  box.innerHTML = "";
+  $("#camHint").textContent = !names.length ? (st.connected ? "No cameras configured." : "Connect to see cameras.") : S.camsOn ? "" : "Off by default to save bandwidth. Recording is independent of this toggle.";
+  if (!S.camsOn) return;
+  for (const n of names) {
+    const fig = document.createElement("figure");
+    fig.innerHTML = `<img alt="Live view of camera ${esc(n)}"><figcaption>${esc(n)}</figcaption>`;
+    box.appendChild(fig);
+    const img = fig.querySelector("img");
+    const next = () => { if (!S.camsOn || !img.isConnected) return; img.src = `/api/camera/${encodeURIComponent(n)}?w=480&t=${Date.now()}`; };
+    img.onload = () => setTimeout(next, 150);
+    img.onerror = () => setTimeout(next, 1000);
+    next();
+  }
+}
+$("#camToggle").addEventListener("change", (e) => { S.camsOn = e.target.checked; S.status && syncCameras(S.status); });
+
+// ======================================================================= episodes
+async function loadEpisodes() {
+  try {
+    const r = await api("/api/episodes");
+    S.episodes = r.episodes;
+    $("#batchDir").textContent = r.batch_dir;
+    $("#batchDir").title = r.batch_dir;
+    const eps = r.episodes;
+    $("#hdrCount").textContent = eps.length;
+    const labeled = eps.filter((e) => e.outcome !== "unlabeled");
+    const succ = eps.filter((e) => e.outcome === "success").length;
+    $("#hdrRate").textContent = labeled.length ? `${succ}/${labeled.length} success (${fmt((100 * succ) / labeled.length, 0)}%)` : "no labeled rollouts";
+    if (S.editing) return;  // don't wipe an open editor
+    $("#epTable").innerHTML = eps.length ? eps.slice().reverse().map((e) => `<tr data-folder="${esc(e.folder)}">
+      <td class="num">${esc(e.folder.split("_")[0])}</td><td>${esc(e.name)}</td><td><span class="outcome ${esc(e.outcome)}">${esc(e.outcome)}</span></td>
+      <td class="num">${fmt(e.duration_s, 1)} s</td><td class="num">${fmt(e.latency_ms_p50, 0)} ms</td>
+      <td class="num">${e.lerobot_frames ? `✓ ${e.lerobot_frames} fr` : `<span class="hint">—</span>`}</td><td class="desc">${esc(e.description)}</td>
+      <td><button class="btn ep-edit" style="padding:3px 8px">Edit</button></td></tr>`).join("")
+      : `<tr><td colspan="8" class="hint">No rollouts saved yet.</td></tr>`;
+  } catch (e) { /* server offline; poll shows the banner */ }
+}
+$("#epTable").addEventListener("click", async (ev) => {
+  const tr = ev.target.closest("tr[data-folder]");
+  if (!tr) return;
+  const folder = tr.dataset.folder;
+  const ep = S.episodes.find((e) => e.folder === folder);
+  if (ev.target.classList.contains("ep-edit")) {
+    S.editing = folder;
+    tr.cells[2].innerHTML = `<select class="ep-out">${["success", "partial", "failure", "unlabeled"].map((o) => `<option ${o === ep.outcome ? "selected" : ""}>${o}</option>`).join("")}</select>`;
+    tr.cells[6].innerHTML = `<textarea class="ep-desc" style="width:100%;min-width:180px;min-height:54px">${esc(ep.description)}</textarea>`;
+    tr.cells[7].innerHTML = `<div class="row"><button class="btn primary ep-save" style="padding:3px 8px">Save</button><button class="btn ep-cancel" style="padding:3px 8px">Cancel</button></div>`;
+  } else if (ev.target.classList.contains("ep-save")) {
+    const r = await act("edit_saved", { folder, description: tr.querySelector(".ep-desc").value, outcome: tr.querySelector(".ep-out").value });
+    if (r) { toast("Rollout updated"); S.editing = null; loadEpisodes(); }
+  } else if (ev.target.classList.contains("ep-cancel")) {
+    S.editing = null; loadEpisodes();
+  }
+});
+
+// ======================================================================= boot
+buildForm();
+loadConfig().then(() => { loadEpisodes(); poll(); });
+setInterval(loadEpisodes, 10000);
+window.addEventListener("resize", () => S.status && render(S.status));
+</script>
+</body>
+</html>

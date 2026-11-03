@@ -1,0 +1,46 @@
+{
+  "sim": false,
+  "node_name": "inference_gui",
+  "node_ip": "192.168.1.1",
+  "group_name": "DroidGroup",
+  "group_port": 7730,
+  "robot_name": "FrankaPanda",
+  "gripper_type": "robotiq",
+  "cameras": [
+    {
+      "name": "zed_right",
+      "obs_key": "observation.images.external",
+      "send_to_policy": true
+    },
+    {
+      "name": "zed_wrist",
+      "obs_key": "observation.images.wrist",
+      "send_to_policy": true
+    }
+  ],
+  "control_pair": "joint",
+  "control_hz": 15.0,
+  "policy_host": "127.0.0.1",
+  "policy_port": 8767,
+  "request_timeout_s": 0.0,
+  "policy_fps": 15.0,
+  "exec_steps": 0,
+  "inference_mode": "sync",
+  "task": "put the marker in the cup",
+  "max_first_step_jump_joint": 0.35,
+  "max_first_step_jump_cartesian": 0.1,
+  "clip_joint_limits": true,
+  "max_episode_s": 120.0,
+  "batch_name": "eval",
+  "batch_description": "",
+  "save_root": "eval_rollouts",
+  "state_record_hz": 50.0,
+  "record_images": true,
+  "save_lerobot": false,
+  "dataset_fps": 0.0,
+  "dataset_image_width": 0,
+  "dataset_image_height": 0,
+  "dataset_force_torque": true,
+  "dataset_use_videos": true,
+  "robot_type": "franka_panda"
+}

@@ -183,3 +183,6 @@ recordings/
 # pixi environment
 .pixi/
 *_report.txt
+
+# inference GUI rollouts
+eval_rollouts/

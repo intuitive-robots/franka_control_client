@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WebXR Teleop</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; padding: 24px; background: #111; color: #eee; font: 18px/1.5 system-ui, sans-serif; }
+    h1 { font-size: 24px; margin: 0 0 16px; }
+    button { font: inherit; font-size: 22px; padding: 16px 32px; border: 0; border-radius: 8px; background: #2d6cdf; color: #fff; }
+    button:disabled { background: #444; color: #999; }
+    table { margin-top: 20px; border-collapse: collapse; }
+    td { padding: 4px 16px 4px 0; }
+    td:first-child { color: #999; }
+    .ok { color: #5c5; } .bad { color: #e55; }
+    #log { margin-top: 16px; color: #999; font-size: 14px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>WebXR Teleop</h1>
+  <button id="enter" disabled>Enter XR</button>
+  <table>
+    <tr><td>WebSocket</td><td id="ws" class="bad">connecting</td></tr>
+    <tr><td>XR session</td><td id="xr">none</td></tr>
+    <tr><td>Send rate</td><td id="hz">–</td></tr>
+    <tr><td>RTT</td><td id="rtt">–</td></tr>
+    <tr><td>Right controller</td><td id="ctrl">–</td></tr>
+  </table>
+  <div id="log"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

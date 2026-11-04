@@ -91,10 +91,13 @@ def resize_frame(frame: np.ndarray, size: Optional[Tuple[int, int]]) -> np.ndarr
 class RolloutDatasetWriter:
     """Streams one rollout into a one-episode LeRobot dataset.
 
-    ``add_sample(obs, action_now)`` is called at the dataset rate. A frame's
-    action is the command playing at the next sample (as in the converters,
-    where the action is the leader one step later), so each frame is held back
-    one sample, and the last one is dropped at ``finish``."""
+    ``add_sample(obs, action_now, repeat)`` is called on the dataset clock;
+    ``repeat`` > 1 fills slots the sampler missed with copies of this sample, so
+    the episode keeps the real duration. A frame's action is the command playing
+    at the next sample (as in the converters, where the action is the leader one
+    step later), so each frame is held back one sample, and the last one is
+    dropped at ``finish``. Frames are never dropped: if the writer falls behind,
+    ``add_sample`` blocks and the sampler fills the gap with repeats."""
 
     def __init__(
         self,
@@ -114,9 +117,11 @@ class RolloutDatasetWriter:
         self.task = task or "rollout"
         self.features = features
         self.n_frames = 0
+        self.duplicated = 0  # frames that repeat the previous sample (sampler too slow)
         self.error: Optional[str] = None
         self._pending: Optional[Dict[str, Any]] = None
-        self._queue: "queue.Queue[Optional[Dict[str, Any]]]" = queue.Queue(maxsize=int(fps * 30) + 10)
+        # Bounded in time, not 30 s: queued frames hold full images (2K: ~8 MB per camera).
+        self._queue: "queue.Queue[Optional[Dict[str, Any]]]" = queue.Queue(maxsize=int(fps * 5) + 5)
         self._dataset = LeRobotDataset.create(
             repo_id=repo_id,
             fps=int(round(fps)),
@@ -129,14 +134,26 @@ class RolloutDatasetWriter:
         self._thread = threading.Thread(target=self._run, name="lerobot-writer", daemon=True)
         self._thread.start()
 
-    def add_sample(self, observation: Dict[str, Any], action_now: np.ndarray) -> None:
+    def add_sample(self, observation: Dict[str, Any], action_now: np.ndarray, repeat: int = 1) -> None:
+        action_now = np.asarray(action_now, dtype=np.float32)
         if self._pending is not None:
-            self._pending["action"] = np.asarray(action_now, dtype=np.float32)
+            self._pending["action"] = action_now
+            self._put(self._pending)
+        # Repeats share the arrays (shallow copies); the copy in a missed slot is
+        # followed by the same capture, so its action is this sample's command.
+        for _ in range(max(1, int(repeat)) - 1):
+            self._put({**observation, "action": action_now})
+            self.duplicated += 1
+        self._pending = dict(observation)
+
+    def _put(self, frame: Dict[str, Any]) -> None:
+        while self._thread.is_alive():
             try:
-                self._queue.put(self._pending, timeout=1.0)
+                self._queue.put(frame, timeout=1.0)
+                return
             except queue.Full:
-                self.error = "dataset writer cannot keep up; frames were dropped"
-        self._pending = observation
+                continue
+        self.error = "dataset writer thread stopped; frames were lost"
 
     def finish(self) -> int:
         """Write the episode; returns the number of frames (0: nothing written)."""

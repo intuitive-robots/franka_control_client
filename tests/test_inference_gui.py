@@ -116,6 +116,19 @@ def test_full_rollout_save_and_edit(sim_session):
     row = read_batch_index(s.batch_dir)[0]
     assert row["description"] == "edited" and row["outcome"] == "failure"
 
+    # delete: folder moves to .trash, index row dropped, number not reused
+    name = Path(folder).name
+    with pytest.raises(ActionError):
+        s.delete_saved("../" + name)
+    with pytest.raises(ActionError):
+        s.delete_saved("nope")
+    r = s.delete_saved(name)
+    assert not Path(folder).exists() and Path(r["moved_to"]).is_dir()
+    assert Path(r["moved_to"]).parent.name == ".trash"
+    assert read_batch_index(s.batch_dir) == []
+    from franka_control_client.inference_gui.recorder import next_episode_index
+    assert next_episode_index(s.batch_dir) == 1
+
 
 def test_estop_reason_and_discard(sim_session):
     s = sim_session
@@ -300,3 +313,31 @@ def test_env_frequency_streams_observations(tmp_path):
     finally:
         s.shutdown()
         server.shutdown()
+
+
+def test_lerobot_keeps_real_duration_with_slow_sampler(sim_session):
+    """A sampler slower than the dataset rate must not shorten the episode:
+    missed slots are filled with repeats (frames ~= duration * fps)."""
+    pytest.importorskip("lerobot")
+    s = sim_session
+    s.update_config({"save_lerobot": True, "dataset_fps": 10, "dataset_image_width": 64, "dataset_image_height": 48})
+    s.connect()
+    _wait(s, SessionState.IDLE)
+    cam = s.hw.cameras["ext"]
+    fast = cam.get_image
+
+    def slow():
+        if s.state == SessionState.RUNNING:
+            time.sleep(0.25)  # 4 Hz camera read for a 10 Hz dataset
+        return fast()
+
+    cam.get_image = slow
+    s.start_episode()
+    _wait(s, SessionState.RUNNING)
+    time.sleep(3.0)
+    s.stop_episode("stopped by user")
+    folder = s.save_episode("", "", "success", wait=True)["folder"]
+    meta = json.load(open(f"{folder}/meta.json"))
+    expected = meta["stats"]["duration_s"] * 10
+    assert abs(meta["lerobot"]["frames"] - expected) <= 4, (meta["lerobot"], expected)
+    assert meta["lerobot"]["duplicated_frames"] > 10

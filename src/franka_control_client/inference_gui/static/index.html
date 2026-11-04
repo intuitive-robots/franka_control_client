@@ -1036,7 +1036,7 @@ async function loadEpisodes() {
       <td class="num">${esc(e.folder.split("_")[0])}</td><td>${esc(e.name)}</td><td><span class="outcome ${esc(e.outcome)}">${esc(e.outcome)}</span></td>
       <td class="num">${fmt(e.duration_s, 1)} s</td><td class="num">${fmt(e.latency_ms_p50, 0)} ms</td>
       <td class="num">${e.lerobot_frames ? `✓ ${e.lerobot_frames} fr` : `<span class="hint">—</span>`}</td><td class="desc">${esc(e.description)}</td>
-      <td><button class="btn ep-edit" style="padding:3px 8px">Edit</button></td></tr>`).join("")
+      <td><div class="row" style="flex-wrap:nowrap"><button class="btn ep-edit" style="padding:3px 8px">Edit</button><button class="btn ep-del" style="padding:3px 8px;color:var(--critical)" title="Move this rollout to the batch's .trash folder">Delete</button></div></td></tr>`).join("")
       : `<tr><td colspan="8" class="hint">No rollouts saved yet.</td></tr>`;
   } catch (e) { /* server offline; poll shows the banner */ }
 }
@@ -1053,6 +1053,10 @@ $("#epTable").addEventListener("click", async (ev) => {
   } else if (ev.target.classList.contains("ep-save")) {
     const r = await act("edit_saved", { folder, description: tr.querySelector(".ep-desc").value, outcome: tr.querySelector(".ep-out").value });
     if (r) { toast("Rollout updated"); S.editing = null; loadEpisodes(); }
+  } else if (ev.target.classList.contains("ep-del")) {
+    if (!confirm(`Delete rollout ${folder}?\n\nIt is removed from this list and from merged datasets; the folder is moved to <batch>/.trash/ (delete that folder to free the disk space).`)) return;
+    const r = await act("delete_saved", { folder });
+    if (r) { toast(`Deleted ${folder}`); if (S.editing === folder) S.editing = null; loadEpisodes(); }
   } else if (ev.target.classList.contains("ep-cancel")) {
     S.editing = null; loadEpisodes();
   }

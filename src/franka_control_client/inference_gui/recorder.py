@@ -280,6 +280,7 @@ class EpisodeRecorder:
                 "repo_id": writer.repo_id,
                 "fps": writer.fps,
                 "frames": frames,
+                "duplicated_frames": writer.duplicated,
                 "features": sorted(writer.features),
                 "warning": writer.error,
             }
@@ -417,17 +418,44 @@ def update_saved_rollout(batch_dir: Path, folder: str, fields: Dict[str, Any]) -
     for row in rows:
         if row.get("folder") == folder:
             row.update(allowed)
+    _write_batch_index(batch_dir, rows)
+    return allowed
+
+
+TRASH_DIR = ".trash"
+
+
+def _write_batch_index(batch_dir: Path, rows: List[Dict[str, Any]]) -> None:
     tmp = batch_dir / "index.jsonl.tmp"
     tmp.write_text("".join(json.dumps(r, default=_json_default) + "\n" for r in rows), encoding="utf-8")
     tmp.replace(batch_dir / "index.jsonl")
-    return allowed
+
+
+def delete_saved_rollout(batch_dir: Path, folder: str) -> Path:
+    """Remove a saved rollout from the batch: its folder is moved to ``<batch>/.trash/``
+    (recoverable by moving it back and re-adding its index line) and its line is
+    dropped from index.jsonl, so it no longer shows in the GUI or in merged datasets."""
+    batch_dir = Path(batch_dir)
+    target = (batch_dir / folder).resolve()
+    if not folder or target.parent != batch_dir.resolve() or not target.is_dir() or folder.startswith("."):
+        raise ValueError(f"No saved rollout {folder!r} in this batch.")
+    trash = batch_dir / TRASH_DIR
+    trash.mkdir(exist_ok=True)
+    dest = trash / f"{folder}__deleted_{_dt.datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    target.rename(dest)
+    rows = read_batch_index(batch_dir)
+    _write_batch_index(batch_dir, [r for r in rows if r.get("folder") != folder])
+    return dest
 
 
 def next_episode_index(batch_dir: Path) -> int:
     batch_dir = Path(batch_dir)
     best = -1
-    if batch_dir.exists():
-        for p in batch_dir.iterdir():
+    # Deleted rollouts (in .trash) still count, so episode numbers are never reused.
+    for d in (batch_dir, batch_dir / TRASH_DIR):
+        if not d.exists():
+            continue
+        for p in d.iterdir():
             m = re.match(r"^(\d+)_", p.name)
             if p.is_dir() and m:
                 best = max(best, int(m.group(1)))

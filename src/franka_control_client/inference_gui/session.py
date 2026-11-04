@@ -27,7 +27,13 @@ from ..policy_inference.policy_server_client import PolicyServerClient
 from .config import CONNECTION_FIELDS, SessionConfig
 from .hardware import Q_LOWER, Q_UPPER, Hardware, build_hardware, gripper_closedness
 from .policy_server import ACTION_SPACES
-from .recorder import EpisodeRecorder, next_episode_index, read_batch_index, update_saved_rollout
+from .recorder import (
+    EpisodeRecorder,
+    delete_saved_rollout,
+    next_episode_index,
+    read_batch_index,
+    update_saved_rollout,
+)
 from .telemetry import Telemetry
 
 LOG = logging.getLogger("inference_gui")
@@ -194,6 +200,7 @@ class InferenceSession:
             ),
             "discard": lambda p: self.discard_episode(),
             "edit_saved": lambda p: self.edit_saved(str(p.get("folder", "")), p),
+            "delete_saved": lambda p: self.delete_saved(str(p.get("folder", ""))),
             "export_dataset": lambda p: self.export_dataset(p),
             "clear_error": lambda p: self.clear_error(),
         }
@@ -500,15 +507,19 @@ class InferenceSession:
         )
 
     def _dataset_loop(self, writer: Any, stop: threading.Event) -> None:
-        """Samples the rollout at the dataset rate into the writer."""
+        """Samples the rollout into the writer on a fixed clock: slot k is at
+        t0 + k / fps. If a sample takes longer than a period (large images, CPU
+        load), the slots that passed meanwhile get copies of the latest sample, so
+        the dataset always spans the real rollout time (frames = duration * fps)
+        instead of silently getting shorter."""
         from .lerobot_export import resize_frame
 
         cfg, hw = self.cfg, self.hw
         assert hw is not None
-        period = 1.0 / writer.fps
+        fps = float(writer.fps)
         size = cfg.dataset_image_size
-        next_t = time.perf_counter()
-        late = 0
+        t0 = time.perf_counter()
+        k = 0  # next slot to fill
         while not stop.is_set():
             try:
                 state, ft, grip = self._measured_dataset_state(hw)
@@ -520,18 +531,25 @@ class InferenceSession:
                     frame[cam.policy_key] = np.ascontiguousarray(np.transpose(img, (2, 0, 1)))
                 arm = self._last_arm_cmd if self._last_arm_cmd is not None else state[:7]
                 g = self._last_grip_cmd if self._last_grip_cmd is not None else grip
-                writer.add_sample(frame, np.concatenate([np.asarray(arm, dtype=np.float32), [g]]).astype(np.float32))
+                action = np.concatenate([np.asarray(arm, dtype=np.float32), [g]]).astype(np.float32)
             except Exception as exc:
                 self.log(f"Dataset sampling error: {exc}", "error")
-            next_t += period
-            delay = next_t - time.perf_counter()
-            if delay < -period:  # fell behind: resync rather than burst
-                late += 1
-                next_t = time.perf_counter()
-            elif delay > 0:
+                stop.wait(1.0 / fps)
+                continue
+            # every slot whose time has come and is not filled yet gets this sample
+            due = int((time.perf_counter() - t0) * fps) + 1
+            n = max(1, due - k)
+            writer.add_sample(frame, action, repeat=n)
+            k += n
+            delay = t0 + k / fps - time.perf_counter()
+            if delay > 0:
                 stop.wait(delay)
-        if late:
-            self.log(f"Dataset sampler fell behind {late} time(s) at {writer.fps:g} Hz.", "warn")
+        if writer.duplicated:
+            self.log(
+                f"Dataset sampler could not keep {fps:g} Hz: {writer.duplicated} of {k} frames are repeats of the "
+                f"previous sample (timing kept). Lower dataset image size or fps if this is large.",
+                "warn",
+            )
 
     # =============================================================== episode
     @property
@@ -1085,6 +1103,17 @@ class InferenceSession:
             raise ActionError(str(exc)) from exc
         self.log(f"Updated saved rollout {folder}: {', '.join(changed)}")
         return {"updated": changed}
+
+    def delete_saved(self, folder: str) -> Dict[str, Any]:
+        with self._lock:
+            if self.export_status.get("running"):
+                raise ActionError("A dataset merge is running; delete after it finishes.")
+            try:
+                dest = delete_saved_rollout(self.batch_dir, folder)
+            except ValueError as exc:
+                raise ActionError(str(exc)) from exc
+        self.log(f"Deleted saved rollout {folder} (moved to {dest}).", "warn")
+        return {"deleted": folder, "moved_to": str(dest)}
 
     # ------------------------------------------------------------- misc
     def go_home(self) -> None:

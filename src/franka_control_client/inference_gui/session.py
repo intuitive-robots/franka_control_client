@@ -438,6 +438,7 @@ class InferenceSession:
             self._last_arm_cmd = values[:7].copy()
         else:
             self._last_grip_cmd = self._gripper_command_value(float(values[0]))
+            self.telemetry.grip_cmd_series.append(t, [self._last_grip_cmd])
         self.recorder.add_command(t, kind, values.tolist())
 
     def _gripper_command_value(self, raw: float) -> float:
@@ -689,6 +690,7 @@ class InferenceSession:
                     row_times = (1 + np.arange(rows.shape[0])) / fps
                     anchor = obs_state[:7]
 
+                generated = rows.copy()  # as the policy produced them, for the dashboard
                 if cfg.first_step_jump_mode == "stop":
                     self._check_first_step(rows[0], anchor, action_space)
                 if action_space == ACTION_SPACES["joint"] and cfg.clip_joint_limits:
@@ -710,6 +712,9 @@ class InferenceSession:
                         )
                 exec_rows = resample_chunk(rows, row_times, anchor, pair.control_hz, action_space)
                 pair.update_action_chunk(exec_rows)
+                t_base = time.time()  # row_times are measured from (about) now
+                for k in range(generated.shape[0]):
+                    self.telemetry.gen_series.append(t_base + float(row_times[k]), generated[k, :8])
 
                 rtt = t_recv - t_send
                 model_s = float(response.get("server_infer_s", np.nan))

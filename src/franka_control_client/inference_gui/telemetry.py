@@ -110,6 +110,10 @@ class Telemetry:
         self.state_series = Series(maxlen=int(history_s * 50))  # q(7) + gripper
         self.ee_series = Series(maxlen=int(history_s * 50))  # xyz + quat
         self.cmd_series = Series(maxlen=int(history_s * 100))  # arm cmd(7)
+        # Executed rows of each chunk as the policy generated them (before joint-limit
+        # clipping / speed limiting), stamped at the time each row is scheduled.
+        self.gen_series = Series(maxlen=int(history_s * 50))  # 8: arm(7) + gripper
+        self.grip_cmd_series = Series(maxlen=int(history_s * 50))  # gripper command (0..1)
         self.latency_series = Series(maxlen=600)  # [rtt_ms, model_ms]
         self.rate_series = Series(maxlen=int(history_s * 4))  # [control_hz, infer_hz]
         self.counters: Dict[str, int] = {"infer": 0, "control_steps": 0, "commands": 0, "rejected_chunks": 0}
@@ -149,6 +153,8 @@ class Telemetry:
                 "state": self.state_series.since(since),
                 "ee": self.ee_series.since(since),
                 "cmd": self.cmd_series.since(since),
+                "gen": self.gen_series.since(since),
+                "gripcmd": self.grip_cmd_series.since(since),
                 "latency": self.latency_series.since(since),
                 "rates": self.rate_series.since(since),
             },

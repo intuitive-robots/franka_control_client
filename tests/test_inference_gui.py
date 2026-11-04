@@ -215,6 +215,11 @@ def test_first_step_jump_mode(tmp_path, mode):
         time.sleep(2.0)
         assert s.state == SessionState.RUNNING  # not stopped by the jump
         assert s.telemetry.counters.get("limited_chunks", 0) >= 1
+        snap = s.telemetry.snapshot(0.0)["series"]
+        gen, cmd = np.array(snap["gen"]), np.array(snap["cmd"])
+        assert gen.shape[1] == 1 + 8 and cmd.shape[1] == 1 + 7
+        # the dashboard sees the raw +0.69 rad request next to the limited command
+        assert np.max(gen[:, 1] - np.interp(gen[:, 0], cmd[:, 0], cmd[:, 1])) > 0.3
         s.stop_episode("stopped by user")
         folder = s.save_episode("", "", "unlabeled", wait=True)["folder"]
         d = np.load(f"{folder}/episode.npz")

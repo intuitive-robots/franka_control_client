@@ -409,6 +409,9 @@ const FIELDS = [
   { sec: "Safety", open: false, items: [
     { k: "max_first_step_jump_joint", l: "Max first-step jump (rad)", t: "number", step: 0.01 },
     { k: "max_first_step_jump_cartesian", l: "Max first-step jump (m)", t: "number", step: 0.01 },
+    { k: "first_step_jump_mode", l: "On a larger jump", t: "select", o: [["stop", "Stop the rollout"], ["limit", "Keep going, speed-limited"]], h: "Limit: every chunk is speed-limited from the measured state; the arm creeps toward far targets." },
+    { k: "max_joint_speed", l: "Max joint speed (rad/s)", t: "number", step: 0.05, h: "Limit mode only. Demos: p99.9 ≈ 1.1–1.3 rad/s." },
+    { k: "max_ee_speed", l: "Max EE speed (m/s)", t: "number", step: 0.01, h: "Limit mode only (cartesian pair, translation)." },
     { k: "clip_joint_limits", l: "Clip to joint limits", t: "bool" },
     { k: "max_episode_s", l: "Auto-stop after (s)", t: "number", step: 5, h: "0 = no limit." },
   ]},
@@ -706,7 +709,7 @@ function renderTiles(st) {
     tile("Control loop", fmt(r.control_hz, 1), "Hz", `target ${fmt(target, 0)} Hz`, running ? (ctrlOk ? ["ok", "on target"] : ["warn", "below 90% of target"]) : null),
     tile("Robot state stream", fmt(r.state_hz, 0), "Hz", `commands ${fmt(r.command_hz, 0)} /s`, null),
     tile("Chunks", c.infer ?? 0, "", chunk ? `last: ${chunk.rows} rows, ran ${chunk.executed}${chunk.skipped ? `, skipped ${chunk.skipped}` : ""}` : "no chunk yet",
-      c.rejected_chunks ? ["warn", `${c.rejected_chunks} rejected`] : null),
+      c.rejected_chunks ? ["warn", `${c.rejected_chunks} rejected`] : (c.limited_chunks ? ["warn", `${c.limited_chunks} speed-limited`] : null)),
   ].join("");
 }
 

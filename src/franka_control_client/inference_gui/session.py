@@ -85,6 +85,40 @@ def resample_chunk(
     return out
 
 
+def speed_limit_chunk(
+    rows: np.ndarray,
+    row_times: np.ndarray,
+    anchor: np.ndarray,
+    action_space: str,
+    max_joint_speed: float,
+    max_ee_speed: float,
+) -> Tuple[np.ndarray, bool]:
+    """Walk the rows from the measured ``anchor`` and cap each step to the speed
+    limit (per joint for the joint pair, EE translation norm for cartesian; the
+    orientation and the gripper column are left as predicted). A far target is
+    then approached over several chunks instead of in one jump; the next chunk
+    starts again from the measured state. Returns (rows, any_row_changed)."""
+    out = rows.astype(np.float64, copy=True)
+    dts = np.diff(np.concatenate([[0.0], np.asarray(row_times, dtype=np.float64)]))
+    cartesian = action_space == ACTION_SPACES["cartesian"]
+    prev = np.asarray(anchor[:3] if cartesian else anchor[:7], dtype=np.float64)
+    for i in range(out.shape[0]):
+        dt = max(float(dts[i]), 1e-3)
+        if cartesian:
+            delta = out[i, :3] - prev
+            norm = float(np.linalg.norm(delta))
+            cap = max_ee_speed * dt
+            if norm > cap:
+                delta *= cap / norm
+            out[i, :3] = prev + delta
+            prev = out[i, :3]
+        else:
+            cap = max_joint_speed * dt
+            out[i, :7] = prev + np.clip(out[i, :7] - prev, -cap, cap)
+            prev = out[i, :7]
+    return out, not np.allclose(out, rows)
+
+
 class InferenceSession:
     def __init__(self, cfg: SessionConfig, config_path: Optional[Path] = None) -> None:
         self.cfg = cfg
@@ -655,10 +689,25 @@ class InferenceSession:
                     row_times = (1 + np.arange(rows.shape[0])) / fps
                     anchor = obs_state[:7]
 
-                self._check_first_step(rows[0], anchor, action_space)
+                if cfg.first_step_jump_mode == "stop":
+                    self._check_first_step(rows[0], anchor, action_space)
                 if action_space == ACTION_SPACES["joint"] and cfg.clip_joint_limits:
                     rows = rows.copy()
                     rows[:, :7] = np.clip(rows[:, :7], Q_LOWER + 0.01, Q_UPPER - 0.01)
+                if cfg.first_step_jump_mode == "limit":
+                    jump = self._first_step_jump(rows[0], anchor, action_space)
+                    rows, limited = speed_limit_chunk(
+                        rows, row_times, anchor, action_space, cfg.max_joint_speed, cfg.max_ee_speed
+                    )
+                    if limited:
+                        self.telemetry.count("limited_chunks")
+                    if jump > self._first_step_limit(action_space) > 0:
+                        unit = "rad" if action_space == ACTION_SPACES["joint"] else "m"
+                        self.log(
+                            f"First action {jump:.3f} {unit} from the measured state; "
+                            f"speed-limited instead of stopping.",
+                            "warn",
+                        )
                 exec_rows = resample_chunk(rows, row_times, anchor, pair.control_hz, action_space)
                 pair.update_action_chunk(exec_rows)
 
@@ -734,15 +783,21 @@ class InferenceSession:
         chunk[:, 7] = np.clip(chunk[:, 7], 0.0, 1.0)
         return chunk
 
-    def _check_first_step(self, first_row: np.ndarray, anchor: np.ndarray, action_space: str) -> None:
+    @staticmethod
+    def _first_step_jump(first_row: np.ndarray, anchor: np.ndarray, action_space: str) -> float:
         if action_space == ACTION_SPACES["joint"]:
-            jump = float(np.max(np.abs(first_row[:7] - anchor[:7])))
-            limit = self.cfg.max_first_step_jump_joint
-            unit = "rad"
-        else:
-            jump = float(np.linalg.norm(first_row[:3] - anchor[:3]))
-            limit = self.cfg.max_first_step_jump_cartesian
-            unit = "m"
+            return float(np.max(np.abs(first_row[:7] - anchor[:7])))
+        return float(np.linalg.norm(first_row[:3] - anchor[:3]))
+
+    def _first_step_limit(self, action_space: str) -> float:
+        if action_space == ACTION_SPACES["joint"]:
+            return float(self.cfg.max_first_step_jump_joint)
+        return float(self.cfg.max_first_step_jump_cartesian)
+
+    def _check_first_step(self, first_row: np.ndarray, anchor: np.ndarray, action_space: str) -> None:
+        jump = self._first_step_jump(first_row, anchor, action_space)
+        limit = self._first_step_limit(action_space)
+        unit = "rad" if action_space == ACTION_SPACES["joint"] else "m"
         if limit > 0 and jump > limit:
             raise _SafetyStop(f"first action is {jump:.3f} {unit} from the measured state (limit {limit:.3f} {unit})")
 

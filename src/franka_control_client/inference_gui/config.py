@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 CONTROL_PAIRS = ("joint", "cartesian")
 GRIPPER_TYPES = ("robotiq", "panda")
 INFERENCE_MODES = ("sync", "async")
+FIRST_STEP_JUMP_MODES = ("stop", "limit")
 
 # Fields that may only change while no robot/policy connection exists, because
 # they decide which devices / sockets / control pair get built.
@@ -76,6 +77,12 @@ class SessionConfig:
     # the measured state: rad on any joint / metres of EE translation.
     max_first_step_jump_joint: float = 0.35
     max_first_step_jump_cartesian: float = 0.10
+    # What to do with such a chunk: "stop" ends the rollout (above); "limit" keeps
+    # going but speed-limits every chunk from the measured state, so the arm creeps
+    # toward far targets instead of jumping (applies to all chunks in this mode).
+    first_step_jump_mode: str = "stop"
+    max_joint_speed: float = 1.0  # rad/s per joint, "limit" mode (demos: p99.9 ~1.1-1.3)
+    max_ee_speed: float = 0.15  # m/s EE translation, "limit" mode (orientation unchanged)
     clip_joint_limits: bool = True
     max_episode_s: float = 120.0  # 0 disables the auto-stop
 
@@ -109,6 +116,10 @@ class SessionConfig:
             raise ValueError("policy_fps must be within [0.5, 200]")
         if not 1.0 <= float(self.state_record_hz) <= 500.0:
             raise ValueError("state_record_hz must be within [1, 500]")
+        if self.first_step_jump_mode not in FIRST_STEP_JUMP_MODES:
+            raise ValueError(f"first_step_jump_mode must be one of {FIRST_STEP_JUMP_MODES}")
+        if float(self.max_joint_speed) <= 0.0 or float(self.max_ee_speed) <= 0.0:
+            raise ValueError("max_joint_speed and max_ee_speed must be > 0")
         if int(self.exec_steps) < 0:
             raise ValueError("exec_steps must be >= 0")
         if not 0.0 <= float(self.dataset_fps) <= 100.0:

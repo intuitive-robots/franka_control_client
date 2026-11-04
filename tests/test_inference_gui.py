@@ -18,6 +18,7 @@ from franka_control_client.inference_gui.session import (
     InferenceSession,
     SessionState,
     resample_chunk,
+    speed_limit_chunk,
 )
 
 
@@ -159,3 +160,68 @@ def test_lerobot_rollouts_and_merge(sim_session, tmp_path):
     # an existing output is not overwritten unless asked
     status = s.export_dataset({"outcomes": ["success"], "output": str(out)}, wait=True)
     assert "exists" in status["error"]
+
+
+def test_speed_limit_chunk_caps_joint_speed():
+    rows = np.zeros((8, 8))
+    rows[:, 0] = 0.691  # far target, as from an out-of-distribution first action
+    rows[:, 1] = 0.01   # small move, must pass unchanged
+    rows[:, 7] = 1.0
+    t = (1 + np.arange(8)) / 15.0
+    out, limited = speed_limit_chunk(rows, t, np.zeros(7), ACTION_SPACES["joint"], 1.0, 0.15)
+    assert limited
+    assert np.all(np.abs(np.diff(np.r_[0.0, out[:, 0]])) <= 1.0 / 15.0 + 1e-9)
+    assert out[-1, 0] == pytest.approx(8 / 15.0)  # moved toward the target at the cap
+    assert np.allclose(out[:, 1], 0.01) and np.allclose(out[:, 7], 1.0)
+    same, limited = speed_limit_chunk(rows * 0.01, t, np.zeros(7), ACTION_SPACES["joint"], 1.0, 0.15)
+    assert not limited and np.allclose(same, rows * 0.01)
+
+
+class _JumpPolicy(DummyPolicy):
+    """Always asks for joint 0 at +0.69 rad from the current state."""
+
+    def infer(self, observation):
+        state = np.asarray(observation["observation.state"], dtype=np.float64)
+        chunk = np.repeat(state[None, :8], 16, axis=0)
+        chunk[:, 0] += 0.691
+        return chunk
+
+
+@pytest.mark.parametrize("mode", ["stop", "limit"])
+def test_first_step_jump_mode(tmp_path, mode):
+    import socket
+
+    with socket.socket() as sk:
+        sk.bind(("127.0.0.1", 0))
+        port = sk.getsockname()[1]
+    server = PolicyServer(_JumpPolicy(action_space="joint"), "127.0.0.1", port)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    time.sleep(0.2)
+    cfg = SessionConfig(
+        sim=True, control_hz=50, policy_port=port, cameras=[CameraConfig("ext")],
+        save_root=str(tmp_path), batch_name="b", task="t",
+        first_step_jump_mode=mode, max_joint_speed=0.5,
+    )
+    s = InferenceSession(cfg)
+    try:
+        s.connect()
+        _wait(s, SessionState.IDLE)
+        s.start_episode()
+        if mode == "stop":
+            _wait(s, SessionState.REVIEW, timeout=10)
+            assert s.episode["stop_reason"].startswith("safety")
+            return
+        _wait(s, SessionState.RUNNING)
+        time.sleep(2.0)
+        assert s.state == SessionState.RUNNING  # not stopped by the jump
+        assert s.telemetry.counters.get("limited_chunks", 0) >= 1
+        s.stop_episode("stopped by user")
+        folder = s.save_episode("", "", "unlabeled", wait=True)["folder"]
+        d = np.load(f"{folder}/episode.npz")
+        q0, t = d["command/arm"][:, 0], d["command/arm_t"]
+        speed = np.abs(np.diff(q0)) / np.maximum(np.diff(t), 1e-3)
+        # commanded joint-0 speed stays near the 0.5 rad/s cap (control-loop jitter aside)
+        assert np.percentile(speed, 95) < 0.5 * 1.5
+    finally:
+        s.shutdown()
+        server.shutdown()

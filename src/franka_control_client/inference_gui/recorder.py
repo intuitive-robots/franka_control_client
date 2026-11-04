@@ -274,13 +274,14 @@ class EpisodeRecorder:
         if self.dataset_writer is not None:
             writer, self.dataset_writer = self.dataset_writer, None
             progress("Writing the LeRobot episode (encoding videos)...")
-            frames = writer.finish()
+            frames = writer.finish(progress)
             dataset_info = {
                 "path": "lerobot" if frames else None,
                 "repo_id": writer.repo_id,
                 "fps": writer.fps,
                 "frames": frames,
                 "duplicated_frames": writer.duplicated,
+                "buffered_samples_mb": round(writer.nbytes / 1e6, 1),
                 "features": sorted(writer.features),
                 "warning": writer.error,
             }

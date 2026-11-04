@@ -132,8 +132,19 @@ rollout then also gets a one-episode LeRobot dataset (lerobot 0.4, v3 format) in
 
 The task string is the task instruction. Like the rollout station, a rollout is its own folder,
 so discarding or deleting one removes its episode, and changing a label never rewrites the
-dataset. Saving encodes the videos in the background (the header shows "Saving rollout");
-`meta.json["lerobot"]` and the table's *LeRobot* column show the frame count.
+dataset.
+
+**Buffered, written at save.** During the rollout the samples (state, command, camera frames)
+only go into a RAM buffer, so recording never slows down or drops time. *Save* resamples
+the buffer onto an exact `dataset_fps` grid from the start to the stop of the rollout
+(frames = duration × fps), then writes and encodes the episode in the background (the
+header shows the progress). `meta.json["lerobot"]` holds `frames`, `duplicated_frames` (grid
+slots without a new sample) and `buffered_samples_mb`.
+
+RAM use is width × height × 3 bytes per camera per frame: two native 2K ZED cameras at 15 Hz
+need ~250 MB/s (15 GB per minute) and take a long time to encode; 640 × 360 needs ~21 MB/s.
+Set `dataset_image_width/height` accordingly. The log shows the estimate at Start, and the
+rollout is stopped (reason "LeRobot buffer: low memory") if free RAM drops below 2 GB.
 
 **Merge for training.** *Build merged LeRobot dataset* under the rollout table (or the CLI)
 aggregates the batch's rollouts with the chosen outcomes, using the labels as they are now:

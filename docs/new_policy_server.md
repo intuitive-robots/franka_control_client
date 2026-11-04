@@ -9,6 +9,8 @@ Reference implementations:
 - [`examples/policy_server_template.py`](../examples/policy_server_template.py): minimal skeleton
 - [`examples/memvla_policy_server.py`](../examples/memvla_policy_server.py): a complete real
   example (MemoryVLA), including the workarounds listed under [Pitfalls](#pitfalls)
+- [`examples/meme_policy_server.py`](../examples/meme_policy_server.py): MME-VLA (memevla, JAX
+  π0.5 + frame memory); runs in the memevla venv, fills the memory frames the GUI does not send
 
 ```
  policy PC                                     robot PC

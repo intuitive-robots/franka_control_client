@@ -496,6 +496,15 @@ class InferenceSession:
             frame = resize_frame(hw.cameras[cam.name].get_image(), size)
             shapes[cam.policy_key] = tuple(frame.shape)
         features = build_features(cfg.control_pair, shapes, cfg.dataset_use_videos, cfg.dataset_force_torque)
+        from .lerobot_export import mem_available_bytes
+
+        rate = sum(int(np.prod(sh)) for sh in shapes.values()) * self._dataset_fps()
+        free = mem_available_bytes()
+        msg = f"LeRobot episode is buffered in RAM until saved: ~{rate / 1e6:.0f} MB/s"
+        if free is not None:
+            msg += f", {free / 1e9:.1f} GB free -> room for ~{max(free - self.DATASET_MIN_FREE_BYTES, 0) / max(rate, 1):.0f} s"
+        self.log(msg + ".", "warn" if free is not None and cfg.max_episode_s > 0
+                 and rate * cfg.max_episode_s > free - self.DATASET_MIN_FREE_BYTES else "info")
         return RolloutDatasetWriter(
             root=self.recorder.tmp_dir / DATASET_DIR,
             repo_id=f"local/{cfg.batch_name}_ep{index:03d}",
@@ -506,50 +515,66 @@ class InferenceSession:
             use_videos=cfg.dataset_use_videos,
         )
 
+    # Keep this much RAM free while buffering the LeRobot episode; below it the
+    # rollout is stopped (an out-of-memory kill would take the GUI down mid-motion).
+    DATASET_MIN_FREE_BYTES = 2 * 1024**3
+
     def _dataset_loop(self, writer: Any, stop: threading.Event) -> None:
-        """Samples the rollout into the writer on a fixed clock: slot k is at
-        t0 + k / fps. If a sample takes longer than a period (large images, CPU
-        load), the slots that passed meanwhile get copies of the latest sample, so
-        the dataset always spans the real rollout time (frames = duration * fps)
-        instead of silently getting shorter."""
-        from .lerobot_export import resize_frame
+        """Captures state, command and camera frames at the dataset rate into the
+        writer's memory buffer. Nothing is encoded or written here (that happens
+        when the rollout is saved), so this keeps up in real time."""
+        from .lerobot_export import mem_available_bytes, resize_frame
 
         cfg, hw = self.cfg, self.hw
         assert hw is not None
         fps = float(writer.fps)
         size = cfg.dataset_image_size
         t0 = time.perf_counter()
-        k = 0  # next slot to fill
+        k = 0
+        warned_rate = False
         while not stop.is_set():
             try:
+                t = time.time()
                 state, ft, grip = self._measured_dataset_state(hw)
                 frame: Dict[str, Any] = {"observation.state": state}
                 if cfg.dataset_force_torque:
                     frame["observation.force_torque"] = ft
                 for cam in cfg.cameras:
                     img = resize_frame(hw.cameras[cam.name].get_image(), size)
-                    frame[cam.policy_key] = np.ascontiguousarray(np.transpose(img, (2, 0, 1)))
+                    # A read-only view of the received message is immutable: keep it, no copy.
+                    frame[cam.policy_key] = img if not img.flags.writeable else img.copy()
                 arm = self._last_arm_cmd if self._last_arm_cmd is not None else state[:7]
                 g = self._last_grip_cmd if self._last_grip_cmd is not None else grip
-                action = np.concatenate([np.asarray(arm, dtype=np.float32), [g]]).astype(np.float32)
+                writer.add(t, frame, np.concatenate([np.asarray(arm, dtype=np.float32), [g]]))
             except Exception as exc:
                 self.log(f"Dataset sampling error: {exc}", "error")
-                stop.wait(1.0 / fps)
-                continue
-            # every slot whose time has come and is not filled yet gets this sample
-            due = int((time.perf_counter() - t0) * fps) + 1
-            n = max(1, due - k)
-            writer.add_sample(frame, action, repeat=n)
-            k += n
+            k += 1
+            if k % max(int(fps), 1) == 0:  # about once a second
+                free = mem_available_bytes()
+                if free is not None and free < self.DATASET_MIN_FREE_BYTES:
+                    writer.t_end = time.time()
+                    self.log(
+                        f"Low memory ({free / 1e9:.1f} GB free) with {writer.nbytes / 1e9:.1f} GB of LeRobot buffer; "
+                        f"stopping the rollout. Lower the dataset image size.",
+                        "error",
+                    )
+                    def oom_stop() -> None:
+                        try:
+                            self.stop_episode("LeRobot buffer: low memory")
+                        except ActionError:
+                            pass  # already stopping
+
+                    self._spawn(oom_stop, "dataset-oom-stop")
+                    return
             delay = t0 + k / fps - time.perf_counter()
             if delay > 0:
                 stop.wait(delay)
-        if writer.duplicated:
-            self.log(
-                f"Dataset sampler could not keep {fps:g} Hz: {writer.duplicated} of {k} frames are repeats of the "
-                f"previous sample (timing kept). Lower dataset image size or fps if this is large.",
-                "warn",
-            )
+            elif delay < -1.0 / fps:
+                if not warned_rate:
+                    warned_rate = True
+                    self.log(f"Dataset sampler is behind {fps:g} Hz (slots are filled at save time).", "warn")
+                k = int((time.perf_counter() - t0) * fps)  # resync; the grid at save fills the gap
+        writer.t_end = time.time()
 
     # =============================================================== episode
     @property
@@ -1203,7 +1228,8 @@ class InferenceSession:
                 "enabled": self.cfg.save_lerobot,
                 "fps": self._dataset_fps(),
                 "recording": bool(self._dataset_thread is not None and self._dataset_thread.is_alive()),
-                "frames": getattr(self.recorder.dataset_writer, "n_frames", None),
+                "frames": getattr(self.recorder.dataset_writer, "n_samples", None),
+                "buffer_mb": round(getattr(self.recorder.dataset_writer, "nbytes", 0) / 1e6, 1),
                 "lerobot_error": self._lerobot_error,
                 "export": self.export_status,
             },

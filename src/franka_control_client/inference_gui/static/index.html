@@ -673,7 +673,7 @@ function render(st) {
   const ds = st.dataset || {};
   if (ds.enabled) {
     $("#taskLine").textContent += ds.lerobot_error ? ` · LeRobot dataset: unavailable (${ds.lerobot_error})`
-      : ds.recording ? ` · LeRobot: ${ds.frames ?? 0} frames @ ${fmt(ds.fps, 0)} Hz` : ` · LeRobot dataset on (${fmt(ds.fps, 0)} Hz)`;
+      : ds.recording ? ` · LeRobot buffer: ${ds.frames ?? 0} frames @ ${fmt(ds.fps, 0)} Hz, ${fmt(ds.buffer_mb, 0)} MB` : ` · LeRobot dataset on (${fmt(ds.fps, 0)} Hz)`;
   }
   // refresh the table when a background save finishes
   if (lastState === "busy" && st.state !== "busy") loadEpisodes();

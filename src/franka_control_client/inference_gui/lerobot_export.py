@@ -1,8 +1,9 @@
 """Rollouts as LeRobot datasets.
 
 Per rollout (``save_lerobot`` on): a sampler in the session captures, at the
-dataset rate, every camera, the robot state and what the controller is playing,
-and :class:`RolloutDatasetWriter` streams it into a one-episode LeRobot dataset
+dataset rate, every camera, the robot state and what the controller is playing
+into a memory buffer; when the rollout is saved, :class:`RolloutDatasetWriter`
+resamples it onto an exact fps grid and writes a one-episode LeRobot dataset
 in ``<rollout folder>/lerobot/``. One rollout = one folder, so deleting a
 rollout is deleting its folder and re-labelling never touches the dataset.
 
@@ -25,7 +26,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import queue
 import shutil
 import threading
 from pathlib import Path
@@ -88,16 +88,30 @@ def resize_frame(frame: np.ndarray, size: Optional[Tuple[int, int]]) -> np.ndarr
     return cv2.resize(frame, size, interpolation=cv2.INTER_AREA)
 
 
-class RolloutDatasetWriter:
-    """Streams one rollout into a one-episode LeRobot dataset.
+def mem_available_bytes() -> Optional[int]:
+    """MemAvailable from /proc/meminfo (Linux); None elsewhere."""
+    try:
+        with open("/proc/meminfo", "r", encoding="ascii") as f:
+            for line in f:
+                if line.startswith("MemAvailable:"):
+                    return int(line.split()[1]) * 1024
+    except OSError:
+        pass
+    return None
 
-    ``add_sample(obs, action_now, repeat)`` is called on the dataset clock;
-    ``repeat`` > 1 fills slots the sampler missed with copies of this sample, so
-    the episode keeps the real duration. A frame's action is the command playing
-    at the next sample (as in the converters, where the action is the leader one
-    step later), so each frame is held back one sample, and the last one is
-    dropped at ``finish``. Frames are never dropped: if the writer falls behind,
-    ``add_sample`` blocks and the sampler fills the gap with repeats."""
+
+class RolloutDatasetWriter:
+    """Buffers one rollout in memory and writes it as a one-episode LeRobot dataset
+    when the rollout is saved.
+
+    During the rollout ``add(t, observation, command)`` only stores references
+    (images HWC, as captured), so recording costs ~nothing in real time; all the
+    LeRobot work (add_frame, video encoding) runs in ``finish()``. There the
+    samples are resampled onto an exact grid t0 + k / fps from the first sample to
+    ``t_end``, so the episode has the real duration (frames = duration * fps)
+    whatever the sampling jitter. Slot k holds the latest sample at or before its
+    time; its action is the command at slot k + 1 (as in the converters, where the
+    action is the leader one step later)."""
 
     def __init__(
         self,
@@ -109,96 +123,100 @@ class RolloutDatasetWriter:
         robot_type: str,
         use_videos: bool,
     ) -> None:
-        from lerobot.datasets.lerobot_dataset import LeRobotDataset
-
         self.root = Path(root)
         self.repo_id = repo_id
-        self.fps = fps
+        self.fps = float(fps)
         self.task = task or "rollout"
         self.features = features
-        self.n_frames = 0
-        self.duplicated = 0  # frames that repeat the previous sample (sampler too slow)
+        self.robot_type = robot_type
+        self.use_videos = use_videos
+        self.n_frames = 0  # frames written by finish()
+        self.duplicated = 0  # grid slots that repeat the previous sample
         self.error: Optional[str] = None
-        self._pending: Optional[Dict[str, Any]] = None
-        # Bounded in time, not 30 s: queued frames hold full images (2K: ~8 MB per camera).
-        self._queue: "queue.Queue[Optional[Dict[str, Any]]]" = queue.Queue(maxsize=int(fps * 5) + 5)
-        self._dataset = LeRobotDataset.create(
-            repo_id=repo_id,
-            fps=int(round(fps)),
-            features=features,
+        self.t_end: Optional[float] = None
+        self.nbytes = 0
+        self._lock = threading.Lock()
+        self._t: List[float] = []
+        self._obs: List[Dict[str, Any]] = []
+        self._cmd: List[np.ndarray] = []
+
+    @property
+    def n_samples(self) -> int:
+        return len(self._t)
+
+    def add(self, t: float, observation: Dict[str, Any], command: np.ndarray) -> None:
+        size = sum(v.nbytes for v in observation.values() if isinstance(v, np.ndarray))
+        with self._lock:
+            self._t.append(float(t))
+            self._obs.append(observation)
+            self._cmd.append(np.asarray(command, dtype=np.float32))
+            self.nbytes += size
+
+    def grid(self, times: Sequence[float]) -> Tuple[np.ndarray, np.ndarray]:
+        """Sample index of every grid slot, and of the slot after it (the action)."""
+        ts = np.asarray(times, dtype=np.float64)
+        t_end = max(self.t_end if self.t_end is not None else ts[-1], ts[-1])
+        n = max(int(round((t_end - ts[0]) * self.fps)), 1)
+        slots = ts[0] + np.arange(n + 1) / self.fps
+        idx = np.clip(np.searchsorted(ts, slots + 1e-9, side="right") - 1, 0, len(ts) - 1)
+        return idx[:-1], idx[1:]
+
+    def finish(self, progress: Callable[[str], None] = lambda msg: None) -> int:
+        """Write the episode; returns the number of frames (0: nothing written)."""
+        with self._lock:
+            ts, obs, cmd = self._t, self._obs, self._cmd
+            self._t, self._obs, self._cmd = [], [], []
+        if len(ts) < 2:
+            LOG.warning("Rollout dataset has %d samples; not writing it.", len(ts))
+            return 0
+        frame_idx, action_idx = self.grid(ts)
+        self.duplicated = int(np.sum(frame_idx[1:] == frame_idx[:-1]))
+        from lerobot.datasets.lerobot_dataset import LeRobotDataset
+
+        dataset = LeRobotDataset.create(
+            repo_id=self.repo_id,
+            fps=int(round(self.fps)),
+            features=self.features,
             root=self.root,
-            robot_type=robot_type,
-            use_videos=use_videos,
+            robot_type=self.robot_type,
+            use_videos=self.use_videos,
             image_writer_threads=4,
         )
-        self._thread = threading.Thread(target=self._run, name="lerobot-writer", daemon=True)
-        self._thread.start()
-
-    def add_sample(self, observation: Dict[str, Any], action_now: np.ndarray, repeat: int = 1) -> None:
-        action_now = np.asarray(action_now, dtype=np.float32)
-        if self._pending is not None:
-            self._pending["action"] = action_now
-            self._put(self._pending)
-        # Repeats share the arrays (shallow copies); the copy in a missed slot is
-        # followed by the same capture, so its action is this sample's command.
-        for _ in range(max(1, int(repeat)) - 1):
-            self._put({**observation, "action": action_now})
-            self.duplicated += 1
-        self._pending = dict(observation)
-
-    def _put(self, frame: Dict[str, Any]) -> None:
-        while self._thread.is_alive():
+        image_keys = [k for k, f in self.features.items() if f["dtype"] in ("image", "video")]
+        n = len(frame_idx)
+        try:
+            for j, (i, a) in enumerate(zip(frame_idx, action_idx)):
+                if j % 50 == 0:
+                    progress(f"Writing the LeRobot episode: frame {j}/{n}...")
+                src = obs[i]
+                frame = {k: v for k, v in src.items() if k not in image_keys}
+                for k in image_keys:
+                    frame[k] = np.ascontiguousarray(np.transpose(src[k], (2, 0, 1)))
+                frame["action"] = cmd[a]
+                frame["task"] = self.task
+                dataset.add_frame(frame)
+                self.n_frames += 1
+            del obs  # free the image buffer before encoding
+            progress(f"Encoding the LeRobot videos ({n} frames)...")
+            dataset.save_episode()
+            dataset.finalize()
+        except Exception as exc:
+            self.error = f"writing the LeRobot episode failed: {exc}"
             try:
-                self._queue.put(frame, timeout=1.0)
-                return
-            except queue.Full:
-                continue
-        self.error = "dataset writer thread stopped; frames were lost"
-
-    def finish(self) -> int:
-        """Write the episode; returns the number of frames (0: nothing written)."""
-        self._pending = None
-        self._queue.put(None)
-        self._thread.join()
-        if self.error and self.n_frames == 0:
-            raise RuntimeError(self.error)
-        if self.n_frames < 2:
-            LOG.warning("Rollout dataset has %d frames; not writing it.", self.n_frames)
-            self._close_quietly()
-            shutil.rmtree(self.root, ignore_errors=True)
-            return 0
-        self._dataset.save_episode()
-        self._dataset.finalize()
+                if getattr(dataset, "image_writer", None) is not None:
+                    dataset.stop_image_writer()
+            except Exception:
+                pass
+            raise
         images = self.root / "images"
         if images.exists() and not any(p.is_file() for p in images.rglob("*")):
             shutil.rmtree(images, ignore_errors=True)  # the image writer's empty scratch folders
         return self.n_frames
 
     def abort(self) -> None:
-        self._pending = None
-        self._queue.put(None)
-        self._thread.join(timeout=10)
-        self._close_quietly()
-
-    def _close_quietly(self) -> None:
-        try:
-            if getattr(self._dataset, "image_writer", None) is not None:
-                self._dataset.stop_image_writer()
-        except Exception:
-            pass
-
-    def _run(self) -> None:
-        while True:
-            frame = self._queue.get()
-            if frame is None:
-                return
-            try:
-                frame["task"] = self.task
-                self._dataset.add_frame(frame)
-                self.n_frames += 1
-            except Exception as exc:  # keep draining so the episode stays consistent
-                self.error = f"add_frame failed: {exc}"
-                LOG.exception("add_frame failed")
+        with self._lock:
+            self._t, self._obs, self._cmd = [], [], []
+            self.nbytes = 0
 
 
 # ---------------------------------------------------------------- merging

@@ -186,6 +186,7 @@ class InferenceSession:
             "stop": lambda p: self.stop_episode("stopped by user"),
             "estop": lambda p: self.software_estop(),
             "home": lambda p: self.go_home(),
+            "set_home_current": lambda p: self.set_home_to_current(),
             "save": lambda p: self.save_episode(
                 p.get("name", ""), p.get("description", ""), p.get("outcome", "unlabeled")
             ),
@@ -1017,9 +1018,23 @@ class InferenceSession:
             self.busy_label = "Moving home"
         self._spawn(lambda: self._home_worker(back_to), "home")
 
+    def set_home_to_current(self) -> Dict[str, Any]:
+        """Store the arm's measured joint pose as the home pose (config file included)."""
+        with self._lock:
+            self._require(SessionState.IDLE, SessionState.REVIEW)
+            state = self.hw.arm.current_state if self.hw is not None else None
+        if state is None or state.get("q") is None:
+            raise ActionError("Arm state missing.")
+        home = [round(float(q), 4) for q in state["q"]][:7]
+        cfg = self.update_config({"home_q": home})
+        self.log(f"Home pose set to the current pose [{', '.join(f'{q:.3f}' for q in home)}].")
+        return {"home_q": list(cfg.home_q)}
+
     def _home_worker(self, back_to: SessionState) -> None:
         try:
-            self.log("Moving to home pose...")
+            home = tuple(float(q) for q in self.cfg.home_q)
+            self.pair.home_position = home
+            self.log(f"Moving to home pose [{', '.join(f'{q:.3f}' for q in home)}]...")
             self.pair.go_home()
             self.log("Home pose reached.")
         except Exception as exc:

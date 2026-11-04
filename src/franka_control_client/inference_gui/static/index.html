@@ -99,6 +99,10 @@ details.section[open] > summary::before { content: "▾ "; }
 .field textarea, .review textarea { min-height: 54px; resize: vertical; }
 .field input:disabled, .field select:disabled, .field textarea:disabled { opacity: .55; }
 .hint { color: var(--text-muted); font-size: 11px; overflow-wrap: anywhere; min-width: 0; }
+.joint-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.joint-row input { width: 100%; min-width: 0; padding: 5px 2px; font-size: 12px; text-align: center; appearance: textfield; -moz-appearance: textfield; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); font-variant-numeric: tabular-nums; }
+.joint-row input::-webkit-inner-spin-button, .joint-row input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.joint-row span { color: var(--text-muted); font-size: 10px; text-align: center; }
 .cam-row { display: grid; grid-template-columns: 1fr 1.3fr auto auto; gap: 6px; align-items: center; margin: 4px 0; }
 .cam-row input[type=text] { width: 100%; padding: 5px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
 .dirty-note { color: var(--serious); font-weight: 600; }
@@ -378,6 +382,7 @@ const S = {
 
 // ======================================================================= config form
 const JOINT_LIMITS = [[-2.8973, 2.8973], [-1.7628, 1.7628], [-2.8973, 2.8973], [-3.0718, -0.0698], [-2.8973, 2.8973], [-0.0175, 3.7525], [-2.8973, 2.8973]];
+const DEFAULT_HOME_Q = [0.0, 0.0, 0.0, -2.15, 0.0, 2.15, 0.0];
 const FIELDS = [
   { sec: "Evaluation batch", open: true, items: [
     { k: "batch_name", l: "Batch name", t: "text", wide: true, h: "Folder under the save root; set it before the first rollout." },
@@ -389,6 +394,7 @@ const FIELDS = [
   { sec: "Control pair", open: true, items: [
     { k: "control_pair", l: "Control pair", t: "select", o: [["joint", "Joint position (PolicyPandaControlPair)"], ["cartesian", "Cartesian pose (CartesianPolicyPandaControlPair)"]] },
     { k: "control_hz", l: "Control frequency (Hz)", t: "number", step: 1 },
+    { k: "home_q", l: "Home pose q0..q6 (rad)", t: "joints", wide: true, h: "Target of the Home button (gripper opens too). Apply to save; must be inside the joint limits." },
   ]},
   { sec: "Policy server", open: true, items: [
     { k: "policy_host", l: "Host (policy PC)", t: "text" },
@@ -440,6 +446,10 @@ function buildForm() {
       if (f.t === "textarea") input = `<textarea id="${id}" data-k="${f.k}"></textarea>`;
       else if (f.t === "select") input = `<select id="${id}" data-k="${f.k}">${f.o.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("")}</select>`;
       else if (f.t === "bool") input = `<input id="${id}" data-k="${f.k}" type="checkbox">`;
+      else if (f.t === "joints") input = `<div class="joint-row" id="${id}">${JOINT_LIMITS.map((lim, i) =>
+          `<input type="number" step="0.01" data-k="${f.k}" data-i="${i}" min="${lim[0]}" max="${lim[1]}" title="q${i}: ${lim[0]} … ${lim[1]} rad">`).join("")}${JOINT_LIMITS.map((_, i) => `<span>q${i}</span>`).join("")}</div>
+        <div class="row" style="margin-top:4px"><button type="button" class="btn" id="btnHomeCurrent" title="Store the arm's current joint pose as home (saved immediately)">Use current pose</button>
+        <button type="button" class="btn" id="btnHomeDefault">Default</button></div>`;
       else input = `<input id="${id}" data-k="${f.k}" type="${f.t}" ${f.step ? `step="${f.step}"` : ""}>`;
       html += `<div class="field ${f.wide ? "wide" : ""}"><label for="${id}">${esc(f.l)}</label><div>${input}${f.h ? `<div class="hint">${esc(f.h)}</div>` : ""}</div></div>`;
     }
@@ -452,6 +462,11 @@ function buildForm() {
   form.addEventListener("input", () => setDirty(true));
   form.addEventListener("change", () => setDirty(true));
   form.addEventListener("submit", (e) => e.preventDefault());
+  $("#btnHomeCurrent").addEventListener("click", async () => {
+    const r = await act("set_home_current");
+    if (r && r.home_q) { S.cfg.home_q = r.home_q; setJoints("home_q", r.home_q); toast("Home pose set to the current pose"); }
+  });
+  $("#btnHomeDefault").addEventListener("click", () => { setJoints("home_q", DEFAULT_HOME_Q); setDirty(true); });
   $("#btnAddCam").addEventListener("click", () => { addCamRow({ name: "", obs_key: "", send_to_policy: true }); setDirty(true); });
 }
 function addCamRow(c) {
@@ -464,10 +479,14 @@ function addCamRow(c) {
   row.querySelector(".c-del").addEventListener("click", () => { row.remove(); setDirty(true); });
   $("#camRows").appendChild(row);
 }
+function setJoints(k, values) {
+  document.querySelectorAll(`#f_${k} input`).forEach((el) => { el.value = values[+el.dataset.i]; });
+}
 function fillForm(cfg) {
   for (const sec of FIELDS) for (const f of sec.items) {
     const el = $("#f_" + f.k);
-    if (f.t === "bool") el.checked = !!cfg[f.k]; else el.value = cfg[f.k];
+    if (f.t === "joints") setJoints(f.k, cfg[f.k] || []);
+    else if (f.t === "bool") el.checked = !!cfg[f.k]; else el.value = cfg[f.k];
   }
   $("#camRows").innerHTML = "";
   (cfg.cameras || []).forEach(addCamRow);
@@ -477,6 +496,7 @@ function readForm() {
   const out = {};
   for (const sec of FIELDS) for (const f of sec.items) {
     const el = $("#f_" + f.k);
+    if (f.t === "joints") { out[f.k] = [...el.querySelectorAll("input")].map((i) => Number(i.value)); continue; }
     out[f.k] = f.t === "bool" ? el.checked : f.t === "number" ? Number(el.value) : el.value;
   }
   out.cameras = [...document.querySelectorAll("#camRows .cam-row")].map((r) => ({
@@ -630,6 +650,7 @@ function render(st) {
   $("#btnStop").disabled = stName !== "running";
   $("#btnHome").disabled = !["idle", "review"].includes(stName);
   $("#btnHome2").disabled = !["idle", "review"].includes(stName);
+  if ($("#btnHomeCurrent")) $("#btnHomeCurrent").disabled = !(st.connected && ["idle", "review"].includes(stName));
   $("#btnEstop").disabled = !st.connected;
 
   const err = st.error || (stName !== "running" && pol.error && st.connected ? "Policy server: " + pol.error : null);

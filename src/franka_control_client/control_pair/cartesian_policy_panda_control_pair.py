@@ -39,6 +39,9 @@ class CartesianPolicyPandaControlPair(ControlPair):
     Includes velocity and acceleration limiting for safety.
     """
 
+    # Joint pose for go_home(); the inference GUI overrides it per instance.
+    home_position = DEFAULT_POSITION
+
     def __init__(
         self,
         panda_arm: RemotePandaArm,
@@ -296,7 +299,7 @@ class CartesianPolicyPandaControlPair(ControlPair):
         )
 
     def go_home(self) -> None:
-        self.panda_arm.move_franka_arm_to_joint_position(DEFAULT_POSITION)
+        self.panda_arm.move_franka_arm_to_joint_position(tuple(self.home_position))
         # Open the gripper
         if isinstance(self.gripper, RemoteRobotiqGripper):
             self.gripper.send_grasp_command(

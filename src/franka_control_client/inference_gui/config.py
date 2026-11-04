@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -12,6 +13,13 @@ CONTROL_PAIRS = ("joint", "cartesian")
 GRIPPER_TYPES = ("robotiq", "panda")
 INFERENCE_MODES = ("sync", "async")
 FIRST_STEP_JUMP_MODES = ("stop", "limit")
+
+# Panda joint limits (rad) and the default home pose (same as the control pairs' DEFAULT_POSITION).
+JOINT_LOWER = (-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973)
+JOINT_UPPER = (2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973)
+DEFAULT_HOME_Q = (0.0, 0.0, 0.0, -2.15, 0.0, 2.15, 0.0)
+# A home pose must stay this far (rad) inside the joint limits.
+HOME_LIMIT_MARGIN = 0.02
 
 # Fields that may only change while no robot/policy connection exists, because
 # they decide which devices / sockets / control pair get built.
@@ -56,6 +64,8 @@ class SessionConfig:
     # ---- control pair ------------------------------------------------------
     control_pair: str = "joint"  # "joint" | "cartesian"
     control_hz: float = 15.0
+    # Joint pose q0..q6 (rad) that "Home" moves to (the gripper is opened as well).
+    home_q: List[float] = field(default_factory=lambda: list(DEFAULT_HOME_Q))
 
     # ---- policy server -----------------------------------------------------
     policy_host: str = "127.0.0.1"
@@ -130,6 +140,14 @@ class SessionConfig:
             raise ValueError("batch_name must not be empty")
         if any(c in self.batch_name for c in '/\\:*?"<>|'):
             raise ValueError("batch_name must be a valid folder name")
+        if len(self.home_q) != 7:
+            raise ValueError(f"home_q needs 7 joint values, got {len(self.home_q)}")
+        for i, (q, lo, hi) in enumerate(zip(self.home_q, JOINT_LOWER, JOINT_UPPER)):
+            if not (math.isfinite(q) and lo + HOME_LIMIT_MARGIN <= q <= hi - HOME_LIMIT_MARGIN):
+                raise ValueError(
+                    f"home_q[{i}] = {q} is outside the joint limits "
+                    f"[{lo + HOME_LIMIT_MARGIN:.4f}, {hi - HOME_LIMIT_MARGIN:.4f}]"
+                )
         names = [c.name for c in self.cameras]
         if len(names) != len(set(names)):
             raise ValueError("camera names must be unique")
@@ -177,6 +195,10 @@ class SessionConfig:
                 setattr(self, f.name, int(float(value)))
             elif f.type in ("bool",) and not isinstance(value, bool):
                 setattr(self, f.name, str(value).lower() in ("1", "true", "yes", "on"))
+        home = self.home_q
+        if isinstance(home, str):  # "0, 0, 0, -2.15, 0, 2.15, 0"
+            home = [v for v in home.replace(",", " ").split() if v]
+        self.home_q = [float(v) for v in home]
 
     @classmethod
     def load(cls, path: str | Path) -> "SessionConfig":

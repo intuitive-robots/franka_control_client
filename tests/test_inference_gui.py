@@ -51,6 +51,15 @@ def test_config_roundtrip_and_validation(tmp_path):
     assert cfg.merged({"control_hz": "30"}).control_hz == 30.0
 
 
+def test_home_q_config():
+    cfg = SessionConfig()
+    assert cfg.home_q == [0.0, 0.0, 0.0, -2.15, 0.0, 2.15, 0.0]
+    assert cfg.merged({"home_q": "0.1, 0, 0, -2, 0, 2, 0.5"}).home_q == [0.1, 0, 0, -2, 0, 2, 0.5]
+    for bad in ([0.0] * 6, [0, 0, 0, 0, 0, 2, 0], [0, 0, 0, -2, 0, 2, float("nan")], [0, 0, 0, -2, 0, 2, "x"]):
+        with pytest.raises(ValueError):
+            cfg.merged({"home_q": bad})  # wrong length / q3 above its limit / nan / not a number
+
+
 @pytest.fixture()
 def sim_session(tmp_path):
     server = PolicyServer(DummyPolicy(action_space="joint", latency_s=0.01), "127.0.0.1", 0)
@@ -230,3 +239,20 @@ def test_first_step_jump_mode(tmp_path, mode):
     finally:
         s.shutdown()
         server.shutdown()
+
+
+def test_home_pose_from_gui(sim_session):
+    s = sim_session
+    s.connect()
+    _wait(s, SessionState.IDLE)
+    target = [0.3, -0.2, 0.1, -2.0, 0.05, 1.9, 0.7]
+    s.update_config({"home_q": target})
+    s.go_home()
+    _wait(s, SessionState.BUSY, timeout=2.0)
+    _wait(s, SessionState.IDLE)
+    assert np.allclose(s.hw.arm.current_state["q"], target, atol=1e-3)
+    with pytest.raises(ActionError):
+        s.update_config({"home_q": [0, 0, 0, 0, 0, 0, 0]})  # q3 = 0 is outside the limits
+    s.update_config({"home_q": [0.0, 0.0, 0.0, -2.15, 0.0, 2.15, 0.0]})
+    home = s.set_home_to_current()["home_q"]  # arm is still at `target`
+    assert np.allclose(home, target, atol=1e-3) and s.cfg.home_q == home

@@ -80,6 +80,11 @@ class SessionConfig:
     # async: request the next chunk while the current one is still playing and
     #        drop the rows that are already stale when it arrives.
     inference_mode: str = "sync"
+    # Env frequency (Hz): during a rollout, stream every env frame to the policy
+    # server at this rate ("observe" requests, for memory/history models trained
+    # on every frame), independent of the action requests. 0 = off: the policy
+    # only sees the observation sent with each action request.
+    env_hz: float = 0.0
     task: str = ""
 
     # ---- safety ------------------------------------------------------------
@@ -130,6 +135,8 @@ class SessionConfig:
             raise ValueError(f"first_step_jump_mode must be one of {FIRST_STEP_JUMP_MODES}")
         if float(self.max_joint_speed) <= 0.0 or float(self.max_ee_speed) <= 0.0:
             raise ValueError("max_joint_speed and max_ee_speed must be > 0")
+        if not 0.0 <= float(self.env_hz) <= 100.0:
+            raise ValueError("env_hz must be within [0, 100] (0 = off)")
         if int(self.exec_steps) < 0:
             raise ValueError("exec_steps must be >= 0")
         if not 0.0 <= float(self.dataset_fps) <= 100.0:

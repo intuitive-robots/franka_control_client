@@ -145,6 +145,8 @@ class InferenceSession:
         self._monitor_thread: Optional[threading.Thread] = None
         self._episode_stop = threading.Event()
         self._infer_thread: Optional[threading.Thread] = None
+        self._observe_thread: Optional[threading.Thread] = None
+        self._env_stream_on = False
         self._episode_id = 0
         self._stop_reason = ""
         self._last_arm_cmd: Optional[np.ndarray] = None
@@ -577,6 +579,7 @@ class InferenceSession:
                 "policy_fps": self.policy_fps,
                 "exec_steps": self.exec_steps,
                 "inference_mode": cfg.inference_mode,
+                "env_hz": cfg.env_hz,
                 "sim": cfg.sim,
                 "policy_server": {"host": cfg.policy_host, "port": cfg.policy_port, "health": self.health},
                 "cameras": [c.__dict__ for c in cfg.cameras],
@@ -585,6 +588,7 @@ class InferenceSession:
             self.recorder.start(batch_dir, index, cfg.record_images and bool(cfg.cameras), self.policy_fps, context)
             self._last_arm_cmd = None
             self._last_grip_cmd = None
+            stream = self._open_env_stream()
             writer = None
             if cfg.save_lerobot:
                 writer = self._create_dataset_writer(index)
@@ -607,6 +611,12 @@ class InferenceSession:
                     target=self._infer_loop, args=(episode_id, self._episode_stop), name="inference", daemon=True
                 )
                 self.state = SessionState.RUNNING
+                self._observe_thread = None
+                if stream is not None:
+                    self._observe_thread = threading.Thread(
+                        target=self._observe_loop, args=(*stream, self._episode_stop), name="env-stream", daemon=True
+                    )
+                    self._observe_thread.start()
                 self._infer_thread.start()
                 self._dataset_thread = None
                 if writer is not None:
@@ -626,6 +636,68 @@ class InferenceSession:
             self.recorder.discard()
             with self._lock:
                 self.state = SessionState.IDLE
+
+    # ------------------------------------------------------- env stream
+    def _open_env_stream(self) -> Optional[Tuple[PolicyServerClient, float, float]]:
+        """Second connection for the env-frequency observation stream. Sends
+        frame 0 right away, so the policy has it before the first action request."""
+        cfg = self.cfg
+        hz = float(cfg.env_hz)
+        self._env_stream_on = False
+        if hz <= 0:
+            return None
+        if not self.health.get("supports_observe"):
+            self.log(f"Env frequency is {hz:g} Hz but the policy server does not accept observations "
+                     "(no supports_observe in health); only action requests are sent.", "warn")
+            return None
+        assert self.hw is not None
+        client = PolicyServerClient(cfg.policy_host, cfg.policy_port, timeout_s=POLICY_CONNECT_TIMEOUT_S)
+        client.connect()
+        if client._sock is not None:
+            client._sock.settimeout(cfg.timeout)
+        t0 = time.time()
+        obs, _, _ = self._build_observation(self.hw)
+        obs.update({"frame_index": 0, "timestamp": t0})
+        client.request({"type": "observe", "observation": obs})
+        self.telemetry.count("observations")
+        self._env_stream_on = True
+        self.log(f"Streaming observations to the policy at {hz:g} Hz.")
+        return client, hz, t0
+
+    def _observe_loop(self, client: PolicyServerClient, hz: float, t0: float, stop: threading.Event) -> None:
+        """Frame k is due at t0 + k / hz. A frame that cannot be sent on time is
+        skipped (the next one carries the later frame_index), so the policy can
+        keep its frame clock on real time."""
+        hw = self.hw
+        k, skipped, errors = 1, 0, 0
+        try:
+            while not stop.is_set():
+                due = t0 + k / hz
+                if stop.wait(max(0.0, due - time.time())):
+                    break
+                if hw is None or hw.arm.current_state is None:
+                    continue
+                obs, _, _ = self._build_observation(hw)
+                obs.update({"frame_index": k, "timestamp": time.time()})
+                try:
+                    client.request({"type": "observe", "observation": obs})
+                    self.telemetry.count("observations")
+                except Exception as exc:  # keep streaming; the infer loop reports fatal server problems
+                    errors += 1
+                    if errors == 1 or errors % 50 == 0:
+                        self.log(f"Observation stream error ({errors}): {exc}", "warn")
+                    if isinstance(exc, (ConnectionError, OSError)):
+                        break
+                late = int((time.time() - t0) * hz)  # frames already due
+                if late > k + 1:
+                    skipped += late - k - 1
+                    self.telemetry.count("skipped_observations", late - k - 1)
+                k = max(k + 1, late)
+        finally:
+            _force_close(client)
+            if skipped:
+                self.log(f"Observation stream: {skipped} frame(s) skipped (sending slower than "
+                         f"{hz:g} Hz).", "warn")
 
     def _write_batch_info(self, batch_dir: Path) -> None:
         path = batch_dir / "batch.json"
@@ -753,6 +825,8 @@ class InferenceSession:
             vec = list(state["EE_pos"]) + list(state["EE_quat"]) + [grip]
         obs_state = np.asarray(vec, dtype=np.float64)
         obs: Dict[str, Any] = {"observation.state": obs_state.astype(np.float32), "task": cfg.task}
+        if self._env_stream_on:
+            obs["env_stream"] = True
         frames: Dict[str, np.ndarray] = {}
         for cam in cfg.cameras:
             frame = hw.cameras[cam.name].get_image()
@@ -897,6 +971,9 @@ class InferenceSession:
             self.state = SessionState.REVIEW
             self.episode["stop_reason"] = reason
         self._halt_control()
+        obs_thread = self._observe_thread
+        if obs_thread is not None and obs_thread is not threading.current_thread():
+            obs_thread.join(timeout=2.0)
         thread = self._dataset_thread
         if thread is not None and thread is not threading.current_thread():
             thread.join(timeout=5.0)

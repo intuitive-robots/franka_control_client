@@ -256,3 +256,47 @@ def test_home_pose_from_gui(sim_session):
     s.update_config({"home_q": [0.0, 0.0, 0.0, -2.15, 0.0, 2.15, 0.0]})
     home = s.set_home_to_current()["home_q"]  # arm is still at `target`
     assert np.allclose(home, target, atol=1e-3) and s.cfg.home_q == home
+
+
+def test_env_frequency_streams_observations(tmp_path):
+    import socket
+
+    seen = []
+
+    class RecordingDummy(DummyPolicy):
+        def infer(self, observation):
+            seen.append(bool(observation.get("env_stream")))
+            return super().infer(observation)
+
+    policy = RecordingDummy(action_space="joint", latency_s=0.05)
+    server = PolicyServer(policy, "127.0.0.1", 0)
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        server.port = sock.getsockname()[1]
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    time.sleep(0.2)
+    with pytest.raises(ValueError):
+        SessionConfig(env_hz=-1).validate()
+    cfg = SessionConfig(sim=True, control_hz=50, policy_port=server.port, cameras=[CameraConfig("ext")],
+                        save_root=str(tmp_path), batch_name="b", task="t", env_hz=20)
+    s = InferenceSession(cfg)
+    try:
+        s.connect()
+        _wait(s, SessionState.IDLE)
+        assert s.health["supports_observe"] is True
+        s.start_episode()
+        _wait(s, SessionState.RUNNING)
+        time.sleep(1.5)
+        s.stop_episode("stopped by user")
+        idx = list(policy.observed)
+        assert idx[0] == 0 and idx == sorted(set(idx))  # increasing frame indices from 0
+        assert 20 <= idx[-1] <= 40  # ~1.5 s at 20 Hz (start-up included)
+        assert len(idx) >= 0.8 * (idx[-1] + 1)  # few frames skipped
+        assert seen and all(seen)  # infer observations are flagged while streaming
+        assert s.telemetry.counters["observations"] == len(idx)
+        n = len(policy.observed)
+        time.sleep(0.3)
+        assert len(policy.observed) == n  # stream stops with the rollout
+    finally:
+        s.shutdown()
+        server.shutdown()

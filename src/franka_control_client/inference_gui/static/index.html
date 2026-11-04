@@ -402,6 +402,7 @@ const FIELDS = [
     { k: "policy_fps", l: "Chunk rate (Hz)", t: "number", step: 0.5, h: "Overridden by the server's health() if it reports fps." },
     { k: "exec_steps", l: "Rows executed / chunk", t: "number", step: 1, h: "0 = use the server's value (or the whole chunk)." },
     { k: "inference_mode", l: "Inference mode", t: "select", o: [["sync", "Sync — observe, infer, play"], ["async", "Async — infer while playing"]] },
+    { k: "env_hz", l: "Env frequency (Hz)", t: "number", step: 1, h: "Stream every env frame to the policy at this rate during a rollout, independent of action requests (memory models; needs server support). 0 = off: a frame is sent only with each action request." },
     { k: "request_timeout_s", l: "Request timeout (s)", t: "number", step: 1, h: "0 = wait forever." },
   ]},
   { sec: "LeRobot dataset", open: false, items: [
@@ -725,7 +726,8 @@ function renderTiles(st) {
   const net = lat.p50 !== null && mdl.p50 !== null ? lat.p50 - mdl.p50 : null;
   const chunk = t.last_chunk;
   $("#tiles").innerHTML = [
-    tile("Inference rate", fmt(r.infer_hz, 2), "Hz", expInfer ? `nominal ≤ ${fmt(expInfer, 2)} Hz` : "", null),
+    tile("Inference rate", fmt(r.infer_hz, 2), "Hz", (expInfer ? `nominal ≤ ${fmt(expInfer, 2)} Hz` : "") + (c.observations ? ` · ${c.observations} env frames sent` : ""),
+      c.skipped_observations ? ["warn", `${c.skipped_observations} env frames skipped`] : null),
     tile("Latency p50", fmt(lat.p50, 0), "ms", `p95 ${fmt(lat.p95, 0)} · max ${fmt(lat.max, 0)} ms`, null),
     tile("Model / network", `${fmt(mdl.p50, 0)}<small>ms</small> / ${fmt(net, 0)}`, "ms", "server compute / transfer+overhead", null),
     tile("Control loop", fmt(r.control_hz, 1), "Hz", `target ${fmt(target, 0)} Hz`, running ? (ctrlOk ? ["ok", "on target"] : ["warn", "below 90% of target"]) : null),

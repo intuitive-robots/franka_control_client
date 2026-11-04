@@ -9,10 +9,17 @@ Requests  (robot PC -> policy PC)
     {"type": "infer", "observation": {"observation.state": np.ndarray,
                                       "observation.images.<cam>": HxWx3 uint8 RGB,
                                       "task": str, ...}}
+    {"type": "observe", "observation": {... same keys ..., "frame_index": int,
+                                        "timestamp": float}}
+        streamed at the GUI's env frequency during a rollout (only if health
+        reports supports_observe); frame_index counts env frames since reset,
+        gaps mean frames the GUI could not send in time. While streaming, infer
+        observations carry "env_stream": True.
     {"type": "close"}
 
 Responses (policy PC -> robot PC), always {"ok": bool, ...}
-    health -> action_space, fps, exec_steps, policy metadata
+    health -> action_space, fps, exec_steps, supports_observe, policy metadata
+    observe -> {}
     infer  -> action [T, D] (absolute targets, gripper closedness last),
               action_space, exec_steps, server_infer_s (pure model time)
     error  -> {"ok": False, "error": "..."}
@@ -75,6 +82,15 @@ class BasePolicy:
     def reset(self, task: Optional[str]) -> None:
         """Called at the start of every rollout."""
 
+    def observe(self, observation: Dict[str, Any]) -> None:
+        """Optional: one env frame streamed at the GUI's env frequency (for models
+        with memory / history that were trained on every frame). Override it to
+        enable streaming; the GUI only streams if health() reports support."""
+
+    @property
+    def supports_observe(self) -> bool:
+        return type(self).observe is not BasePolicy.observe
+
     def infer(self, observation: Dict[str, Any]) -> np.ndarray:
         raise NotImplementedError
 
@@ -103,6 +119,10 @@ class DummyPolicy(BasePolicy):
         self.latency_s = float(latency_s)
         self._anchor: Optional[np.ndarray] = None
         self._t0 = time.time()
+        self.observed: list = []  # frame_index of every streamed observation since reset
+
+    def observe(self, observation: Dict[str, Any]) -> None:
+        self.observed.append(int(observation.get("frame_index", len(self.observed))))
 
     def metadata(self) -> Dict[str, Any]:
         return {"name": "dummy", "chunk_len": self.chunk_len, "amplitude": self.amplitude}
@@ -110,6 +130,7 @@ class DummyPolicy(BasePolicy):
     def reset(self, task: Optional[str]) -> None:
         self._anchor = None
         self._t0 = time.time()
+        self.observed = []
 
     def infer(self, observation: Dict[str, Any]) -> np.ndarray:
         state = np.asarray(observation["observation.state"], dtype=np.float64).reshape(-1)
@@ -202,6 +223,7 @@ class PolicyServer:
                     "action_space": self.policy.action_space,
                     "fps": self.policy.fps,
                     "exec_steps": self.policy.exec_steps,
+                    "supports_observe": bool(getattr(self.policy, "supports_observe", False)),
                     "policy": self.policy.metadata(),
                 }
             if kind == "reset":
@@ -223,6 +245,10 @@ class PolicyServer:
                     "server_infer_s": infer_s,
                     "server_recv_time": t_recv,
                 }
+            if kind == "observe":
+                with self._policy_lock:
+                    self.policy.observe(request["observation"])
+                return {"ok": True}
             if kind == "close":
                 return {"ok": True}
             return {"ok": False, "error": f"Unknown request type {kind!r}"}

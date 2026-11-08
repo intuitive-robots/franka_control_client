@@ -35,6 +35,8 @@ class XRSample:
     b: bool
     recv_t: float  # time.monotonic() on arrival
     conn_id: int
+    stick: bool = False  # right thumbstick pressed (realign)
+    head_rot: Optional[Tuple[float, float, float, float]] = None  # headset orientation, xyzw
 
 
 @dataclass(frozen=True)
@@ -42,8 +44,9 @@ class XRSnapshot:
     sample: Optional[XRSample]
     conn_id: int  # id of the active connection (0: none yet)
     connected: bool
-    reset_count: int  # bumped by recenter, session end and new connections
+    reset_count: int  # bumped by recenter, session end, visibility loss and new connections
     rtt_ms: Optional[float]
+    frame_reset_count: int = 0  # bumped only when the WebXR frame itself changes: recenter, session end
 
 
 @dataclass(frozen=True)
@@ -62,6 +65,7 @@ class WebXRServer:
         self._conn_id = 0
         self._connected = False
         self._reset_count = 0
+        self._frame_reset_count = 0
         self._rtt_ms: Optional[float] = None
         self._arrivals: Deque[float] = deque()
         self._thread: Optional[threading.Thread] = None
@@ -87,7 +91,10 @@ class WebXRServer:
 
     def snapshot(self) -> XRSnapshot:
         with self._lock:
-            return XRSnapshot(self._sample, self._conn_id, self._connected, self._reset_count, self._rtt_ms)
+            return XRSnapshot(
+                self._sample, self._conn_id, self._connected, self._reset_count, self._rtt_ms,
+                self._frame_reset_count,
+            )
 
     def stats(self) -> XRStats:
         now = time.monotonic()
@@ -173,6 +180,8 @@ class WebXRServer:
                         b=bool(data["b"]),
                         recv_t=recv_t,
                         conn_id=conn_id,
+                        stick=bool(data.get("stick", False)),
+                        head_rot=tuple(float(v) for v in data["head"]) if data.get("head") else None,
                     )
                     with self._lock:
                         if conn_id == self._conn_id:
@@ -180,11 +189,13 @@ class WebXRServer:
                             self._arrivals.append(recv_t)
                             while self._arrivals and recv_t - self._arrivals[0] > STATS_PERIOD_S:
                                 self._arrivals.popleft()
-                elif kind in ("reset", "session_end"):
+                elif kind in ("reset", "recenter", "session_end"):
                     log.info("WebXR client %d: %s", conn_id, kind)
                     with self._lock:
                         if conn_id == self._conn_id:
                             self._reset_count += 1
+                            if kind != "reset":
+                                self._frame_reset_count += 1
                             self._sample = None
                 elif kind == "ping":
                     if data.get("rtt") is not None:

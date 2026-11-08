@@ -163,6 +163,10 @@ class DataCollectionManager(abc.ABC):
                         self._reset_to_waiting()
                     # time.sleep(0.001)
         finally:
+            # stop a teleop loop left on (q / Ctrl-C), its non-daemon thread would keep the process alive
+            control_pair = getattr(self, "control_pair", None)
+            if control_pair is not None:
+                control_pair.stop_control_pair()
             self._close()
 
     def _handle_keypress(self, key: str) -> None:
@@ -175,7 +179,14 @@ class DataCollectionManager(abc.ABC):
         elif key == "q":
             self._state_machine.trigger(DataCollectionEvent.QUIT)
         elif key == "r":
+            # the reset motion must not fight a running teleop loop
+            if self._state_machine.state == DataCollectionState.WAITING:
+                self._set_teleop(False)
             self._state_machine.trigger(DataCollectionEvent.RESET)
+        elif key == "t":
+            if self._state_machine.state == DataCollectionState.WAITING:
+                control_pair = getattr(self, "control_pair", None)
+                self._set_teleop(not (control_pair is not None and control_pair.is_running))
         elif key == "o":
             control_pair = getattr(self, "control_pair", None)
             if control_pair is not None and hasattr(control_pair, "open_gripper"):
@@ -185,10 +196,29 @@ class DataCollectionManager(abc.ABC):
             if control_pair is not None and hasattr(control_pair, "close_gripper"):
                 control_pair.close_gripper()
 
+    def _set_teleop(self, enabled: bool) -> None:
+        """Run the control pair while WAITING, without recording.
+
+        Starting an episode keeps it running; saving/discarding stops it as usual.
+        """
+        control_pair = getattr(self, "control_pair", None)
+        if control_pair is None:
+            return
+        if enabled and not control_pair.is_running:
+            control_pair.start_control_pair()
+            self._ui_console.log("Teleop ON (not recording).")
+        elif not enabled and control_pair.is_running:
+            control_pair.stop_control_pair()
+            self._ui_console.log("Teleop OFF.")
+        self._on_state_enter(self._state_machine.state)
+
     def _on_state_enter(self, state: DataCollectionState) -> None:
         if state == DataCollectionState.WAITING:
+            control_pair = getattr(self, "control_pair", None)
+            teleop = "ON" if control_pair is not None and control_pair.is_running else "OFF"
             self._ui_console.update_hint(
-                "Press 'n' to start collecting, 'r' to reset, 'o' to open gripper, 'p' to close gripper, or 'q' to quit"
+                f"[teleop {teleop}] Press 'n' to start collecting, 't' to toggle teleop, 'r' to reset, "
+                "'o' to open gripper, 'p' to close gripper, or 'q' to quit"
             )
         elif state == DataCollectionState.COLLECTING:
             self._ui_console.update_hint(

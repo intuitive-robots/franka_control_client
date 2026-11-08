@@ -61,12 +61,12 @@ def main() -> None:
             delta = np.asarray(sig["pos"]) - FAKE_EE_POS
             clutch = "ENGAGED " if ctrl.on_control else f"free({ctrl.declutch_reason or '-'})"
             fresh = s is not None and snap.connected
-            buttons = (" A" if fresh and s.a else "") + (" B" if fresh and s.b else "")
+            buttons = (" A" if fresh and s.a else "") + (" B" if fresh and s.b else "") + (" STICK" if fresh and s.stick else "")
             print(
                 f"{'ws' if snap.connected else 'NO WS'} {clutch:<26} "
                 f"target {np.round(sig['pos'], 3)} (Δ from start {np.round(delta, 3)}) "
                 f"grip_cmd {sig['gripper_width']:.2f} | {stats.hz:5.1f} Hz p95 {stats.interarrival_p95_ms:5.1f} ms "
-                f"age {age} ms RTT {rtt} ms{buttons}",
+                f"age {age} ms RTT {rtt} ms align {np.rad2deg(ctrl.heading_xr):+4.0f} deg{buttons}",
                 flush=True,
             )
     except KeyboardInterrupt:

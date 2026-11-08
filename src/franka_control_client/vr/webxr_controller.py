@@ -9,6 +9,11 @@ held, the EE target follows the controller relative to where both were at clutch
 Safety: the clutch drops on a stale sample (> stale_timeout_s), WS disconnect, new
 connection, recenter or XR session end, and re-engages only on a fresh grip press.
 The target is clamped to a workspace box and rate-limited per received sample.
+
+Realign: pressing the right thumbstick takes the headset's current heading as the
+operator's forward (``yaw_deg`` in the base frame), like a recenter. It also drops the
+clutch. A recenter or a new XR session clears it, because WebXR forward is then the
+headset heading again.
 """
 
 import logging
@@ -24,6 +29,7 @@ from ..core.remote_device import RemoteDevice
 from .control_signal import MQ3ControlSignal
 from .webxr_frames import (
     clamp_position,
+    heading_from_quat,
     in_bounds,
     limit_step,
     position_delta,
@@ -66,6 +72,8 @@ class WebXRController(RemoteDevice):
         self.panda_arm = panda_arm
         self.server = server if server is not None else WebXRServer()
         self.server.start()
+        self.yaw_deg = yaw_deg
+        self.heading_xr = 0.0  # set by the realign button
         self.m = xr_to_base_matrix(yaw_deg)
         self.bounds = bounds
         self.max_pos_step = max_pos_step
@@ -77,6 +85,8 @@ class WebXRController(RemoteDevice):
         self._armed = False  # grip seen released since the last de-clutch
         self._seen_conn_id = 0
         self._seen_reset_count = 0
+        self._seen_frame_reset_count = 0
+        self._stick_prev = True  # a stick press counts only after it was seen released
         self._last_seq: Optional[int] = None
         self._last_sample: Optional[XRSample] = None
         self.declutch_reason: Optional[str] = None
@@ -124,7 +134,13 @@ class WebXRController(RemoteDevice):
             self._seen_conn_id = snap.conn_id
             self._seen_reset_count = snap.reset_count
             self._last_seq = None
+            self._stick_prev = True
             self._declutch("recenter/reconnect")
+        if snap.frame_reset_count != self._seen_frame_reset_count:
+            self._seen_frame_reset_count = snap.frame_reset_count
+            if self.heading_xr != 0.0:
+                log.info("WebXR frame reset (recenter / new session): realign cleared")
+            self._set_heading(0.0)
         sample = snap.sample
         if not snap.connected or sample is None:
             self._declutch("disconnected" if not snap.connected else "no sample")
@@ -139,6 +155,9 @@ class WebXRController(RemoteDevice):
         self._step(sample)
 
     def _step(self, s: XRSample) -> None:
+        if s.stick and not self._stick_prev:
+            self._realign(s)
+        self._stick_prev = s.stick
         if not self.on_control:
             if s.grip < GRIP_RELEASE:
                 self._armed = True
@@ -158,6 +177,26 @@ class WebXRController(RemoteDevice):
         )
         self._gripper = float(np.clip(s.trigger, 0.0, 1.0))
         self._publish()
+
+    def _realign(self, s: XRSample) -> None:
+        if s.head_rot is None:
+            log.warning("WebXR realign: no headset pose in the sample (reload the page)")
+            return
+        heading = heading_from_quat(s.head_rot)
+        if heading is None:
+            log.warning("WebXR realign: looking too far up/down, look toward your working direction")
+            return
+        # the clutch base was taken in the old mapping; keeping it would make the target jump
+        self._declutch("realign")
+        self._set_heading(heading)
+        log.info(
+            "WebXR realigned: your current facing is now base heading %.0f deg (offset %.0f deg from WebXR forward)",
+            self.yaw_deg, np.rad2deg(heading),
+        )
+
+    def _set_heading(self, heading_xr: float) -> None:
+        self.heading_xr = heading_xr
+        self.m = xr_to_base_matrix(self.yaw_deg, heading_xr)
 
     def _engage(self, s: XRSample) -> None:
         arm_state = self.panda_arm.current_state

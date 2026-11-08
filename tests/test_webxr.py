@@ -6,6 +6,7 @@ from scipy.spatial.transform import Rotation as R
 
 from franka_control_client.vr.webxr_controller import WebXRController, WorkspaceBounds
 from franka_control_client.vr.webxr_frames import (
+    heading_from_quat,
     limit_step,
     position_delta,
     rotation_delta,
@@ -69,6 +70,27 @@ def test_rotation_delta_independent_of_base_orientation():
     np.testing.assert_allclose(delta.as_rotvec(), [0, 0, np.deg2rad(15)], atol=1e-9)
 
 
+@pytest.mark.parametrize("deg", [0.0, 30.0, -75.0, 120.0, 179.0])
+def test_heading_from_quat(deg):
+    # head turned CCW (left) about +Y by deg, pitched down 20 deg: pitch must not change the heading
+    q = (R.from_euler("y", deg, degrees=True) * R.from_euler("x", -20, degrees=True)).as_quat()
+    assert heading_from_quat(q) == pytest.approx(np.deg2rad(deg))
+
+
+def test_heading_undefined_when_looking_down():
+    assert heading_from_quat(R.from_euler("x", -85, degrees=True).as_quat()) is None
+
+
+def test_heading_offset_maps_facing_to_forward():
+    # operator turned 90 deg left in the XR frame: their forward is XR -X
+    m = xr_to_base_matrix(0.0, np.deg2rad(90))
+    np.testing.assert_allclose(position_delta(m, [-1, 0, 0], [0, 0, 0]), [1, 0, 0], atol=1e-12)
+    np.testing.assert_allclose(position_delta(m, [0, 0, 1], [0, 0, 0]), [0, 1, 0], atol=1e-12)  # their left
+    np.testing.assert_allclose(position_delta(m, [0, 1, 0], [0, 0, 0]), [0, 0, 1], atol=1e-12)
+    turn_left = R.from_rotvec([0, np.deg2rad(30), 0]).as_quat()
+    np.testing.assert_allclose(rotation_delta(m, turn_left, IDENT).as_rotvec(), [0, 0, np.deg2rad(30)], atol=1e-12)
+
+
 def test_limit_step():
     pos, rot = limit_step(np.zeros(3), R.identity(), np.array([0.1, 0, 0]), R.from_rotvec([0, 0, 1.0]), 0.01, np.deg2rad(5))
     np.testing.assert_allclose(pos, [0.01, 0, 0])
@@ -90,19 +112,21 @@ class FakeServer:
         self.conn_id = 1
         self.connected = True
         self.reset_count = 1
+        self.frame_reset_count = 0
         self.sample = None
         self.seq = 0
 
     def start(self):
         pass
 
-    def push(self, pos=(0, 1, 0), rot=IDENT, grip=0.0, trigger=0.0, age=0.0):
+    def push(self, pos=(0, 1, 0), rot=IDENT, grip=0.0, trigger=0.0, age=0.0, stick=False, head=IDENT):
         self.seq += 1
         self.sample = XRSample(self.seq, 0.0, tuple(pos), tuple(rot), trigger, grip, False, False,
-                               time.monotonic() - age, self.conn_id)
+                               time.monotonic() - age, self.conn_id, stick=stick,
+                               head_rot=tuple(head) if head is not None else None)
 
     def snapshot(self):
-        return XRSnapshot(self.sample, self.conn_id, self.connected, self.reset_count, None)
+        return XRSnapshot(self.sample, self.conn_id, self.connected, self.reset_count, None, self.frame_reset_count)
 
 
 def make(arm=None, **kw):
@@ -242,6 +266,64 @@ def test_reengage_walks_from_last_command():
     engage(ctrl, server)
     sig = step(ctrl, server, grip=1.0)
     np.testing.assert_allclose(sig["pos"], [0.51, 0.0, 0.4], atol=1e-9)
+
+
+TURNED_LEFT_90 = R.from_euler("y", 90, degrees=True).as_quat()  # head facing XR -X
+
+
+def test_realign_maps_current_facing_to_base_x():
+    ctrl, server = make()
+    step(ctrl, server, head=TURNED_LEFT_90)
+    step(ctrl, server, head=TURNED_LEFT_90, stick=True)
+    assert ctrl.heading_xr == pytest.approx(np.pi / 2)
+    step(ctrl, server, stick=False)
+    engage(ctrl, server)
+    sig = step(ctrl, server, pos=(-0.005, 1, 0), grip=1.0)  # 5 mm along the new forward (XR -X)
+    np.testing.assert_allclose(sig["pos"], [0.505, 0.0, 0.4], atol=1e-9)
+
+
+def test_realign_declutches_and_needs_fresh_press():
+    ctrl, server = make()
+    engage(ctrl, server)
+    step(ctrl, server, grip=1.0, head=TURNED_LEFT_90, stick=True)
+    assert not ctrl.on_control and ctrl.declutch_reason == "realign"
+    step(ctrl, server, grip=1.0)
+    assert not ctrl.on_control
+    engage(ctrl, server)
+
+
+def test_realign_needs_stick_release_and_ignores_held_stick_at_connect():
+    ctrl, server = make()
+    step(ctrl, server, head=TURNED_LEFT_90, stick=True)  # held since before connecting
+    assert ctrl.heading_xr == 0.0
+    step(ctrl, server, head=TURNED_LEFT_90, stick=False)
+    step(ctrl, server, head=TURNED_LEFT_90, stick=True)
+    assert ctrl.heading_xr == pytest.approx(np.pi / 2)
+    step(ctrl, server, head=IDENT, stick=True)  # still held: no second realign
+    assert ctrl.heading_xr == pytest.approx(np.pi / 2)
+
+
+def test_realign_without_head_pose_or_looking_down_is_ignored():
+    ctrl, server = make()
+    step(ctrl, server, head=None)
+    step(ctrl, server, head=None, stick=True)
+    assert ctrl.heading_xr == 0.0
+    step(ctrl, server, stick=False)
+    step(ctrl, server, head=R.from_euler("x", -85, degrees=True).as_quat(), stick=True)
+    assert ctrl.heading_xr == 0.0
+
+
+def test_recenter_clears_realign_but_reconnect_keeps_it():
+    ctrl, server = make()
+    step(ctrl, server, head=TURNED_LEFT_90)
+    step(ctrl, server, head=TURNED_LEFT_90, stick=True)
+    server.conn_id += 1
+    server.seq = 0
+    step(ctrl, server)
+    assert ctrl.heading_xr == pytest.approx(np.pi / 2)  # same XR frame, only the socket changed
+    server.frame_reset_count += 1
+    step(ctrl, server)
+    assert ctrl.heading_xr == 0.0
 
 
 def test_webxr_modules_do_not_import_simpub():

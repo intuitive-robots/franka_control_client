@@ -74,7 +74,7 @@ if __name__ == "__main__":
         control_pair=control_pair,
         cfg=inference_cfg,
     )
-    
+
     try:
         inference_manager.run()
     finally:

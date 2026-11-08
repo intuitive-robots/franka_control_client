@@ -37,7 +37,13 @@ outside the immersive session. Inside it you see passthrough and nothing is rend
 |---------|--------|
 | Grip    | Clutch. Hold to move the EE, release to freeze it. Engages above 0.9 and releases below 0.1. |
 | Trigger | Robotiq position, 0 open … 1 closed (proportional). The gripper holds its last value while de-clutched. |
+| Thumbstick press | Realign: your current facing becomes forward (see [Frames and yaw](#frames-and-yaw)). Releases the clutch. |
 | A / B   | Streamed and shown in `webxr-echo`, not used. Episodes are controlled from the keyboard TUI. |
+
+The arm only follows the controller while the control loop runs. In the collection TUI, press
+**`t`** while waiting to turn teleop on or off without recording. Pressing `n` with teleop on
+keeps control running into the episode. `s`/`d` end the episode and stop control as before, and
+`r` turns teleop off before moving the arm home.
 
 While the clutch is held, the EE follows the controller's motion relative to where both were
 when the clutch engaged: `pos = ee_base + M·Δp` and `rot = (M·R_Δ·Mᵀ)·R_ee_base`.
@@ -56,8 +62,16 @@ stands behind the robot facing base +X:
 
 If you stand elsewhere, pass `--yaw <deg>`: the operator's facing direction in the base frame,
 counter-clockwise from +X seen from above. `90` means you face base +Y (standing on the robot's
-right side), and `180` means you face the robot. Recenter (hold the Meta button) while facing
-your working direction, because yaw is relative to the recentered forward direction.
+right side), and `180` means you face the robot. Yaw is relative to WebXR forward, so align
+while facing your working direction.
+
+**Realign (press the right thumbstick):** if the motion comes out rotated (for example after the
+headset slept or the session was re-entered), face your working direction (the `--yaw`
+direction) and click the thumbstick. Your current heading becomes the operator's forward, and you
+feel a short double pulse. Only the heading is used, so pitch and roll don't matter, but don't
+look straight down. Realigning releases the clutch, so release the grip and press it again.
+A Meta recenter or a new XR session clears the realign, because WebXR forward is then your
+heading anyway. `webxr-echo` shows the current offset as `align`.
 
 ## Safety behaviour
 
@@ -73,5 +87,22 @@ your working direction, because yaw is relative to the recentered forward direct
 - **Step cap**: the target moves at most 1 cm and 5° per received sample (≈0.7 m/s and 360°/s at
   72 Hz). On re-engage the target walks from its last commanded value to the new base, without
   jumping.
+
+## Taking the headset off
+
+Taking the headset off makes it sleep, and the clutch drops (stale samples). When you put it
+back on:
+
+- **Haptics** on the right controller show the link state, because nothing is visible in XR. One
+  short pulse means the WebSocket is connected. Two strong pulses mean it was lost and the page
+  is reconnecting. The page drops a socket that hasn't answered a ping for 3 s.
+- **XR session ended:** if the Quest ended the session during sleep, the 2D page is back. Press
+  **Enter XR** again.
+- **Clutch:** release the grip, then press it again to re-engage.
+- **No pulse at all:** the adb tunnel is probably gone. Re-run `adb reverse tcp:8000 tcp:8000` on
+  the host and reload the page.
+
+To keep the headset from sleeping while it's off your head, run
+`adb shell am broadcast -a com.oculus.vrpowermanager.prox_close`. Repeat it after every reboot.
 
 Robot tests are started by the operator only, with the e-stop at hand.

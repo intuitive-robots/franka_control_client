@@ -13,7 +13,7 @@ Rotations are mapped as matrices (M R Mᵀ), never by permuting quaternion compo
 Quaternions are scipy order (x, y, z, w).
 """
 
-from typing import Sequence, Tuple
+from typing import Optional, Sequence, Tuple
 
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -28,10 +28,29 @@ _XR_TO_BASE_FACING_X = np.array(
 )
 
 
-def xr_to_base_matrix(yaw_deg: float = 0.0) -> np.ndarray:
-    """Rotation matrix M with ``v_base = M @ v_xr``."""
+def xr_to_base_matrix(yaw_deg: float = 0.0, heading_xr_rad: float = 0.0) -> np.ndarray:
+    """Rotation matrix M with ``v_base = M @ v_xr``.
+
+    ``heading_xr_rad`` is the operator's forward direction in the WebXR frame (see
+    ``heading_from_quat``), 0 meaning WebXR -Z. It is undone first, so the operator's
+    forward maps to ``yaw_deg`` however the WebXR reference space happens to be oriented.
+    """
     yaw = R.from_euler("z", yaw_deg, degrees=True).as_matrix()
-    return yaw @ _XR_TO_BASE_FACING_X
+    unheading = R.from_euler("y", -heading_xr_rad).as_matrix()
+    return yaw @ _XR_TO_BASE_FACING_X @ unheading
+
+
+def heading_from_quat(rot: Sequence[float], min_horizontal: float = 0.3) -> Optional[float]:
+    """Heading (rad, CCW about WebXR +Y, 0 = -Z) of a pose's forward (-Z) axis.
+
+    Returns None if the forward axis is too close to vertical (looking straight up or down)
+    for the heading to be meaningful.
+    """
+    f = R.from_quat(rot).apply([0.0, 0.0, -1.0])
+    if float(np.hypot(f[0], f[2])) < min_horizontal:
+        return None
+    # rotating -Z by phi about +Y gives (-sin phi, 0, -cos phi)
+    return float(np.arctan2(-f[0], -f[2]))
 
 
 def position_delta(m: np.ndarray, pos: Sequence[float], base_pos: Sequence[float]) -> np.ndarray:

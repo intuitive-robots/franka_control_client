@@ -36,7 +36,7 @@ pixi run inference-gui-sim                   # robot side, open http://localhost
    ```bash
    cd /data/zhuoyue/Nov_Evaluation/memevla && source env_local.sh
    $PY ../franka_control_client/examples/meme_policy_server.py --port 8768 \
-       --ckpt <checkpoint step dir> --task "<instruction>"
+       --ckpt /data/zhuoyue/Nov_Evaluation/ckpt/meme/franka-mem-pi05-seed42-b128-20k/franka-mem-b128-s20000-seed42/19999<checkpoint step dir> --task "<instruction>"
    ```
 
    | task | `--ckpt` (under `/data/zhuoyue/Nov_Evaluation/ckpt/meme/`) | `--task` (verbatim) |

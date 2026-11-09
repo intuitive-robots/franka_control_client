@@ -254,6 +254,10 @@ tr.click:hover td { background: var(--surface-2); }
       <div class="row" style="margin-top:8px">
         <button class="btn primary" id="applyBtn">Apply</button>
         <button class="btn" id="revertBtn">Revert</button>
+        <span style="flex:1"></span>
+        <button class="btn" id="cfgExportBtn" type="button" title="Download the settings shown in this form as a JSON file">Export</button>
+        <button class="btn" id="cfgImportBtn" type="button" title="Load settings from an exported JSON file into the form (review, then Apply)">Import</button>
+        <input type="file" id="cfgFile" accept=".json,application/json" hidden>
       </div>
     </div>
   </div>
@@ -537,6 +541,50 @@ $("applyBtn").onclick = async () => {
   catch (e) { localLog(e.message, "error"); }
 };
 $("revertBtn").onclick = async () => fillForm(await api("/api/config"));
+
+// Export / import: the form as a JSON file, so each user can keep and reload their own settings.
+const CFG_FILE_KIND = "franka_data_collection_gui_config";
+const CONN_KEYS = new Set(["sim", "node_name", "node_ip", "group_name", "group_port", "robot_name",
+  "gello_name", "mq3_name", "mq3_ip", "cameras", "mode", "gello_gains"]);  // = config.CONNECTION_FIELDS
+$("cfgExportBtn").onclick = () => {
+  const c = {...(cfg || {}), ...formValues()};  // what the form shows, applied or not
+  const doc = {kind: CFG_FILE_KIND, version: 1, exported: new Date().toISOString(), config: c};
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[-:]/g, "").replace("T", "_");
+  const name = `data_collection_gui_${String(c.task || c.mode || "config").replace(/[^\w.-]+/g, "_")}_${stamp}.json`;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(doc, null, 2)], {type: "application/json"}));
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  localLog(`Exported settings to ${name}`);
+};
+$("cfgImportBtn").onclick = () => {
+  if (status && status.state === "recording") { localLog("Stop recording before importing settings.", "warn"); return; }
+  $("cfgFile").value = ""; $("cfgFile").click();
+};
+$("cfgFile").onchange = async (ev) => {
+  const file = ev.target.files[0];
+  if (!file || !cfg) return;
+  let data;
+  try { data = JSON.parse(await file.text()); } catch (e) { localLog(`${file.name}: not valid JSON`, "error"); return; }
+  // An exported file wraps the settings; a plain config file (configs/*.json) is accepted too.
+  const imported = data && data.kind === CFG_FILE_KIND ? data.config : data;
+  if (!imported || typeof imported !== "object" || Array.isArray(imported)) { localLog(`${file.name}: no settings found`, "error"); return; }
+  const known = Object.keys(cfg);
+  const used = known.filter((k) => k in imported);
+  const ignored = Object.keys(imported).filter((k) => !known.includes(k));
+  if (!used.length) { localLog(`${file.name}: no known settings`, "error"); return; }
+  const applied = cfg;
+  fillForm({...cfg, ...Object.fromEntries(used.map((k) => [k, imported[k]]))});
+  cfg = applied;  // the server's settings stay the reference until Apply
+  setDirty(true);
+  let msg = `Imported ${used.length} settings from ${file.name}. Review, then Apply (Revert discards).`;
+  if (ignored.length) msg += ` Ignored unknown: ${ignored.join(", ")}.`;
+  const blocked = status && status.connected
+    ? used.filter((k) => CONN_KEYS.has(k) && JSON.stringify(imported[k]) !== JSON.stringify(applied[k])) : [];
+  if (blocked.length) msg += ` Disconnect first to apply: ${blocked.join(", ")}.`;
+  localLog(msg, blocked.length ? "warn" : "info");
+};
 $("homeCurrent").onclick = async () => { const r = await act("set_home_current"); if (r) fillForm(await api("/api/config")); };
 document.querySelectorAll("[data-browse]").forEach((b) => b.onclick = () => {
   const el = document.querySelector(`[data-key="${b.dataset.browse}"]`);

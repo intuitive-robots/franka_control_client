@@ -218,6 +218,10 @@ td.num, th.num { white-space: nowrap; }
       <div class="row" style="margin-top:10px">
         <button class="btn primary" id="btnApply">Apply settings</button>
         <button class="btn" id="btnRevert">Revert</button>
+        <span style="flex:1"></span>
+        <button class="btn" id="btnCfgExport" type="button" title="Download the settings shown in this form as a JSON file">Export</button>
+        <button class="btn" id="btnCfgImport" type="button" title="Load settings from an exported JSON file into the form (review, then Apply)">Import</button>
+        <input type="file" id="cfgFile" accept=".json,application/json" hidden>
       </div>
       <p class="hint" id="cfgHint" style="margin:8px 0 0">Settings are written back to the config file. Robot &amp; camera settings can only change while disconnected.</p>
     </div>
@@ -515,6 +519,7 @@ function lockForm(st) {
   }
   $("#btnApply").disabled = busy || !S.dirty;
   $("#btnRevert").disabled = !S.dirty;
+  $("#btnCfgImport").disabled = busy;
 }
 async function loadConfig() {
   S.cfg = await api("/api/config");
@@ -529,6 +534,43 @@ $("#btnApply").addEventListener("click", async () => {
   } catch (e) { toast(e.message, true); }
 });
 $("#btnRevert").addEventListener("click", () => S.cfg && fillForm(S.cfg));
+
+// Export / import: the form as a JSON file, so each user can keep and reload their own settings.
+const CFG_FILE_KIND = "franka_inference_gui_config";
+$("#btnCfgExport").addEventListener("click", () => {
+  const cfg = { ...(S.cfg || {}), ...readForm() };  // what the form shows, applied or not
+  const doc = { kind: CFG_FILE_KIND, version: 1, exported: new Date().toISOString(), config: cfg };
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[-:]/g, "").replace("T", "_");
+  const name = `inference_gui_${(cfg.batch_name || "config").replace(/[^\w.-]+/g, "_")}_${stamp}.json`;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" }));
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast(`Exported ${name}`);
+});
+$("#btnCfgImport").addEventListener("click", () => { $("#cfgFile").value = ""; $("#cfgFile").click(); });
+$("#cfgFile").addEventListener("change", async (ev) => {
+  const file = ev.target.files[0];
+  if (!file || !S.cfg) return;
+  let data;
+  try { data = JSON.parse(await file.text()); } catch (e) { toast(`${file.name}: not valid JSON`, true); return; }
+  // An exported file wraps the settings; a plain config file (configs/*.json) is accepted too.
+  const imported = data && data.kind === CFG_FILE_KIND ? data.config : data;
+  if (!imported || typeof imported !== "object" || Array.isArray(imported)) { toast(`${file.name}: no settings found`, true); return; }
+  const known = Object.keys(S.cfg);
+  const used = known.filter((k) => k in imported);
+  const ignored = Object.keys(imported).filter((k) => !known.includes(k));
+  if (!used.length) { toast(`${file.name}: no known settings`, true); return; }
+  fillForm({ ...S.cfg, ...Object.fromEntries(used.map((k) => [k, imported[k]])) });
+  setDirty(true);
+  const blocked = S.status && S.status.connected
+    ? used.filter((k) => CONN_KEYS.has(k) && JSON.stringify(imported[k]) !== JSON.stringify(S.cfg[k])) : [];
+  let msg = `Imported ${used.length} settings from ${file.name}. Review, then Apply.`;
+  if (ignored.length) msg += ` Ignored unknown: ${ignored.join(", ")}.`;
+  if (blocked.length) msg += ` Disconnect first to apply: ${blocked.join(", ")}.`;
+  toast(msg, blocked.length > 0);
+});
 
 // ======================================================================= actions
 $("#btnConnect").addEventListener("click", () => {

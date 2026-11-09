@@ -109,6 +109,15 @@ def test_full_rollout_save_and_edit(sim_session):
     assert meta["description"] == "my description"
     assert meta["notes"]["pre_start_notes"] == "cup left"
     assert meta["name"] == "batch_ep000"
+    # cam_*.mp4 is on the real time axis: duration ~= rollout duration
+    import cv2
+
+    cap = cv2.VideoCapture(f"{folder}/cam_ext.mp4")
+    n_video, fps_video = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+    assert n_video == len(data["camera/ext/t"])
+    assert abs(n_video / fps_video - meta["stats"]["duration_s"]) < 0.3, (n_video, fps_video, meta["stats"]["duration_s"])
+    assert len(np.unique(data["camera/ext/t"])) == len(data["policy/t_obs"])  # one new frame per request
 
     from pathlib import Path
 

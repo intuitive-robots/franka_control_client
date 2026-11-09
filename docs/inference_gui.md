@@ -28,7 +28,47 @@ pixi run policy-server-dummy                 # policy side, port 8767
 pixi run inference-gui-sim                   # robot side, open http://localhost:8080
 ```
 
-**Real robot**
+**Real robot, MME-VLA (memevla)**
+
+1. Policy PC: start the server in the memevla venv. Wait for
+   `Policy server listening on 0.0.0.0:8768` (loading and compiling the model takes a few minutes).
+
+   ```bash
+   cd /data/zhuoyue/Nov_Evaluation/memevla && source env_local.sh
+   $PY ../franka_control_client/examples/meme_policy_server.py --port 8768 \
+       --ckpt <checkpoint step dir> --task "<instruction>"
+   ```
+
+   | task | `--ckpt` (under `/data/zhuoyue/Nov_Evaluation/ckpt/meme/`) | `--task` (verbatim) |
+   |---|---|---|
+   | all three (multitask) | `franka-mem-pi05-seed42-10k/franka-mem-seed42/9999` | one of the three below |
+   | sponge | `franka-mem-pi05-sponge-seed42-6k/franka-mem-sponge-b128-seed42/5999` | `Pick up the sponge and place it on the plate. Go up, move to pick up the sponge on the plate, return it to its original position.` |
+   | plant | `franka-mem-pi05-plant-seed42-8k/franka-mem-plant-b128-seed42/7999` | `Pick up the shovel, scoop two shovelfuls of soil into the flowerpot, put down the shovel, pick up the flower, and plant it in the flowerpot.` |
+   | pot timer | `franka-mem-pi05-pottimer-seed42-8.7k/franka-mem-pottimer-b128-seed42/8699` | `Put the pot on the stove, wait for 30 seconds, then put the green pepper into the pot.` |
+
+   `--task` overrides the instruction typed in the GUI. Without it, the GUI's task is used and
+   must match the training instruction exactly.
+
+2. Robot PC (franka proxy and cameras running):
+
+   ```bash
+   cd franka_control_client
+   pixi run inference-gui
+   # dashboard: http://localhost:8080 (from another machine: ssh -L 8080:localhost:8080 <robot-pc>)
+   ```
+
+3. In the dashboard, Setup panel (then *Apply*):
+   - Policy server: host = policy PC address, *Port* `8768`, control pair `joint`,
+     *Rows executed / chunk* `0` (uses the server's 10), *Inference mode* `Async`,
+     ***Env frequency (Hz)* `15`** (the memory needs every frame)
+   - Safety: *On a larger jump* = *Keep going, speed-limited*; a low *Max joint speed* at first
+     (e.g. 0.5 rad/s)
+   - LeRobot dataset (optional): on, image size e.g. 640 × 360 (native 2K needs ~250 MB/s of RAM)
+
+4. *Connect*, check `action_space` / `fps 15` / `exec_steps 10` in the log, *Home*, *Start*.
+   Keep a hand on the hardware e-stop.
+
+**Real robot, any other policy**
 
 ```bash
 # policy PC
@@ -55,6 +95,10 @@ The dashboard binds to `127.0.0.1`. From another machine use
    policy host/port, chunk rate, executed rows, sync/async, safety limits. *Apply* writes
    them back to the config file. Robot / network / camera settings only change while
    disconnected.
+   *Export* downloads the settings shown in the form as a JSON file; *Import* loads such a
+   file (or any `configs/*.json`) into the form, so each user can keep their own settings
+   and reload them. An import is not applied until you review it and click *Apply*; unknown
+   keys are ignored and missing ones keep their current value.
 2. **Connect** — robot devices, cameras and policy server (`health()` is shown in the log).
 3. Optionally type **rollout notes** (scene setup), then **Start** (`N`).
 4. **Stop** (`S`), **Software stop** (`Esc`: halts the control loop and sets the arm to Idle;

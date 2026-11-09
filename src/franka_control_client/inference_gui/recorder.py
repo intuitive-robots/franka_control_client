@@ -55,7 +55,8 @@ ARRAY_SCHEMA = {
     "command/arm": "arm commands: joint targets [K,7] or EE pose xyz+quat [K,7]",
     "command/gripper_t": "wall time of each gripper command",
     "command/gripper": "gripper command [G] (closedness for Robotiq, width for Franka hand)",
-    "camera/<name>/t": "capture time of each recorded frame (matches the mp4 frame order)",
+    "camera/<name>/t": "capture time of the frame shown at each mp4 frame (mp4 is on the real time axis: "
+    "frame k = first frame time + k / fps; repeated frames = no new policy input)",
 }
 
 
@@ -82,13 +83,22 @@ def _stack(rows: List[Sequence[float]], width: int) -> np.ndarray:
 
 
 class _VideoSink:
-    """Background mp4 writer so encoding never blocks the inference loop."""
+    """Background mp4 writer so encoding never blocks the inference loop.
+
+    Frames arrive only with the infer requests (irregular, often far below the
+    video rate), so the mp4 is written on the real time axis: frame k of a camera
+    shows the latest received frame at t0 + k / fps (t0 = its first frame), and
+    gaps are filled by repeating the previous frame up to the next one and, at
+    ``close``, up to the end of the rollout. The mp4 therefore plays in real time.
+    ``timestamps[cam][k]`` is the capture time of the frame shown at mp4 frame k."""
 
     def __init__(self, directory: Path, fps: float) -> None:
         self.directory = directory
         self.fps = max(1.0, float(fps))
         self._queue: "queue.Queue[Optional[tuple]]" = queue.Queue(maxsize=256)
         self._writers: Dict[str, Any] = {}
+        self._t0: Dict[str, float] = {}
+        self._last: Dict[str, tuple] = {}  # cam -> (capture time, BGR frame)
         self.timestamps: Dict[str, List[float]] = {}
         self.dropped = 0
         self._thread = threading.Thread(target=self._run, daemon=True)
@@ -100,12 +110,28 @@ class _VideoSink:
         except queue.Full:
             self.dropped += 1
 
-    def close(self) -> None:
+    def close(self, t_end: Optional[float] = None) -> None:
         self._queue.put(None)
-        self._thread.join(timeout=30)
+        self._thread.join(timeout=60)
+        if t_end is not None:
+            for name in list(self._writers):
+                try:
+                    self._fill(name, int(round((t_end - self._t0[name]) * self.fps)))
+                except Exception:
+                    LOG.exception("Failed to finish the video of camera %s", name)
         for writer in self._writers.values():
             writer.release()
         self._writers.clear()
+
+    def _write(self, name: str, t: float, bgr: np.ndarray) -> None:
+        self._writers[name].write(bgr)
+        self.timestamps[name].append(t)
+
+    def _fill(self, name: str, upto: int) -> None:
+        """Repeat the last frame until the mp4 has ``upto`` frames."""
+        t, bgr = self._last[name]
+        while len(self.timestamps[name]) < upto:
+            self._write(name, t, bgr)
 
     def _run(self) -> None:
         while True:
@@ -115,15 +141,20 @@ class _VideoSink:
             t, frames = item
             for name, frame in frames.items():
                 try:
-                    writer = self._writers.get(name)
-                    if writer is None:
+                    bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                    if name not in self._writers:
                         h, w = frame.shape[:2]
                         path = str(self.directory / f"cam_{name}.mp4")
-                        writer = cv2.VideoWriter(path, cv2.VideoWriter_fourcc(*"mp4v"), self.fps, (w, h))
-                        self._writers[name] = writer
+                        self._writers[name] = cv2.VideoWriter(path, cv2.VideoWriter_fourcc(*"mp4v"), self.fps, (w, h))
                         self.timestamps[name] = []
-                    writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-                    self.timestamps[name].append(t)
+                        self._t0[name] = t
+                    slot = int(round((t - self._t0[name]) * self.fps))
+                    if name in self._last:
+                        self._fill(name, slot)  # hold the previous frame until this one's time
+                    if slot >= len(self.timestamps[name]):
+                        self._write(name, t, bgr)
+                    # else: two frames in one slot; this one is shown from the next slot on
+                    self._last[name] = (t, bgr)
                 except Exception:  # never kill the writer thread
                     LOG.exception("Failed to write frame of camera %s", name)
 
@@ -172,7 +203,7 @@ class EpisodeRecorder:
             self.t_end = time.time()
             self.stop_reason = reason
         if self._video is not None:
-            self._video.close()
+            self._video.close(self.t_end)
 
     def discard(self) -> None:
         self.stop("discarded")

@@ -35,6 +35,12 @@ inference-gui-sim = "python -m franka_control_client.inference_gui.app --config 
 # policy PC side without a model (oscillates around the start pose); extra args are appended
 policy-server-dummy = "python -m franka_control_client.inference_gui.policy_server --policy dummy"
 data-collection = "python examples/data_collection_droid_irl.py --control-mode compliant"
+# GUI data collection (robot PC): dashboard on http://localhost:8090, see docs/data_collection_gui.md
+data-collection-gui = "python -m franka_control_client.data_collection_gui.app --config configs/data_collection_gui.json"
+# same GUI with a simulated arm/gripper/GELLO/VR/cameras (no robot needed)
+data-collection-gui-sim = "python -m franka_control_client.data_collection_gui.app --config configs/data_collection_gui_sim.json"
+# IRL raw recordings -> LeRobot dataset from the command line (--help)
+irl-to-lerobot = "python -m franka_control_client.data_collection_gui.irl_to_lerobot"
 # kinesthetic teaching (hand guiding) -> robot replays the demo, both recorded; extra args are appended (--help)
 teach-replay = "python examples/teach_and_replay_droid_irl.py"
 # checks the Desk end-effector load against the mounted hardware (proxy must be running); extra args are appended

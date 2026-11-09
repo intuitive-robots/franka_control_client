@@ -1,0 +1,1177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Franka Data Collection</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f3f3f1; --surface-1: #fcfcfb; --surface-2: #f0efec; --border: #dddcd7;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7b7a74; --grid: #e6e5e0;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --accent: #2a78d6; --btn-text: #fff; --shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #111110; --surface-1: #1a1a19; --surface-2: #232321; --border: #33332f;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86; --grid: #2a2a27;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    --accent: #3987e5; --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+button, input, select, textarea { font: inherit; color: inherit; }
+h2 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); margin: 0 0 10px; display: flex; gap: 8px; align-items: center; }
+h2 .grow { flex: 1; }
+.num { font-variant-numeric: tabular-nums; }
+code, .mono { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+header { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 8px 16px; background: var(--surface-1); border-bottom: 1px solid var(--border); }
+header .title { font-weight: 700; font-size: 15px; }
+.tabs { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.tabs button { border: 0; background: var(--surface-2); padding: 6px 14px; cursor: pointer; font-weight: 600; border-right: 1px solid var(--border); }
+.tabs button:last-child { border-right: 0; }
+.tabs button[aria-selected="true"] { background: var(--text-primary); color: var(--surface-1); }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); font-weight: 600; font-size: 12px; white-space: nowrap; }
+.badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+.badge[data-tone="good"] .dot { background: var(--good); }
+.badge[data-tone="warning"] .dot { background: var(--warning); }
+.badge[data-tone="critical"] .dot { background: var(--critical); }
+.badge[data-tone="info"] .dot { background: var(--accent); }
+.badge.sim { border-style: dashed; }
+header .spacer { flex: 1; }
+header .meta { color: var(--text-secondary); font-size: 12px; }
+
+main { padding: 12px 16px 24px; }
+.grid3 { display: grid; grid-template-columns: 340px minmax(0, 1fr) 420px; gap: 12px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; }
+.gridv { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; }
+@media (max-width: 1400px) { .grid3 { grid-template-columns: 320px minmax(0, 1fr); } .grid3 > .col3 { grid-column: 1 / -1; } }
+@media (max-width: 1000px) { .grid3, .grid2, .gridv { grid-template-columns: minmax(0, 1fr); } }
+.col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px; box-shadow: var(--shadow); min-width: 0; }
+
+.btn { border: 1px solid var(--border); background: var(--surface-2); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-weight: 600; }
+.btn:hover:not(:disabled) { border-color: var(--text-muted); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--btn-text); }
+.btn.go { background: var(--good); border-color: var(--good); color: #fff; }
+.btn.danger { background: var(--critical); border-color: var(--critical); color: #fff; }
+.btn.big { padding: 11px 18px; font-size: 15px; border-radius: 10px; }
+.btn.small { padding: 3px 8px; font-size: 12px; border-radius: 6px; }
+.btn kbd { font: 11px ui-monospace, monospace; opacity: .8; margin-left: 6px; padding: 0 4px; border: 1px solid currentColor; border-radius: 3px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+details.section { border-top: 1px solid var(--border); padding: 8px 0; }
+details.section:first-of-type { border-top: 0; }
+details.section > summary { cursor: pointer; font-weight: 600; color: var(--text-secondary); list-style: none; padding: 2px 0; }
+details.section > summary::before { content: "▸ "; color: var(--text-muted); }
+details.section[open] > summary::before { content: "▾ "; }
+.field { display: grid; grid-template-columns: 1fr 1.2fr; gap: 8px; align-items: center; margin: 6px 0; }
+.field.wide { grid-template-columns: 1fr; gap: 3px; }
+.field label, .lbl { color: var(--text-secondary); font-size: 12px; }
+.field input[type=text], .field input[type=number], .field select, .field textarea, input.txt, select.txt {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); min-width: 0; }
+.field textarea { min-height: 48px; resize: vertical; }
+.field input:disabled, .field select:disabled { opacity: .55; }
+.check { display: flex; gap: 8px; align-items: center; margin: 6px 0; color: var(--text-secondary); font-size: 12px; }
+.hint { color: var(--text-muted); font-size: 11px; overflow-wrap: anywhere; min-width: 0; }
+.pathrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.pair { display: grid; grid-template-columns: 1fr auto 1fr; gap: 4px; align-items: center; }
+.joint-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.joint-row input { width: 100%; min-width: 0; padding: 5px 2px; font-size: 12px; text-align: center; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
+.cam-row { display: grid; grid-template-columns: 1fr 76px auto; gap: 6px; align-items: center; margin: 4px 0; }
+.cam-row input { width: 100%; padding: 5px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
+.cam-row input[type=checkbox] { width: auto; }
+.dirty-note { color: var(--serious); font-weight: 600; }
+
+.run-top { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
+.timer { font-size: 30px; font-weight: 700; }
+.progress { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.progress > div { height: 100%; background: var(--accent); width: 0; transition: width .2s linear; }
+.banner { margin-top: 10px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--critical); display: flex; gap: 8px; align-items: center; }
+.banner::before { content: "⚠"; color: var(--critical); font-weight: 700; }
+.note { margin-top: 10px; padding: 8px 10px; border-radius: 8px; border: 1px dashed var(--border); color: var(--text-secondary); }
+.btngroups { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; }
+.btngroups > div { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.tile .label { color: var(--text-secondary); font-size: 12px; }
+.tile .value { font-size: 22px; font-weight: 700; margin-top: 2px; }
+.tile .value small { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-left: 3px; }
+.tile .sub { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+.flag-warn::before { content: "▲ "; color: var(--warning); }
+.flag-ok::before { content: "● "; color: var(--good); }
+
+.chart-wrap { position: relative; }
+.chart-wrap canvas { display: block; width: 100%; }
+.chart-wrap canvas.overlay { position: absolute; left: 0; top: 0; pointer-events: none; }
+.chart-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin: 8px 0 2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--text-secondary); margin: 2px 0 4px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; cursor: default; }
+.legend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; }
+.legend i.dash { border-top-style: dashed; }
+.tooltip { position: fixed; z-index: 50; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; font-size: 11px; box-shadow: 0 4px 14px rgba(0,0,0,.15); max-width: 320px; }
+.tooltip .tt-row { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; align-items: center; }
+.tooltip i { display: inline-block; width: 12px; border-top: 2px solid; }
+
+.cams { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.cams figure { margin: 0; }
+.cams img, .cams video { width: 100%; border-radius: 6px; background: var(--surface-2); display: block; aspect-ratio: 4 / 3; object-fit: contain; }
+.cams figcaption { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { text-align: left; padding: 4px 5px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--text-secondary); font-weight: 600; position: sticky; top: 0; background: var(--surface-1); }
+td.r, th.r { text-align: right; }
+tr.sel td { background: var(--surface-2); }
+tr.click { cursor: pointer; }
+tr.click:hover td { background: var(--surface-2); }
+.tablebox { max-height: 460px; overflow: auto; }
+.tag { display: inline-block; padding: 0 6px; border-radius: 4px; border: 1px solid var(--border); font-size: 11px; color: var(--text-secondary); }
+.logbox { height: 240px; overflow: auto; font: 11px/1.5 ui-monospace, monospace; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px; }
+.logbox .warn { color: var(--serious); } .logbox .error { color: var(--critical); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 12px; }
+.kv dt { color: var(--text-muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
+.player { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: 10px; align-items: center; margin: 10px 0; }
+.player input[type=range] { width: 100%; }
+
+.keypad { display: grid; grid-template-columns: repeat(3, 44px); gap: 4px; }
+.keypad span { height: 34px; border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--text-muted); background: var(--surface-2); font-size: 13px; }
+.keypad span.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.kbbox { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 12px; padding: 10px; border: 1px dashed var(--border); border-radius: 8px; }
+.kbbox[data-active="true"] { border-color: var(--accent); border-style: solid; }
+.vec3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.vec3 input { width: 100%; min-width: 0; padding: 5px 4px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 40; display: flex; align-items: center; justify-content: center; }
+.modal { width: min(720px, 94vw); max-height: 82vh; display: flex; flex-direction: column; background: var(--surface-1); border-radius: 12px; border: 1px solid var(--border); padding: 14px; gap: 8px; }
+.modal .list { overflow: auto; flex: 1; border: 1px solid var(--border); border-radius: 6px; }
+.modal .list div { padding: 5px 8px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--grid); }
+.modal .list div:hover { background: var(--surface-2); }
+</style>
+</head>
+<body>
+<header>
+  <span class="title">Franka Data Collection</span>
+  <div class="tabs" role="tablist">
+    <button data-tab="collect" aria-selected="true">Collect</button>
+    <button data-tab="convert" aria-selected="false">Convert IRL → LeRobot</button>
+    <button data-tab="view" aria-selected="false">View LeRobot</button>
+  </div>
+  <span class="badge" id="stateBadge"><span class="dot"></span><span id="stateText">…</span></span>
+  <span class="badge sim" id="simBadge" hidden>SIMULATION</span>
+  <span class="spacer"></span>
+  <span class="meta mono" id="headerPath"></span>
+</header>
+
+<main>
+<!-- ============================================================= COLLECT -->
+<section id="tab-collect" class="grid3">
+  <div class="col">
+    <div class="card">
+      <h2>Setup <span class="grow"></span><span class="dirty-note" id="dirtyNote" hidden>unsaved</span></h2>
+      <div class="field"><label>Collection mode</label>
+        <select data-key="mode">
+          <option value="gello">GELLO teleop (joint)</option>
+          <option value="vr">VR teleop, Meta Quest 3 (Cartesian)</option>
+          <option value="kinesthetic">Kinesthetic (hand guiding)</option>
+          <option value="teach_replay">Teach &amp; replay</option>
+          <option value="keyboard">Keyboard (push-T, Cartesian)</option>
+        </select></div>
+      <div class="hint" id="modeHint"></div>
+      <div class="field" data-modes="gello"><label>Arm gains</label>
+        <select data-key="gello_gains"><option value="stiff">stiff (HybridJointImpedance)</option><option value="compliant">compliant (contact-rich)</option></select></div>
+      <div class="field"><label>Task (folder)</label><input type="text" data-key="task"></div>
+      <div class="field wide"><label>Task instruction (LeRobot "task")</label><textarea data-key="task_instruction" placeholder="empty: task name with spaces"></textarea></div>
+      <div class="field wide"><label>Data folder</label>
+        <div class="pathrow"><input type="text" data-key="data_dir"><button class="btn small" data-browse="data_dir">…</button></div></div>
+      <div class="field"><label>Robot sampling (Hz)</label><input type="number" min="1" max="1000" step="1" data-key="record_hz"></div>
+      <div class="field"><label>Auto-save after (s, 0 off)</label><input type="number" min="0" step="1" data-key="max_episode_s"></div>
+
+      <details class="section" open><summary>What to save</summary>
+        <label class="check"><input type="checkbox" data-key="save_irl"> IRL raw data (PNG frames, *.pt states)</label>
+        <label class="check"><input type="checkbox" data-key="save_lerobot"> LeRobot dataset (append every saved episode)</label>
+        <div id="lerobotOpts">
+          <div class="field"><label>LeRobot fps</label><input type="number" min="1" max="200" step="1" data-key="lerobot_fps"></div>
+          <div class="field"><label>Image W × H (0 = native)</label>
+            <div class="pair"><input type="number" min="0" step="1" data-key="lerobot_image_width"><span class="hint">×</span><input type="number" min="0" step="1" data-key="lerobot_image_height"></div></div>
+          <div class="field"><label>State space</label><select data-key="lerobot_state_space"><option value="auto">auto (VR/keyboard: cartesian, else joint)</option><option value="joint">joint q0..q6 + gripper</option><option value="cartesian">cartesian xyz quat + gripper</option></select></div>
+          <div class="field"><label>Action</label><select data-key="lerobot_action_source"><option value="auto">auto</option><option value="leader">leader (GELLO / VR / replay cmd)</option><option value="next_state">next follower state</option></select></div>
+          <label class="check"><input type="checkbox" data-key="lerobot_use_videos"> videos (AV1) instead of PNG images</label>
+          <label class="check"><input type="checkbox" data-key="lerobot_force_torque"> observation.force_torque (14)</label>
+          <div class="field wide"><label>LeRobot dataset folder</label>
+            <div class="pathrow"><input type="text" data-key="lerobot_root" id="lerobotRootInput"><button class="btn small" data-browse="lerobot_root">…</button></div></div>
+        </div>
+      </details>
+
+      <details class="section" open><summary>Cameras</summary>
+        <div id="camRows"></div>
+        <div class="row"><button class="btn small" id="addCam">+ camera</button><span class="hint">rate 0 = every robot sample</span></div>
+      </details>
+
+      <details class="section" data-modes="teach_replay" open><summary>Replay</summary>
+        <div class="field"><label>Replay gains</label><select data-key="replay_gains"><option value="stiff">stiff</option><option value="compliant">compliant</option></select></div>
+        <div class="field"><label>Command rate (Hz)</label><input type="number" min="1" max="1000" data-key="replay_hz"></div>
+        <div class="field"><label>Keep recording after (s)</label><input type="number" min="0" step="0.1" data-key="replay_settle_s"></div>
+        <label class="check"><input type="checkbox" data-key="replay_feedforward"> joint velocity feed-forward</label>
+      </details>
+
+      <details class="section" data-modes="keyboard" open><summary>Keyboard teleop</summary>
+        <div class="field"><label>Speed xy (m/s)</label><input type="number" min="0.001" max="0.5" step="0.005" data-key="kb_speed"></div>
+        <div class="field"><label>Speed z, Q/E (m/s)</label><input type="number" min="0.001" max="0.5" step="0.005" data-key="kb_z_speed"></div>
+        <div class="field"><label>Shift = slow ×</label><input type="number" min="0.05" max="1" step="0.05" data-key="kb_slow_factor"></div>
+        <div class="field"><label>Arrow keys frame</label><select data-key="kb_yaw_deg">
+          <option value="0">0°: ↑ = base +x</option><option value="90">90°: ↑ = base +y</option>
+          <option value="180">180°: ↑ = base −x (facing the robot)</option><option value="270">270°: ↑ = base −y</option></select></div>
+        <div class="field"><label>Max target lead (m)</label><input type="number" min="0" max="0.2" step="0.005" data-key="kb_max_lead"></div>
+        <div class="field"><label>Control rate (Hz)</label><input type="number" min="10" max="1000" step="10" data-key="kb_control_hz"></div>
+        <div class="lbl">Workspace min x, y, z (m)</div><div class="vec3" id="kbMin"></div>
+        <div class="lbl" style="margin-top:4px">Workspace max x, y, z (m)</div><div class="vec3" id="kbMax"></div>
+        <div class="row" style="margin-top:6px"><button class="btn small" id="kbFloor">z floor = current EE z</button></div>
+        <div class="hint">Bring the pusher just above the table, then set the floor. Speeds, frame and workspace apply live (Apply).</div>
+      </details>
+
+      <details class="section"><summary>Home pose</summary>
+        <div class="joint-row" id="homeRow"></div>
+        <div class="row" style="margin-top:6px"><button class="btn small" id="homeCurrent">Use current pose</button></div>
+      </details>
+
+      <details class="section"><summary>Robot &amp; network</summary>
+        <label class="check"><input type="checkbox" data-key="sim"> simulation (no robot)</label>
+        <div class="field"><label>Node IP</label><input type="text" data-key="node_ip"></div>
+        <div class="field"><label>Group / port</label><div class="pair"><input type="text" data-key="group_name"><span></span><input type="number" data-key="group_port"></div></div>
+        <div class="field"><label>Robot name</label><input type="text" data-key="robot_name"></div>
+        <div class="field"><label>GELLO name</label><input type="text" data-key="gello_name"></div>
+        <div class="field"><label>MQ3 name / IP</label><div class="pair"><input type="text" data-key="mq3_name"><span></span><input type="text" data-key="mq3_ip"></div></div>
+      </details>
+      <div class="row" style="margin-top:8px">
+        <button class="btn primary" id="applyBtn">Apply</button>
+        <button class="btn" id="revertBtn">Revert</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card">
+      <div class="run-top">
+        <div>
+          <div class="lbl" id="runKind">Not recording</div>
+          <div class="timer num" id="timer">0:00.0</div>
+        </div>
+        <div class="row">
+          <button class="btn" id="connectBtn">Connect</button>
+          <button class="btn" id="disconnectBtn">Disconnect</button>
+        </div>
+      </div>
+      <div class="progress" id="limitBar" hidden><div></div></div>
+      <div class="btngroups">
+        <div>
+          <button class="btn go big" data-act="start">Start<kbd>N</kbd></button>
+          <button class="btn primary big" data-act="save">Save<kbd>S</kbd></button>
+          <button class="btn danger big" data-act="discard">Discard<kbd>D</kbd></button>
+        </div>
+        <div>
+          <button class="btn big" data-act="replay" data-modes="teach_replay">Replay demo<kbd>Y</kbd></button>
+        </div>
+        <div>
+          <button class="btn" data-act="reset" id="resetBtn">Reset<kbd>R</kbd></button>
+          <button class="btn" data-act="home">Home<kbd>H</kbd></button>
+          <button class="btn" data-act="gripper_open">Open gripper<kbd>O</kbd></button>
+          <button class="btn" data-act="gripper_close">Close gripper<kbd>P</kbd></button>
+        </div>
+      </div>
+      <div class="kbbox" id="kbBox" hidden>
+        <div class="keypad" id="keypad">
+          <span data-k="q">Q</span><span data-k="up">↑</span><span data-k="e">E</span>
+          <span data-k="left">←</span><span data-k="down">↓</span><span data-k="right">→</span>
+        </div>
+        <div class="hint" style="max-width:440px">↑↓←→ move the EE in the table plane, Q up, E down, hold Shift for slow motion.
+          Keys act while recording and while this page has focus; releasing stops the arm. Gripper: O / P.
+          <div class="mono" id="kbPos" style="margin-top:4px"></div></div>
+      </div>
+      <div class="note" id="demoNote" hidden></div>
+      <div class="banner" id="errorBanner" hidden><span id="errorText"></span><span class="grow" style="flex:1"></span><button class="btn small" data-act="clear_error">Dismiss</button></div>
+      <div class="hint" style="margin-top:8px" id="recDir"></div>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><div class="label">Sampling rate</div><div class="value num" id="tRate">–</div><div class="sub" id="tRateSub"></div></div>
+      <div class="tile"><div class="label">Samples</div><div class="value num" id="tSamples">–</div><div class="sub" id="tSamplesSub"></div></div>
+      <div class="tile"><div class="label">Camera frames</div><div class="value num" id="tFrames">–</div><div class="sub" id="tFramesSub"></div></div>
+      <div class="tile"><div class="label">LeRobot export</div><div class="value num" id="tLerobot">–</div><div class="sub" id="tLerobotSub"></div></div>
+    </div>
+
+    <div class="card">
+      <h2><span id="liveTitle">Joints, last 20 s</span> <span class="grow"></span><span class="hint" id="jointLegendNote">solid: arm · dashed: leader</span></h2>
+      <div class="legend" id="liveLegend"></div>
+      <div class="chart-wrap"><canvas id="liveJoints" height="200"></canvas></div>
+      <div id="xyWrap" hidden><div class="chart-title">Top view, last 20 s (base frame: x up, y left) · box = keyboard workspace</div>
+        <div class="legend" id="xyLegend"></div><canvas id="xyMap" height="260" style="width:100%;display:block"></canvas></div>
+      <div class="chart-title">Gripper (0 open, 1 closed)</div>
+      <div class="legend" id="gripLegend"></div>
+      <div class="chart-wrap"><canvas id="liveGrip" height="90"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>Cameras <span class="grow"></span><label class="check" style="margin:0"><input type="checkbox" id="liveCams"> live view</label></h2>
+      <div class="cams" id="camView"><span class="hint">Connect, then tick live view (recording does not depend on it).</span></div>
+    </div>
+  </div>
+
+  <div class="col col3">
+    <div class="card">
+      <h2>Episodes <span class="grow"></span><span class="hint" id="epCount"></span></h2>
+      <div class="hint mono" id="epRoot"></div>
+      <div class="tablebox" style="margin-top:6px"><table>
+        <thead><tr><th>Episode</th><th class="r">Samples</th><th class="r">s</th><th class="r">Hz</th><th>Cams</th><th>LR</th></tr></thead>
+        <tbody id="epBody"></tbody></table></div>
+    </div>
+    <div class="card">
+      <h2>Log</h2>
+      <div class="logbox" id="logBox"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================= CONVERT -->
+<section id="tab-convert" class="grid2" hidden>
+  <div class="col">
+    <div class="card">
+      <h2>IRL source</h2>
+      <div class="pathrow"><input class="txt" type="text" id="cvSource" placeholder="/home/irl-admin/new_data_collection/<task>"><button class="btn small" id="cvBrowse">…</button></div>
+      <div class="row" style="margin-top:8px"><button class="btn primary" id="cvScan">Scan</button><span class="hint" id="cvScanInfo"></span></div>
+    </div>
+    <div class="card">
+      <h2>Episodes <span class="grow"></span><label class="check" style="margin:0"><input type="checkbox" id="cvAll" checked> all</label></h2>
+      <div class="tablebox" style="max-height:620px"><table>
+        <thead><tr><th></th><th>Episode</th><th class="r">Samples</th><th class="r">s</th><th class="r">Robot Hz</th><th>Leader</th><th>Cameras (frames @ Hz)</th></tr></thead>
+        <tbody id="cvBody"><tr><td colspan="7" class="hint">Choose an IRL folder (a task folder or one episode) and scan it.</td></tr></tbody></table></div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card">
+      <h2>LeRobot output</h2>
+      <div class="field wide"><label>Output folder</label><div class="pathrow"><input class="txt" type="text" id="cvOutput"><button class="btn small" id="cvOutBrowse">…</button></div></div>
+      <div class="field"><label>If it exists</label><select id="cvExisting"><option value="fail">stop</option><option value="append">append episodes</option><option value="overwrite">overwrite</option></select></div>
+      <div class="field"><label>fps</label><input type="number" id="cvFps" min="1" max="200" value="15"></div>
+      <div class="field"><label>Image W × H (0 = native)</label><div class="pair"><input type="number" id="cvW" value="256" min="0"><span class="hint">×</span><input type="number" id="cvH" value="256" min="0"></div></div>
+      <div class="field"><label>State space</label><select id="cvState"><option value="auto">auto</option><option value="joint">joint</option><option value="cartesian">cartesian</option></select></div>
+      <div class="field"><label>Action</label><select id="cvAction"><option value="auto">auto</option><option value="leader">leader</option><option value="next_state">next state</option></select></div>
+      <label class="check"><input type="checkbox" id="cvVideos" checked> videos (AV1) instead of PNG images</label>
+      <label class="check"><input type="checkbox" id="cvFT" checked> observation.force_torque (14)</label>
+      <div class="field wide"><label>Task instruction</label><textarea class="txt" id="cvTask" rows="2" placeholder="empty: from metadata.json, else the task folder name"></textarea></div>
+      <div class="field"><label>Robot type</label><input type="text" id="cvRobotType" value="franka_panda"></div>
+      <div class="chart-title">Cameras</div>
+      <div id="cvCams" class="hint">scan first</div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn go" id="cvRun">Convert</button>
+        <button class="btn" id="cvCancel">Cancel</button>
+        <button class="btn" id="cvView" hidden>Open in viewer</button>
+      </div>
+      <div class="progress"><div id="cvBar"></div></div>
+      <div class="hint" id="cvMsg" style="margin-top:6px"></div>
+      <div id="cvResult" class="hint"></div>
+    </div>
+    <div class="card"><h2>How the timeline is built</h2><div class="hint">
+      Frame k of the dataset is the grid time t0 + k / fps over the robot timestamps; it takes the latest robot sample at or before
+      that time and from each camera the latest frame captured up to that sample. Recordings from this GUI store per-frame camera
+      timestamps; older recordings are assumed to spread their frames evenly (or set the camera rate). Action <b>leader</b>: GELLO joints /
+      VR pose / replayed command at the same sample. <b>next state</b>: the follower state of the next frame (kinesthetic demos).
+      Images keys drop the <code>zed_</code> prefix like the existing converters.</div></div>
+  </div>
+</section>
+
+<!-- ============================================================= VIEW -->
+<section id="tab-view" hidden>
+  <div class="card" style="margin-bottom:12px">
+    <div class="row">
+      <input class="txt" type="text" id="vzPath" style="flex:1; min-width:280px" placeholder="LeRobot dataset folder (contains meta/info.json)">
+      <button class="btn small" id="vzBrowse">…</button>
+      <button class="btn primary" id="vzOpen">Open</button>
+      <button class="btn" id="vzLive" title="the dataset the Collect tab writes to">Collect dataset</button>
+    </div>
+  </div>
+  <div class="gridv">
+    <div class="col">
+      <div class="card"><h2>Dataset</h2><dl class="kv" id="vzInfo"><dt>–</dt><dd>open a dataset</dd></dl></div>
+      <div class="card"><h2>Episodes</h2><div class="tablebox" style="max-height:560px"><table>
+        <thead><tr><th>#</th><th class="r">Frames</th><th class="r">s</th><th>Task</th></tr></thead><tbody id="vzEps"></tbody></table></div></div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h2><span id="vzTitle">Episode</span><span class="grow"></span><button class="btn small" id="vzRerun" disabled>Open in Rerun</button></h2>
+        <div class="hint mono" id="vzSource"></div>
+        <div class="cams" id="vzCams"></div>
+        <div class="player">
+          <button class="btn" id="vzPlay" disabled>▶ Play</button>
+          <select class="txt" id="vzSpeed" style="width:auto"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
+          <input type="range" id="vzSlider" min="0" max="0" value="0" disabled>
+          <span class="num mono" id="vzFrame">–</span>
+        </div>
+        <div class="hint">Space: play/pause · ←/→: one frame · click a plot to jump</div>
+      </div>
+      <div class="card"><h2>Signals <span class="grow"></span><span class="hint">solid: observation.state · dashed: action</span></h2><div id="vzPlots"></div></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<div class="modal-bg" id="picker" hidden>
+  <div class="modal">
+    <h2 id="pkTitle">Choose a folder</h2>
+    <div class="pathrow"><input class="txt mono" type="text" id="pkPath"><button class="btn small" id="pkGo">Go</button></div>
+    <div class="row"><button class="btn small" id="pkUp">↑ Up</button><span class="hint" id="pkKind"></span></div>
+    <div class="list" id="pkList"></div>
+    <div class="row"><span style="flex:1"></span><button class="btn" id="pkCancel">Cancel</button><button class="btn primary" id="pkSelect">Select this folder</button></div>
+  </div>
+</div>
+<div class="tooltip" id="tooltip" hidden></div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const fmt = (v, d = 1) => (v === null || v === undefined || !isFinite(v)) ? "–" : Number(v).toFixed(d);
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const SERIES = () => [1, 2, 3, 4, 5, 6, 7, 8].map((i) => css(`--s${i}`));
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) throw new Error(data.error || `${res.status} ${res.statusText}`);
+  return data;
+}
+const post = (path, payload = {}) => api(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
+async function act(name, payload = {}) {
+  try { return await post(`/api/action/${name}`, payload); }
+  catch (e) { localLog(e.message, "error"); return null; }
+}
+function localLog(msg, level = "info") {
+  const box = $("logBox");
+  const line = document.createElement("div");
+  line.className = level;
+  line.textContent = `${new Date().toLocaleTimeString()} ${msg}`;
+  box.appendChild(line); box.scrollTop = box.scrollHeight;
+  if (level === "error" && currentTab !== "collect") alert(msg);
+}
+
+// ------------------------------------------------------------------ tabs
+let currentTab = "collect";
+document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => showTab(b.dataset.tab));
+function showTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
+  for (const t of ["collect", "convert", "view"]) $(`tab-${t}`).hidden = t !== tab;
+  if (tab === "view") requestAnimationFrame(drawViewerPlots);
+}
+
+// ------------------------------------------------------------------ config form
+let cfg = null, dirty = false;
+const MODE_HINTS = {
+  gello: "GELLO leader arm → Panda in joint impedance. Reset moves the arm to the GELLO pose; teleop runs while recording. Saves Gello/ (joints, gripper) as leader.",
+  keyboard: "Browser keys → Cartesian impedance, EE orientation locked: arrows move in the table plane, Q/E up/down, Shift slow (push-T). Reset/Home and episode start/end never open the gripper (keeps the pusher). Saves Keyboard/ (target pose, velocity, gripper) as leader.",
+  vr: "Meta Quest 3: hold the right grip to move the arm, index trigger = gripper. Reset goes home and re-anchors the controller. Saves MQ3/ (EE pose, gripper) as leader.",
+  kinesthetic: "Hand guiding (HumanControl, gravity compensated). Reset goes home and lets the arm float; O/P open/close the gripper and are saved as gripper_command.",
+  teach_replay: "Record a hand-guided demo (→ demo/), then Replay: the robot moves to its start and replays it with the original timing, recorded again (→ replay/, commands in Traj/).",
+};
+function fieldEls() { return document.querySelectorAll("#tab-collect [data-key]"); }
+function fillForm(c) {
+  cfg = c;
+  fieldEls().forEach((el) => {
+    const v = c[el.dataset.key];
+    if (el.type === "checkbox") el.checked = !!v; else el.value = v ?? "";
+  });
+  $("camRows").innerHTML = "";
+  (c.cameras || []).forEach((cam) => addCamRow(cam.name, cam.hz));
+  for (const [id, key] of [["kbMin", "kb_workspace_min"], ["kbMax", "kb_workspace_max"]])
+    $(id).innerHTML = (c[key] || []).map((v, i) => `<input type="number" step="0.01" data-vec="${key}" value="${v}" title="${"xyz"[i]}">`).join("");
+  $("homeRow").innerHTML = (c.home_q || []).map((q, i) => `<input type="number" step="0.01" data-home="${i}" value="${q}" title="joint ${i + 1}">`).join("");
+  setDirty(false); updateModeVisibility();
+}
+function addCamRow(name = "", hz = 25) {
+  const row = document.createElement("div");
+  row.className = "cam-row";
+  row.innerHTML = `<input type="text" placeholder="zed_right" value="${esc(name)}"><input type="number" min="0" max="200" step="1" value="${hz}" title="Hz"><button class="btn small" title="remove">✕</button>`;
+  row.querySelector("button").onclick = () => { row.remove(); setDirty(true); };
+  row.querySelectorAll("input").forEach((i) => i.oninput = () => setDirty(true));
+  $("camRows").appendChild(row);
+}
+$("addCam").onclick = () => { addCamRow("", 25); setDirty(true); };
+function formValues() {
+  const out = {};
+  fieldEls().forEach((el) => { out[el.dataset.key] = el.type === "checkbox" ? el.checked : el.value; });
+  out.cameras = [...$("camRows").children].map((r) => {
+    const [n, h] = r.querySelectorAll("input");
+    return {name: n.value.trim(), hz: Number(h.value || 0)};
+  }).filter((c) => c.name);
+  out.home_q = [...document.querySelectorAll("[data-home]")].map((e) => Number(e.value));
+  for (const key of ["kb_workspace_min", "kb_workspace_max"])
+    out[key] = [...document.querySelectorAll(`[data-vec="${key}"]`)].map((e) => Number(e.value));
+  return out;
+}
+function setDirty(d) { dirty = d; $("dirtyNote").hidden = !d; }
+fieldEls().forEach((el) => el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => { setDirty(true); updateModeVisibility(); }));
+$("homeRow").addEventListener("input", () => setDirty(true));
+$("kbMin").addEventListener("input", () => setDirty(true));
+$("kbMax").addEventListener("input", () => setDirty(true));
+$("kbFloor").onclick = async () => { const r = await act("kb_floor_current"); if (r) fillForm(await api("/api/config")); };
+function formMode() { return document.querySelector('[data-key="mode"]').value; }
+function updateModeVisibility() {
+  const mode = formMode();
+  document.querySelectorAll("#tab-collect [data-modes]").forEach((el) => { el.hidden = !el.dataset.modes.split(",").includes(mode); });
+  $("modeHint").textContent = MODE_HINTS[mode] || "";
+  $("lerobotOpts").hidden = !document.querySelector('[data-key="save_lerobot"]').checked;
+  const task = document.querySelector('[data-key="task"]').value || "<task>";
+  const dd = document.querySelector('[data-key="data_dir"]').value || "<data>";
+  $("lerobotRootInput").placeholder = `${dd.replace(/\/$/, "")}/lerobot_data/${task}`;
+}
+$("applyBtn").onclick = async () => {
+  try { const r = await post("/api/config", formValues()); fillForm(r.config); refreshEpisodes(true); }
+  catch (e) { localLog(e.message, "error"); }
+};
+$("revertBtn").onclick = async () => fillForm(await api("/api/config"));
+$("homeCurrent").onclick = async () => { const r = await act("set_home_current"); if (r) fillForm(await api("/api/config")); };
+document.querySelectorAll("[data-browse]").forEach((b) => b.onclick = () => {
+  const el = document.querySelector(`[data-key="${b.dataset.browse}"]`);
+  openPicker(el.value || el.placeholder || "~", (p) => { el.value = p; setDirty(true); updateModeVisibility(); });
+});
+
+// ------------------------------------------------------------------ actions
+document.querySelectorAll("[data-act]").forEach((b) => b.onclick = () => doAct(b.dataset.act));
+$("connectBtn").onclick = async () => {
+  if (dirty && !confirm("Apply the unsaved settings first?")) return;
+  if (dirty) { await $("applyBtn").onclick(); }
+  act("connect");
+};
+$("disconnectBtn").onclick = () => act("disconnect");
+function doAct(name) {
+  if (name === "gripper_open") return act("gripper", {close: false});
+  if (name === "gripper_close") return act("gripper", {close: true});
+  if (name === "start" && dirty) { localLog("Apply (or revert) the changed settings first.", "warn"); return; }
+  return act(name);
+}
+// keyboard teleop: held keys -> server (sent on change + refreshed every 100 ms while held; dead-man)
+const KB_KEYS = {ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", q: "q", Q: "q", e: "e", E: "e"};
+const kbHeld = new Set();
+let kbSlow = false, kbTimer = null;
+function kbActive() {
+  if (currentTab !== "collect" || !status || status.mode !== "keyboard" || !status.connected) return false;
+  const tag = (document.activeElement?.tagName || "").toLowerCase();
+  return !["input", "textarea", "select"].includes(tag) && $("picker").hidden;
+}
+function kbSend() {
+  fetch("/api/action/keys", {method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({keys: [...kbHeld], slow: kbSlow})}).catch(() => {});
+  if (kbHeld.size && !kbTimer) kbTimer = setInterval(kbSend, 100);
+  if (!kbHeld.size && kbTimer) { clearInterval(kbTimer); kbTimer = null; }
+  document.querySelectorAll("#keypad [data-k]").forEach((el) => el.classList.toggle("on", kbHeld.has(el.dataset.k)));
+}
+function kbReleaseAll() { if (kbHeld.size || kbSlow) { kbHeld.clear(); kbSlow = false; kbSend(); } }
+window.addEventListener("blur", kbReleaseAll);
+document.addEventListener("visibilitychange", () => { if (document.hidden) kbReleaseAll(); });
+document.addEventListener("keydown", (e) => {
+  if (!kbActive() || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = KB_KEYS[e.key];
+  if (e.key === "Shift") { if (!kbSlow) { kbSlow = true; if (kbHeld.size) kbSend(); } return; }
+  if (!k) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  kbSlow = e.shiftKey;
+  if (!kbHeld.has(k)) { kbHeld.add(k); kbSend(); }
+}, true);
+document.addEventListener("keyup", (e) => {
+  if (e.key === "Shift") { if (kbSlow) { kbSlow = false; if (kbHeld.size) kbSend(); } return; }
+  const k = KB_KEYS[e.key];
+  if (k && kbHeld.delete(k)) kbSend();
+}, true);
+function renderKeyboard(s) {
+  const on = s.mode === "keyboard";
+  $("kbBox").hidden = !on;
+  if (!on) return;
+  $("kbBox").dataset.active = String(s.state === "recording" && kbActive());
+  const r = s.robot || {};
+  $("kbPos").textContent = r.ee_pos ? `EE ${r.ee_pos.map((v) => v.toFixed(3)).join(", ")} m` + (r.leader_pos ? ` · target ${r.leader_pos.map((v) => v.toFixed(3)).join(", ")}` : "") : "";
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const tag = (e.target.tagName || "").toLowerCase();
+  if (["input", "textarea", "select"].includes(tag)) return;
+  if (!$("picker").hidden) return;
+  const k = e.key.toLowerCase();
+  if (currentTab === "view") {
+    if (k === " ") { e.preventDefault(); togglePlay(); }
+    else if (k === "arrowright") setFrame(vz.frame + 1);
+    else if (k === "arrowleft") setFrame(vz.frame - 1);
+    return;
+  }
+  if (currentTab !== "collect") return;
+  const st = status?.state;
+  const map = {n: "start", s: "save", d: "discard", r: "reset", h: "home", o: "gripper_open", p: "gripper_close", y: "replay"};
+  if (k === " ") { e.preventDefault(); doAct(st === "recording" ? "save" : "start"); }
+  else if (k === "escape" && st === "recording") doAct("discard");
+  else if (map[k]) { e.preventDefault(); doAct(map[k]); }
+});
+
+// ------------------------------------------------------------------ status polling
+let status = null, logAfter = 0, savedRev = -1;
+const live = [];  // {t, q, lq, g, lg}
+async function poll() {
+  try {
+    status = await api(`/api/status?log_after=${logAfter}`);
+    renderStatus(status);
+  } catch (e) { $("stateText").textContent = "server offline"; $("stateBadge").dataset.tone = "critical"; }
+  setTimeout(poll, currentTab === "collect" ? 250 : 700);
+}
+const STATE_TONE = {disconnected: "", connecting: "info", idle: "good", recording: "critical", busy: "warning", error: "critical"};
+function renderStatus(s) {
+  $("stateText").textContent = s.state === "busy" ? `busy: ${s.busy_label}` : s.state;
+  $("stateBadge").dataset.tone = STATE_TONE[s.state] || "";
+  $("simBadge").hidden = !s.sim;
+  $("headerPath").textContent = s.paths.task_dir;
+  const rec = s.recording, connected = s.connected, idle = s.state === "idle", recording = s.state === "recording";
+  $("connectBtn").disabled = connected || s.state === "connecting";
+  $("disconnectBtn").disabled = !connected || !idle && s.state !== "error";
+  const gripOk = idle || (recording && rec && rec.kind !== "replay" && s.mode !== "gello");
+  const en = {start: idle, save: recording, discard: recording, reset: idle, home: idle,
+              gripper_open: gripOk, gripper_close: gripOk,
+              replay: idle && !!s.demo};
+  document.querySelectorAll("[data-act]").forEach((b) => { if (b.dataset.act in en) b.disabled = !en[b.dataset.act]; });
+  $("resetBtn").title = {gello: "move the arm to the GELLO pose", vr: "home + re-anchor VR", kinesthetic: "home, then hand guiding", teach_replay: "home, then hand guiding", keyboard: "home (gripper untouched)"}[s.mode] || "";
+  renderKeyboard(s);
+  // run card
+  if (rec) {
+    const kind = {episode: "Recording episode", demo: "Recording demo (hand guiding)", replay: "Recording replay (robot moving)"}[rec.kind];
+    $("runKind").textContent = kind + (rec.staging ? " · LeRobot only" : "");
+    $("timer").textContent = clock(rec.elapsed_s);
+    $("recDir").textContent = rec.dir;
+    const bar = $("limitBar");
+    bar.hidden = !rec.limit_s;
+    if (rec.limit_s) bar.firstElementChild.style.width = `${Math.min(100, 100 * rec.elapsed_s / rec.limit_s)}%`;
+  } else {
+    $("runKind").textContent = s.state === "busy" ? s.busy_label + "…" : "Not recording";
+    $("limitBar").hidden = true;
+    $("recDir").textContent = s.last_saved ? `last saved: ${s.last_saved.path}` : "";
+  }
+  $("errorBanner").hidden = !s.error; $("errorText").textContent = s.error || "";
+  const demoNote = $("demoNote");
+  demoNote.hidden = s.mode !== "teach_replay";
+  demoNote.textContent = s.demo ? `Demo ready: ${fmt(s.demo.duration_s)} s, ${s.demo.samples} samples (${s.demo.source || "memory"}). Replay (Y) moves the robot to its start pose: keep clear.`
+                                : "No demo yet: Start (N) records a hand-guided demo; or pick a saved demo in the episode list (use).";
+  // tiles
+  const target = cfg ? cfg.record_hz : null;
+  if (rec) {
+    const ok = rec.hz && target && rec.hz > 0.95 * target;
+    $("tRate").innerHTML = `${fmt(rec.hz)}<small>Hz</small>`;
+    $("tRateSub").innerHTML = `<span class="${ok ? "flag-ok" : "flag-warn"}">target ${fmt(target, 0)} Hz</span> · overruns ${rec.overruns}`;
+    $("tSamples").textContent = rec.samples;
+    $("tSamplesSub").textContent = rec.missing ? `${rec.missing} skipped (state missing)` : "no skipped samples";
+    const frames = Object.entries(rec.frames);
+    $("tFrames").textContent = frames.length ? frames.map(([, n]) => n).join(" / ") : "–";
+    const dropped = Object.values(rec.dropped).reduce((a, b) => a + b, 0);
+    $("tFramesSub").innerHTML = frames.length ? `${frames.map(([c]) => esc(c)).join(" / ")} · writes pending ${rec.pending_writes}` + (dropped ? ` · <span class="flag-warn">${dropped} dropped</span>` : "") : "no cameras";
+  } else {
+    $("tRate").textContent = "–"; $("tRateSub").textContent = target ? `target ${fmt(target, 0)} Hz` : "";
+    $("tSamples").textContent = "–"; $("tSamplesSub").textContent = ""; $("tFrames").textContent = "–"; $("tFramesSub").textContent = "";
+  }
+  const lr = s.lerobot;
+  $("tLerobot").innerHTML = lr.enabled || lr.done || lr.pending ? `${lr.done}<small>episodes</small>` : "off";
+  $("tLerobotSub").innerHTML = (lr.pending ? `<span class="flag-warn">${lr.pending} queued</span> ${esc(lr.current)}` : lr.enabled ? `@ ${fmt(cfg?.lerobot_fps, 0)} fps` : "")
+    + (lr.failed ? ` · <span class="flag-warn">${lr.failed} failed</span>` : "");
+  // logs
+  if (s.logs.length) {
+    const box = $("logBox");
+    const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 4;
+    for (const l of s.logs) {
+      const d = document.createElement("div"); d.className = l.level;
+      d.textContent = `${new Date(l.t * 1000).toLocaleTimeString()} ${l.msg}`;
+      box.appendChild(d); logAfter = l.seq;
+    }
+    while (box.childElementCount > 600) box.firstElementChild.remove();
+    if (atBottom) box.scrollTop = box.scrollHeight;
+  }
+  if (s.saved_rev !== savedRev) { savedRev = s.saved_rev; refreshEpisodes(); }
+  // live chart buffer
+  const r = s.robot || {};
+  if (r.q) {
+    live.push({t: s.now, q: r.q, lq: r.leader_q || null, g: r.gripper, lg: r.leader_gripper, p: r.ee_pos || null, lp: r.leader_pos || null, ws: r.workspace || null});
+    while (live.length && live[0].t < s.now - 20) live.shift();
+  } else live.length = 0;
+  if (currentTab === "collect") drawLive();
+  updateCams(s);
+  renderConvertStatus(s.convert);
+}
+function clock(s) { const m = Math.floor(s / 60); return `${m}:${(s - 60 * m).toFixed(1).padStart(4, "0")}`; }
+
+// ------------------------------------------------------------------ charts
+const charts = new Map();  // canvas -> {layout, x, series, onClick, fmtX}
+function setupCanvas(cv) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = Number(cv.getAttribute("height"));
+  if (cv.width !== Math.round(w * dpr) || cv.dataset.h !== String(h)) {
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.height = `${h}px`; cv.dataset.h = String(h);
+  }
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return {ctx, w, h};
+}
+// series: [{y: [...], color, dash, label}], x: [...] shared
+function drawChart(cv, x, series, opts = {}) {
+  const {ctx, w, h} = setupCanvas(cv);
+  ctx.clearRect(0, 0, w, h);
+  const L = 46, R = 8, T = 6, B = 18;
+  let ymin = Infinity, ymax = -Infinity;
+  for (const s of series) for (const v of s.y) if (v !== null && isFinite(v)) { if (v < ymin) ymin = v; if (v > ymax) ymax = v; }
+  if (opts.yRange) [ymin, ymax] = opts.yRange;
+  if (!isFinite(ymin)) { ymin = 0; ymax = 1; }
+  if (ymax - ymin < 1e-6) { ymin -= 0.5; ymax += 0.5; }
+  const pad = (ymax - ymin) * 0.06; ymin -= pad; ymax += pad;
+  const x0 = opts.xRange ? opts.xRange[0] : x[0], x1 = opts.xRange ? opts.xRange[1] : x[x.length - 1];
+  const sx = (v) => L + (w - L - R) * ((v - x0) / Math.max(x1 - x0, 1e-9));
+  const sy = (v) => T + (h - T - B) * (1 - (v - ymin) / (ymax - ymin));
+  // grid + axes (recessive)
+  ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1; ctx.fillStyle = css("--text-muted"); ctx.font = "10px system-ui";
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (let i = 0; i <= 3; i++) {
+    const v = ymin + pad + (ymax - ymin - 2 * pad) * i / 3, y = sy(v);
+    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - R, y); ctx.stroke();
+    ctx.fillText(Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2), L - 4, y);
+  }
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for (let i = 0; i <= 4; i++) {
+    const v = x0 + (x1 - x0) * i / 4;
+    ctx.fillText(opts.fmtX ? opts.fmtX(v) : v.toFixed(1), Math.min(Math.max(sx(v), L + 10), w - R - 10), h - B + 4);
+  }
+  // lines, 2px
+  for (const s of series) {
+    ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.setLineDash(s.dash ? [5, 4] : []); ctx.lineJoin = "round";
+    ctx.beginPath(); let pen = false;
+    const step = Math.max(1, Math.floor(x.length / ((w - L) * 2)));
+    for (let i = 0; i < x.length; i += step) {
+      const v = s.y[i];
+      if (v === null || !isFinite(v)) { pen = false; continue; }
+      if (!pen) { ctx.moveTo(sx(x[i]), sy(v)); pen = true; } else ctx.lineTo(sx(x[i]), sy(v));
+    }
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  charts.set(cv, {x, series, sx, sy, L, R, w, h, x0, x1, fmtX: opts.fmtX, onClick: opts.onClick});
+}
+function legendHtml(items) {
+  return items.map((it) => `<span><i class="${it.dash ? "dash" : ""}" style="border-color:${it.color}"></i>${esc(it.label)}</span>`).join("");
+}
+// hover: crosshair + tooltip
+const tooltip = $("tooltip");
+document.addEventListener("mousemove", (e) => {
+  const cv = e.target;
+  const c = charts.get(cv);
+  if (!c) { tooltip.hidden = true; clearOverlay(); return; }
+  const rect = cv.getBoundingClientRect(), px = e.clientX - rect.left;
+  if (px < c.L || px > c.w - c.R) { tooltip.hidden = true; return; }
+  const xv = c.x0 + (px - c.L) / (c.w - c.L - c.R) * (c.x1 - c.x0);
+  let i = 0, best = Infinity;
+  for (let k = 0; k < c.x.length; k++) { const d = Math.abs(c.x[k] - xv); if (d < best) { best = d; i = k; } }
+  const rows = c.series.map((s) => `<div class="tt-row"><i style="border-color:${s.color};border-top-style:${s.dash ? "dashed" : "solid"}"></i><span>${esc(s.label)}</span><b class="num">${fmt(s.y[i], 3)}</b></div>`).join("");
+  tooltip.innerHTML = `<div class="hint" style="margin-bottom:3px">${c.fmtX ? c.fmtX(c.x[i]) : fmt(c.x[i], 2)}</div>${rows}`;
+  tooltip.hidden = false;
+  const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+  tooltip.style.left = `${Math.min(e.clientX + 14, window.innerWidth - tw - 8)}px`;
+  tooltip.style.top = `${Math.min(e.clientY + 14, window.innerHeight - th - 8)}px`;
+  drawOverlay(cv, c.sx(c.x[i]));
+});
+let overlayOn = null;
+function drawOverlay(cv, px) {
+  const ov = cv.parentElement.querySelector("canvas.overlay");
+  if (!ov) return;
+  const {ctx, w, h} = setupCanvas(ov);
+  ctx.clearRect(0, 0, w, h);
+  if (px !== null) { ctx.strokeStyle = css("--text-muted"); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px, 6); ctx.lineTo(px, h - 18); ctx.stroke(); }
+  if (cv.dataset.cursor !== undefined) {
+    const c = charts.get(cv), xv = Number(cv.dataset.cursor);
+    ctx.strokeStyle = css("--text-primary"); ctx.lineWidth = 1.5; const x = c.sx(xv);
+    ctx.beginPath(); ctx.moveTo(x, 6); ctx.lineTo(x, h - 18); ctx.stroke();
+  }
+  overlayOn = cv;
+}
+function clearOverlay() { if (overlayOn) { const c = overlayOn; overlayOn = null; drawOverlay(c, null); overlayOn = null; } }
+document.addEventListener("click", (e) => {
+  const c = charts.get(e.target);
+  if (!c || !c.onClick) return;
+  const rect = e.target.getBoundingClientRect();
+  c.onClick(c.x0 + (e.clientX - rect.left - c.L) / (c.w - c.L - c.R) * (c.x1 - c.x0));
+});
+
+function drawLive() {
+  const colors = SERIES();
+  const now = status ? status.now : 0;
+  const x = live.map((p) => p.t - now);
+  const series = [];
+  const cart = status && (status.mode === "keyboard" || status.mode === "vr");
+  $("xyWrap").hidden = !cart;
+  if (cart) {
+    $("liveTitle").textContent = "EE position, last 20 s";
+    const names = ["x", "y", "z"];
+    const hasT = live.some((p) => p.lp);
+    for (let j = 0; j < 3; j++) {
+      series.push({y: live.map((p) => p.p ? p.p[j] : null), color: colors[j], label: names[j]});
+      if (hasT) series.push({y: live.map((p) => p.lp ? p.lp[j] : null), color: colors[j], dash: true, label: `target ${names[j]}`});
+    }
+    drawChart($("liveJoints"), x.length ? x : [-20, 0], x.length ? series : [], {xRange: [-20, 0], fmtX: (v) => `${v.toFixed(0)} s`});
+    $("liveLegend").innerHTML = legendHtml(names.map((n, j) => ({label: n, color: colors[j]})));
+    $("jointLegendNote").textContent = hasT ? "solid: measured · dashed: target" : "measured EE";
+    drawXY(colors);
+  } else {
+  $("liveTitle").textContent = "Joints, last 20 s";
+  const hasLeader = live.some((p) => p.lq);
+  for (let j = 0; j < 7; j++) {
+    series.push({y: live.map((p) => p.q[j]), color: colors[j], label: `q${j}`});
+    if (hasLeader) series.push({y: live.map((p) => p.lq ? p.lq[j] : null), color: colors[j], dash: true, label: `leader q${j}`});
+  }
+  drawChart($("liveJoints"), x.length ? x : [-20, 0], x.length ? series : [], {xRange: [-20, 0], fmtX: (v) => `${v.toFixed(0)} s`});
+  $("liveLegend").innerHTML = legendHtml([...Array(7).keys()].map((j) => ({label: `q${j}`, color: colors[j]})));
+  $("jointLegendNote").textContent = hasLeader ? "solid: arm · dashed: GELLO" : "measured arm joints";
+  }
+  const g = [{y: live.map((p) => p.g ?? null), color: colors[0], label: "arm gripper"}];
+  if (live.some((p) => p.lg !== undefined && p.lg !== null)) g.push({y: live.map((p) => p.lg ?? null), color: colors[1], dash: true, label: "leader gripper"});
+  drawChart($("liveGrip"), x.length ? x : [-20, 0], x.length ? g : [], {xRange: [-20, 0], yRange: [0, 1], fmtX: (v) => `${v.toFixed(0)} s`});
+  $("gripLegend").innerHTML = g.length > 1 ? legendHtml(g) : "";
+}
+// top view: screen up = base +x, screen left = base +y (as seen from behind the robot)
+function drawXY(colors) {
+  const cv = $("xyMap");
+  const {ctx, w, h} = setupCanvas(cv);
+  ctx.clearRect(0, 0, w, h);
+  const last = live[live.length - 1];
+  const ws = last && last.ws ? last.ws : (cfg ? [cfg.kb_workspace_min, cfg.kb_workspace_max] : [[0.25, -0.45, 0], [0.85, 0.45, 0.7]]);
+  let [xlo, ylo] = ws[0], [xhi, yhi] = ws[1];
+  for (const p of live) for (const q of [p.p, p.lp]) if (q) { xlo = Math.min(xlo, q[0]); xhi = Math.max(xhi, q[0]); ylo = Math.min(ylo, q[1]); yhi = Math.max(yhi, q[1]); }
+  const pad = 14, m = 0.02;
+  const scale = Math.min((w - 2 * pad) / (yhi - ylo + 2 * m), (h - 2 * pad) / (xhi - xlo + 2 * m));
+  const cx = w / 2, cy = h / 2, my = (ylo + yhi) / 2, mx = (xlo + xhi) / 2;
+  const P = (x, y) => [cx - (y - my) * scale, cy - (x - mx) * scale];
+  // workspace box + 5 cm grid (recessive)
+  ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1;
+  for (let gx = Math.ceil(xlo / 0.05) * 0.05; gx <= xhi; gx += 0.05) { const [a, b] = P(gx, yhi), [c, d] = P(gx, ylo); ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); }
+  for (let gy = Math.ceil(ylo / 0.05) * 0.05; gy <= yhi; gy += 0.05) { const [a, b] = P(xhi, gy), [c, d] = P(xlo, gy); ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); }
+  ctx.strokeStyle = css("--text-muted"); ctx.setLineDash([4, 3]);
+  const [bx0, by0] = P(ws[1][0], ws[1][1]), [bx1, by1] = P(ws[0][0], ws[0][1]);
+  ctx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0); ctx.setLineDash([]);
+  ctx.fillStyle = css("--text-muted"); ctx.font = "10px system-ui"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+  ctx.fillText(`x ${ws[1][0].toFixed(2)}`, bx0 + 3, by0 + 3); ctx.textBaseline = "bottom"; ctx.fillText(`x ${ws[0][0].toFixed(2)}`, bx0 + 3, by1 - 3);
+  ctx.textAlign = "right"; ctx.fillText(`y ${ws[0][1].toFixed(2)}`, bx1 - 3, by1 - 3);
+  const trail = (key, color, dash) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash(dash ? [5, 4] : []); ctx.beginPath(); let pen = false;
+    for (const p of live) { const q = p[key]; if (!q) { pen = false; continue; } const [a, b] = P(q[0], q[1]); pen ? ctx.lineTo(a, b) : ctx.moveTo(a, b); pen = true; }
+    ctx.stroke(); ctx.setLineDash([]);
+  };
+  trail("lp", colors[1], true); trail("p", colors[0], false);
+  const dot = (q, color) => { if (!q) return; const [a, b] = P(q[0], q[1]); ctx.beginPath(); ctx.arc(a, b, 5, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = css("--surface-1"); ctx.stroke(); };
+  if (last) { dot(last.lp, colors[1]); dot(last.p, colors[0]); }
+  $("xyLegend").innerHTML = legendHtml([{label: "measured EE", color: colors[0]}, {label: "target", color: colors[1], dash: true}]);
+}
+window.addEventListener("resize", () => { if (currentTab === "collect") drawLive(); else if (currentTab === "view") drawViewerPlots(); });
+
+// ------------------------------------------------------------------ live cameras
+let camKey = "";
+function updateCams(s) {
+  const on = $("liveCams").checked && s.cameras.length;
+  const key = on ? s.cameras.join(",") : "";
+  if (key !== camKey) {
+    camKey = key;
+    $("camView").innerHTML = on ? s.cameras.map((c) => `<figure><img data-cam="${esc(c)}" alt="${esc(c)}"><figcaption>${esc(c)}</figcaption></figure>`).join("")
+      : `<span class="hint">${s.cameras.length ? "Tick live view to show the cameras." : "No cameras connected."}</span>`;
+    $("camView").querySelectorAll("img").forEach(loadCam);
+  }
+}
+function loadCam(img) {
+  if (!document.body.contains(img)) return;
+  const next = () => setTimeout(() => loadCam(img), 180);
+  img.onload = next; img.onerror = () => setTimeout(() => loadCam(img), 1000);
+  img.src = `/api/camera/${encodeURIComponent(img.dataset.cam)}?w=360&t=${Date.now()}`;
+}
+$("liveCams").onchange = () => status && updateCams(status);
+
+// ------------------------------------------------------------------ episodes (collect)
+async function refreshEpisodes() {
+  try {
+    const r = await api("/api/episodes");
+    $("epRoot").textContent = r.root;
+    const eps = r.episodes;
+    const total = eps.reduce((a, e) => a + (e.duration_s || 0), 0);
+    $("epCount").textContent = `${eps.length} · ${clock(total)} total`;
+    $("epBody").innerHTML = eps.slice().reverse().map((e) => {
+      if (!e.ok) return `<tr><td colspan="6" class="hint">${esc(e.name)}: ${esc(e.error)}</td></tr>`;
+      const cams = Object.values(e.cameras || {}).map((c) => c.frames).join("/") || "–";
+      const lr = e.lerobot ? `<span class="tag" title="${esc(e.lerobot.root)}">#${e.lerobot.episode_index}</span>` : "";
+      const isDemo = (e.kind === "demo") || e.name.startsWith("demo/");
+      const active = r.demo && r.demo === e.path;
+      const btns = [
+        isDemo ? `<button class="btn small" data-use="${esc(e.path)}" title="replay this demo">${active ? "★" : "use"}</button>` : "",
+        `<button class="btn small" data-lr="${esc(e.path)}" title="append to the LeRobot dataset">→LR</button>`,
+        `<button class="btn small" data-del="${esc(e.path)}" title="delete">✕</button>`].join(" ");
+      return `<tr><td><div class="mono">${esc(e.name)}</div><div class="row" style="gap:3px;margin-top:3px">${btns}</div></td>
+        <td class="r num">${e.samples}</td><td class="r num">${fmt(e.duration_s)}</td>
+        <td class="r num">${fmt(e.robot_hz, 0)}</td><td class="num">${cams}</td><td>${lr}</td></tr>`;
+    }).join("") || `<tr><td colspan="6" class="hint">No episodes in this task folder yet.</td></tr>`;
+    $("epBody").querySelectorAll("[data-del]").forEach((b) => b.onclick = () => {
+      if (confirm(`Delete ${b.dataset.del}?`)) act("delete_episode", {path: b.dataset.del});
+    });
+    $("epBody").querySelectorAll("[data-use]").forEach((b) => b.onclick = async () => { await act("use_demo", {path: b.dataset.use}); refreshEpisodes(); });
+    $("epBody").querySelectorAll("[data-lr]").forEach((b) => b.onclick = () => act("requeue_lerobot", {path: b.dataset.lr}));
+  } catch (e) { localLog(e.message, "error"); }
+}
+
+// ------------------------------------------------------------------ folder picker
+let pickerCb = null;
+function openPicker(path, cb, title = "Choose a folder") {
+  pickerCb = cb; $("pkTitle").textContent = title; $("picker").hidden = false; browse(path);
+}
+async function browse(path) {
+  try {
+    const r = await api(`/api/fs?path=${encodeURIComponent(path)}`);
+    $("pkPath").value = r.path; $("pkUp").dataset.path = r.parent || r.path;
+    $("pkKind").textContent = r.kind === "lerobot" ? "LeRobot dataset" : r.kind === "irl_episode" ? "IRL episode" : "";
+    const tag = {lerobot: "LeRobot", irl_episode: "IRL episode"};
+    $("pkList").innerHTML = r.entries.map((e) => `<div data-p="${esc(e.path)}"><span>📁 ${esc(e.name)}</span>${e.kind ? `<span class="tag">${tag[e.kind]}</span>` : ""}</div>`).join("")
+      || `<div class="hint">no sub folders</div>`;
+    $("pkList").querySelectorAll("[data-p]").forEach((d) => d.onclick = () => browse(d.dataset.p));
+  } catch (e) { alert(e.message); }
+}
+$("pkUp").onclick = () => browse($("pkUp").dataset.path);
+$("pkGo").onclick = () => browse($("pkPath").value);
+$("pkPath").onkeydown = (e) => { if (e.key === "Enter") browse($("pkPath").value); };
+$("pkCancel").onclick = () => { $("picker").hidden = true; };
+$("pkSelect").onclick = () => { $("picker").hidden = true; if (pickerCb) pickerCb($("pkPath").value); };
+
+// ------------------------------------------------------------------ convert tab
+let scan = null;
+$("cvBrowse").onclick = () => openPicker($("cvSource").value || cfg?.data_dir || "~", (p) => { $("cvSource").value = p; doScan(); }, "IRL folder (task folder or episode)");
+$("cvOutBrowse").onclick = () => openPicker($("cvOutput").value || cfg?.data_dir || "~", (p) => { $("cvOutput").value = p; }, "Output folder (new, or a LeRobot dataset to append to)");
+$("cvScan").onclick = doScan;
+async function doScan() {
+  const path = $("cvSource").value.trim();
+  if (!path) return;
+  $("cvScanInfo").textContent = "scanning…";
+  try { scan = await api(`/api/irl/scan?path=${encodeURIComponent(path)}`); }
+  catch (e) { $("cvScanInfo").textContent = e.message; return; }
+  const eps = scan.episodes, ok = eps.filter((e) => e.ok);
+  const dur = ok.reduce((a, e) => a + (e.duration_s || 0), 0);
+  $("cvScanInfo").textContent = `${eps.length} episodes, ${clock(dur)} total` + (eps.length - ok.length ? `, ${eps.length - ok.length} unreadable` : "");
+  $("cvBody").innerHTML = eps.map((e, i) => {
+    if (!e.ok) return `<tr><td></td><td class="mono">${esc(e.name)}</td><td colspan="5" class="hint">${esc(e.error)}</td></tr>`;
+    const cams = Object.entries(e.cameras).map(([c, v]) => `${esc(c)} ${v.frames}@${fmt(v.hz, 1)}${v.timestamps ? "" : "*"}`).join(", ");
+    return `<tr><td><input type="checkbox" data-ep="${i}" checked></td><td class="mono">${esc(e.name)}</td><td class="r num">${e.samples}</td>
+      <td class="r num">${fmt(e.duration_s)}</td><td class="r num">${fmt(e.robot_hz, 1)}</td><td>${esc(e.leader || "–")}${e.leader_space ? ` <span class="tag">${e.leader_space}</span>` : ""}</td><td class="hint">${cams}</td></tr>`;
+  }).join("") || `<tr><td colspan="7" class="hint">No IRL episodes (folders with timestamps.pt) found.</td></tr>`;
+  if (ok.some((e) => Object.values(e.cameras).some((c) => !c.timestamps))) $("cvBody").insertAdjacentHTML("beforeend", `<tr><td colspan="7" class="hint">* no camera timestamps (older recording): frames assumed evenly spread, or set the camera rate.</td></tr>`);
+  // camera choices: union over episodes
+  const cams = {};
+  for (const e of ok) for (const [c, v] of Object.entries(e.cameras)) { (cams[c] ||= {n: 0, ts: true}); cams[c].n++; cams[c].ts &&= v.timestamps; }
+  $("cvCams").innerHTML = Object.keys(cams).length ? Object.entries(cams).map(([c, v]) => `<div class="cam-row"><label class="check" style="margin:0"><input type="checkbox" data-cvcam="${esc(c)}" ${v.n === ok.length ? "checked" : ""}> ${esc(c)} <span class="hint">(${v.n}/${ok.length})</span></label>
+      <input type="number" min="0" step="0.1" data-cvhz="${esc(c)}" placeholder="${v.ts ? "from ts" : "auto"}" title="camera rate for recordings without timestamps (empty = frames / duration)" ${v.ts ? "disabled" : ""}><span class="hint">Hz</span></div>`).join("")
+    : `<span class="hint">no cameras</span>`;
+  // defaults
+  const first = ok[0];
+  if (first && !$("cvTask").value && first.task_instruction) $("cvTask").placeholder = `from metadata: ${first.task_instruction}`;
+  if (!$("cvOutput").value) {
+    const base = path.replace(/\/+$/, ""), name = base.split("/").pop();
+    $("cvOutput").value = `${base.slice(0, base.length - name.length)}lerobot_data/${name}`;
+  }
+  $("cvAll").checked = true;
+}
+$("cvAll").onchange = () => document.querySelectorAll("[data-ep]").forEach((c) => { c.checked = $("cvAll").checked; });
+$("cvRun").onclick = async () => {
+  if (!scan) return localLog("Scan a folder first.", "error");
+  const episodes = [...document.querySelectorAll("[data-ep]")].filter((c) => c.checked).map((c) => scan.episodes[Number(c.dataset.ep)].path);
+  const cameras = [...document.querySelectorAll("[data-cvcam]")].filter((c) => c.checked).map((c) => c.dataset.cvcam);
+  const camera_hz = {};
+  document.querySelectorAll("[data-cvhz]").forEach((i) => { if (i.value) camera_hz[i.dataset.cvhz] = Number(i.value); });
+  const payload = {
+    episodes, cameras, camera_hz, output: $("cvOutput").value.trim(), existing: $("cvExisting").value,
+    fps: Number($("cvFps").value), width: Number($("cvW").value), height: Number($("cvH").value),
+    state_space: $("cvState").value, action_source: $("cvAction").value, use_videos: $("cvVideos").checked,
+    force_torque: $("cvFT").checked, task: $("cvTask").value, robot_type: $("cvRobotType").value,
+  };
+  if (await act("convert", payload)) $("cvView").hidden = true;
+};
+$("cvCancel").onclick = () => act("cancel_convert");
+$("cvView").onclick = () => { $("vzPath").value = status.convert.result.output; showTab("view"); openDataset(); };
+function renderConvertStatus(c) {
+  if (!c) return;
+  $("cvRun").disabled = c.running; $("cvCancel").disabled = !c.running;
+  $("cvBar").style.width = `${Math.round(100 * (c.fraction || 0))}%`;
+  $("cvMsg").textContent = c.message || "";
+  const r = c.result;
+  $("cvView").hidden = !(r && !c.running && r.written.length);
+  $("cvResult").innerHTML = r && !c.running ? `<div class="mono">${esc(r.output)}</div>` + (r.skipped.length ? `<div>Skipped:</div>` + r.skipped.map((s) => `<div>· ${esc(s.source.split("/").slice(-2).join("/"))}: ${esc(s.error)}</div>`).join("") : "")
+    + (r.written.length && r.written[0].notes.length ? `<div>Notes (first episode): ${esc(r.written[0].notes.join("; "))}</div>` : "") : "";
+}
+
+// ------------------------------------------------------------------ viewer
+const vz = {info: null, ep: null, frame: 0, playing: false, speed: 1, last: 0, media: []};
+$("vzBrowse").onclick = () => openPicker($("vzPath").value || cfg?.data_dir || "~", (p) => { $("vzPath").value = p; openDataset(); }, "LeRobot dataset");
+$("vzOpen").onclick = openDataset;
+$("vzPath").onkeydown = (e) => { if (e.key === "Enter") openDataset(); };
+$("vzLive").onclick = () => { $("vzPath").value = status.paths.lerobot_dir; openDataset(); };
+$("vzRerun").onclick = () => vz.ep && act("rerun", {episode: vz.ep.index});
+async function openDataset() {
+  const path = $("vzPath").value.trim();
+  if (!path) return;
+  let info;
+  try { info = await post("/api/action/open_viewer", {path}); } catch (e) { alert(e.message); return; }
+  vz.info = info;
+  const feats = Object.entries(info.features).map(([k, f]) => `${k} <span class="hint">${f.dtype} ${JSON.stringify(f.shape)}</span>`).join("<br>");
+  $("vzInfo").innerHTML = `<dt>Folder</dt><dd class="mono">${esc(info.root)}</dd><dt>Episodes</dt><dd>${info.total_episodes}</dd>
+    <dt>Frames</dt><dd>${info.total_frames} (${clock(info.total_frames / info.fps)})</dd><dt>fps</dt><dd>${info.fps}</dd>
+    <dt>Robot</dt><dd>${esc(info.robot_type || "–")}</dd><dt>Version</dt><dd>${esc(info.codebase_version)}</dd><dt>Features</dt><dd>${feats}</dd>`;
+  $("vzEps").innerHTML = info.episodes.map((e) => `<tr class="click" data-vep="${e.index}"><td>${e.index}</td><td class="r num">${e.length}</td><td class="r num">${fmt(e.duration_s)}</td><td class="hint" title="${esc(e.source || "")}">${esc(e.tasks.join("; "))}</td></tr>`).join("");
+  $("vzEps").querySelectorAll("[data-vep]").forEach((tr) => tr.onclick = () => loadEpisode(Number(tr.dataset.vep)));
+  if (info.episodes.length) loadEpisode(info.episodes[0].index);
+}
+async function loadEpisode(index) {
+  stopPlay();
+  let ep;
+  try { ep = await api(`/api/viz/episode?ep=${index}`); } catch (e) { alert(e.message); return; }
+  vz.ep = ep; vz.frame = 0;
+  document.querySelectorAll("#vzEps tr").forEach((tr) => tr.classList.toggle("sel", Number(tr.dataset.vep) === index));
+  $("vzTitle").textContent = `Episode ${index} · ${ep.length} frames · ${fmt(ep.length / ep.fps)} s`;
+  $("vzSource").textContent = (ep.tasks.length ? `task: ${ep.tasks.join("; ")}` : "") + (ep.source ? `  ·  from ${ep.source.source}` : "");
+  $("vzRerun").disabled = false; $("vzPlay").disabled = false;
+  const slider = $("vzSlider"); slider.max = Math.max(ep.length - 1, 0); slider.value = 0; slider.disabled = false;
+  // media
+  vz.media = [];
+  const cams = $("vzCams"); cams.innerHTML = "";
+  for (const [key, v] of Object.entries(ep.videos)) {
+    const fig = document.createElement("figure");
+    const video = document.createElement("video");
+    video.muted = true; video.preload = "auto"; video.playsInline = true;
+    video.src = `/api/viz/video?key=${encodeURIComponent(key)}&chunk=${v.chunk}&file=${v.file}`;
+    fig.appendChild(video); fig.insertAdjacentHTML("beforeend", `<figcaption>${esc(key)}</figcaption>`); cams.appendChild(fig);
+    const m = {key, kind: "video", el: video, from: v.from, fig};
+    video.addEventListener("loadedmetadata", () => seekMedia(m));
+    video.addEventListener("error", () => fallbackToImage(m));
+    vz.media.push(m);
+  }
+  for (const key of ep.images) {
+    const fig = document.createElement("figure"), img = document.createElement("img");
+    fig.appendChild(img); fig.insertAdjacentHTML("beforeend", `<figcaption>${esc(key)}</figcaption>`); cams.appendChild(fig);
+    vz.media.push({key, kind: "image", el: img, fig});
+  }
+  if (!vz.media.length) cams.innerHTML = `<span class="hint">no camera features</span>`;
+  buildPlots();
+  setFrame(0);
+}
+function fallbackToImage(m) {
+  if (m.kind === "image") return;
+  const img = document.createElement("img");
+  m.el.replaceWith(img); m.el = img; m.kind = "image";
+  m.fig.querySelector("figcaption").textContent = `${m.key} (decoded on the server)`;
+  seekMedia(m);
+}
+function seekMedia(m) {
+  const ep = vz.ep;
+  if (m.kind === "video") {
+    if (m.el.readyState < 1 || m.el.seeking) { m.pending = true; return; }
+    m.pending = false;
+    m.el.currentTime = m.from + (vz.frame + 0.5) / ep.fps;
+  } else {
+    if (m.loading) { m.pending = true; return; }
+    m.loading = true; m.pending = false;
+    m.el.onload = m.el.onerror = () => { m.loading = false; if (m.pending) seekMedia(m); };
+    m.el.src = `/api/viz/frame?ep=${ep.index}&key=${encodeURIComponent(m.key)}&i=${vz.frame}&w=640`;
+  }
+}
+function setFrame(f) {
+  if (!vz.ep) return;
+  vz.frame = Math.max(0, Math.min(vz.ep.length - 1, Math.round(f)));
+  $("vzSlider").value = vz.frame;
+  $("vzFrame").textContent = `${vz.frame} / ${vz.ep.length - 1} · ${fmt(vz.frame / vz.ep.fps, 2)} s`;
+  for (const m of vz.media) {
+    if (m.kind === "video" && !m.bound) { m.bound = true; m.el.addEventListener("seeked", () => { if (m.pending) seekMedia(m); }); }
+    seekMedia(m);
+  }
+  document.querySelectorAll("#vzPlots canvas.base").forEach((cv) => { cv.dataset.cursor = String(vz.frame / vz.ep.fps); drawOverlay(cv, null); });
+}
+$("vzSlider").oninput = () => { stopPlay(); setFrame(Number($("vzSlider").value)); };
+$("vzSpeed").onchange = () => { vz.speed = Number($("vzSpeed").value); };
+$("vzPlay").onclick = togglePlay;
+function togglePlay() { if (!vz.ep) return; vz.playing ? stopPlay() : startPlay(); }
+function startPlay() {
+  if (vz.frame >= vz.ep.length - 1) vz.frame = 0;
+  vz.playing = true; vz.pos = vz.frame; vz.last = performance.now(); $("vzPlay").textContent = "❚❚ Pause";
+  requestAnimationFrame(tick);
+}
+function stopPlay() { vz.playing = false; $("vzPlay").textContent = "▶ Play"; }
+function tick(now) {
+  if (!vz.playing) return;
+  vz.pos += (now - vz.last) / 1000 * vz.ep.fps * vz.speed; vz.last = now;
+  if (vz.pos >= vz.ep.length - 1) { setFrame(vz.ep.length - 1); stopPlay(); return; }
+  if (Math.floor(vz.pos) !== vz.frame) setFrame(Math.floor(vz.pos));
+  requestAnimationFrame(tick);
+}
+
+// plots: split each feature into groups of <= 8 series; state (solid) and action (dashed) share a group
+function groupOf(name) {
+  if (/^joint_\d+$/.test(name)) return "joints [rad]";
+  if (/^(x|y|z)$/.test(name)) return "EE position [m]";
+  if (/^q[xyzw]$/.test(name)) return "EE orientation (quaternion)";
+  if (name === "gripper") return "gripper (0 open, 1 closed)";
+  if (/^external_joint_torque_/.test(name)) return "external joint torque [Nm]";
+  if (/^external_wrench_/.test(name)) return "external wrench [N, Nm]";
+  if (name === "gripper_current") return "gripper current";
+  return null;
+}
+let plotDefs = [];
+function buildPlots() {
+  const ep = vz.ep, groups = new Map();
+  for (const [key, s] of Object.entries(ep.series)) {
+    const role = key === "action" ? "action" : key === "observation.state" ? "state" : key;
+    s.names.forEach((name, d) => {
+      let g = groupOf(name);
+      g = g ? (role === "state" || role === "action" ? `state / action · ${g}` : `${key} · ${g}`) : `${key} (${Math.floor(d / 8) * 8}…)`;
+      if (!groups.has(g)) groups.set(g, {title: g, dims: []});
+      groups.get(g).dims.push({name, values: s.values[d], dash: role === "action", role});
+    });
+  }
+  plotDefs = [...groups.values()];
+  $("vzPlots").innerHTML = plotDefs.map((g, i) => `<div class="chart-title">${esc(g.title)}</div><div class="legend" id="vzl${i}"></div>
+    <div class="chart-wrap"><canvas class="base" id="vzc${i}" height="${g.dims.length > 2 ? 150 : 90}"></canvas><canvas class="overlay" height="${g.dims.length > 2 ? 150 : 90}"></canvas></div>`).join("");
+  drawViewerPlots();
+}
+function drawViewerPlots() {
+  if (!vz.ep || currentTab !== "view") return;
+  const colors = SERIES(), x = vz.ep.timestamps.length ? vz.ep.timestamps : vz.ep.series[Object.keys(vz.ep.series)[0]].values[0].map((_, i) => i / vz.ep.fps);
+  plotDefs.forEach((g, i) => {
+    const names = [...new Set(g.dims.map((d) => d.name))];
+    const series = g.dims.map((d) => ({y: d.values, color: colors[names.indexOf(d.name) % 8], dash: d.dash, label: `${d.role === "action" ? "action " : ""}${d.name}`}));
+    const cv = $(`vzc${i}`);
+    drawChart(cv, x, series, {fmtX: (v) => `${v.toFixed(1)} s`, onClick: (t) => { stopPlay(); setFrame(t * vz.ep.fps); }});
+    const roles = new Set(g.dims.map((d) => d.role));
+    $(`vzl${i}`).innerHTML = legendHtml(names.map((n, k) => ({label: n, color: colors[k % 8]})))
+      + (roles.has("state") && roles.has("action") ? `<span class="hint">— state · - - action</span>` : "");
+    cv.dataset.cursor = String(vz.frame / vz.ep.fps); drawOverlay(cv, null);
+  });
+}
+
+// ------------------------------------------------------------------ boot
+(async () => {
+  try { fillForm(await api("/api/config")); } catch (e) { localLog(e.message, "error"); }
+  poll();
+  // deep links: #convert=<irl folder>, #view=<lerobot folder>[&ep=<n>]
+  const m = location.hash.match(/^#(collect|convert|view)(?:=([^&]*))?(?:&ep=(\d+))?/);
+  if (m) {
+    showTab(m[1]);
+    const path = m[2] ? decodeURIComponent(m[2]) : "";
+    if (m[1] === "convert" && path) { $("cvSource").value = path; doScan(); }
+    if (m[1] === "view" && path) { $("vzPath").value = path; await openDataset(); if (m[3]) loadEpisode(Number(m[3])); }
+  }
+})();
+</script>
+</body>
+</html>

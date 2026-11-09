@@ -1,0 +1,17 @@
+{
+  "sim": true,
+  "cameras": [
+    {"name": "zed_right", "hz": 15.0},
+    {"name": "zed_wrist", "hz": 15.0}
+  ],
+  "mode": "gello",
+  "data_dir": "sim_data_collection",
+  "task": "sim_test",
+  "task_instruction": "simulated pick and place",
+  "record_hz": 50.0,
+  "save_irl": true,
+  "save_lerobot": true,
+  "lerobot_fps": 15.0,
+  "lerobot_image_width": 128,
+  "lerobot_image_height": 96
+}

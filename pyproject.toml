@@ -14,3 +14,4 @@ dependencies = [
 
 [tool.setuptools.package-data]
 "franka_control_client.inference_gui" = ["static/*.html"]
+"franka_control_client.data_collection_gui" = ["static/*.html"]

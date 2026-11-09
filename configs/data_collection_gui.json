@@ -1,0 +1,72 @@
+{
+  "sim": false,
+  "node_name": "data_collection_gui",
+  "node_ip": "192.168.1.1",
+  "group_name": "DroidGroup",
+  "group_port": 7730,
+  "robot_name": "FrankaPanda",
+  "gello_name": "gello",
+  "mq3_name": "IRL-MQ3-2",
+  "mq3_ip": "192.168.0.117",
+  "cameras": [
+    {
+      "name": "zed_right",
+      "hz": 50.0
+    },
+    {
+      "name": "zed_wrist",
+      "hz": 50.0
+    },
+    {
+      "name": "zed_left",
+      "hz": 50.0
+    }
+  ],
+  "mode": "keyboard",
+  "gello_gains": "stiff",
+  "data_dir": "/home/irl-admin/new_data_collection",
+  "task": "T-push_test_lerobot_no_resize",
+  "task_instruction": "",
+  "record_hz": 200.0,
+  "max_episode_s": 0.0,
+  "save_irl": true,
+  "save_lerobot": true,
+  "lerobot_root": "",
+  "lerobot_fps": 25.0,
+  "lerobot_state_space": "auto",
+  "lerobot_action_source": "auto",
+  "lerobot_image_width": 672,
+  "lerobot_image_height": 376,
+  "lerobot_use_videos": true,
+  "lerobot_force_torque": true,
+  "robot_type": "franka_panda",
+  "replay_gains": "stiff",
+  "replay_hz": 200.0,
+  "replay_feedforward": true,
+  "replay_settle_s": 1.0,
+  "kb_speed": 0.1,
+  "kb_z_speed": 0.03,
+  "kb_slow_factor": 0.5,
+  "kb_yaw_deg": 0.0,
+  "kb_control_hz": 100.0,
+  "kb_max_lead": 0.02,
+  "kb_workspace_min": [
+    0.25,
+    -0.45,
+    0.0
+  ],
+  "kb_workspace_max": [
+    0.85,
+    0.45,
+    0.7
+  ],
+  "home_q": [
+    0.0,
+    0.31,
+    0.019,
+    -2.257,
+    0.0,
+    2.6,
+    0.0
+  ]
+}

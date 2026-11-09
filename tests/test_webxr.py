@@ -119,9 +119,9 @@ class FakeServer:
     def start(self):
         pass
 
-    def push(self, pos=(0, 1, 0), rot=IDENT, grip=0.0, trigger=0.0, age=0.0, stick=False, head=IDENT):
+    def push(self, pos=(0, 1, 0), rot=IDENT, grip=0.0, trigger=0.0, age=0.0, stick=False, head=IDENT, t_ms=0.0):
         self.seq += 1
-        self.sample = XRSample(self.seq, 0.0, tuple(pos), tuple(rot), trigger, grip, False, False,
+        self.sample = XRSample(self.seq, t_ms, tuple(pos), tuple(rot), trigger, grip, False, False,
                                time.monotonic() - age, self.conn_id, stick=stick,
                                head_rot=tuple(head) if head is not None else None)
 
@@ -324,6 +324,57 @@ def test_recenter_clears_realign_but_reconnect_keeps_it():
     server.frame_reset_count += 1
     step(ctrl, server)
     assert ctrl.heading_xr == 0.0
+
+
+# ---- twist feed-forward ----
+
+def engage_at(ctrl, server, t_ms, pos=(0, 1, 0)):
+    step(ctrl, server, pos=pos, grip=0.0, t_ms=t_ms)
+    step(ctrl, server, pos=pos, grip=1.0, t_ms=t_ms + 14.0)
+    assert ctrl.on_control
+
+
+def test_twist_from_consecutive_targets_and_headset_time():
+    ctrl, server = make()
+    engage_at(ctrl, server, 1000.0)
+    sig = step(ctrl, server, pos=(0, 1, 0), grip=1.0, t_ms=1028.0)
+    np.testing.assert_allclose(sig["pos_vel"], [0, 0, 0], atol=1e-12)
+    # 7 mm forward (XR -Z = base +X) and 1 deg about up (base +Z) within 14 ms
+    turn = R.from_rotvec([0, np.deg2rad(1.0), 0]).as_quat()
+    sig = step(ctrl, server, pos=(0, 1, -0.007), rot=turn, grip=1.0, t_ms=1042.0)
+    np.testing.assert_allclose(sig["pos_vel"], [0.5, 0, 0], atol=1e-9)
+    np.testing.assert_allclose(sig["rot_vel"], [0, 0, np.deg2rad(1.0) / 0.014], atol=1e-9)
+
+
+def test_twist_zeroed_on_declutch():
+    ctrl, server = make()
+    engage_at(ctrl, server, 1000.0)
+    step(ctrl, server, pos=(0, 1, 0), grip=1.0, t_ms=1028.0)
+    sig = step(ctrl, server, pos=(0, 1, -0.007), grip=1.0, t_ms=1042.0)
+    assert np.linalg.norm(sig["pos_vel"]) > 0.1
+    sig = step(ctrl, server, pos=(0, 1, -0.007), grip=0.0, t_ms=1056.0)
+    assert not ctrl.on_control
+    np.testing.assert_allclose(sig["pos_vel"], [0, 0, 0])
+    np.testing.assert_allclose(sig["rot_vel"], [0, 0, 0])
+    np.testing.assert_allclose(sig["pos"], [0.507, 0.0, 0.4], atol=1e-9)  # holds the last target
+
+
+def test_twist_zeroed_on_stale_sample():
+    ctrl, server = make()
+    engage_at(ctrl, server, 1000.0)
+    step(ctrl, server, pos=(0, 1, 0), grip=1.0, t_ms=1028.0)
+    step(ctrl, server, pos=(0, 1, -0.007), grip=1.0, t_ms=1042.0)
+    server.push(pos=(0, 1, -0.014), grip=1.0, age=0.15, t_ms=1056.0)
+    sig = ctrl.current_control_signal
+    assert not ctrl.on_control
+    np.testing.assert_allclose(sig["pos_vel"], [0, 0, 0])
+
+
+def test_no_twist_without_a_valid_time_step():
+    ctrl, server = make()
+    engage_at(ctrl, server, 1000.0)
+    sig = step(ctrl, server, pos=(0, 1, -0.005), grip=1.0, t_ms=1014.0)  # same frame time
+    np.testing.assert_allclose(sig["pos_vel"], [0, 0, 0])
 
 
 def test_webxr_modules_do_not_import_simpub():

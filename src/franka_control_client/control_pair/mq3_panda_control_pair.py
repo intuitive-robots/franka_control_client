@@ -24,7 +24,11 @@ class MQ3PandaControlPair(ControlPair):
         desired_position = control_signal["pos"]
         desired_rot = control_signal["rot"]
         self.follower.panda_arm.send_cartesian_pose_command(
-            pos=desired_position, rot=desired_rot
+            pos=desired_position,
+            rot=desired_rot,
+            # twist feed-forward: the proxy extrapolates the pose between leader samples
+            pos_vel=control_signal["pos_vel"],
+            rot_vel=control_signal["rot_vel"],
         )
         self.follower.robotiq_gripper.send_grasp_command(
             position=control_signal["gripper_width"],

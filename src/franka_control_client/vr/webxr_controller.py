@@ -8,7 +8,8 @@ held, the EE target follows the controller relative to where both were at clutch
 
 Safety: the clutch drops on a stale sample (> stale_timeout_s), WS disconnect, new
 connection, recenter or XR session end, and re-engages only on a fresh grip press.
-The target is clamped to a workspace box and rate-limited per received sample.
+The target is clamped to a workspace box and rate-limited per received sample. Its twist
+(estimated from consecutive targets) is sent as feed-forward and zeroed on de-clutch.
 
 Realign: pressing the right thumbstick takes the headset's current heading as the
 operator's forward (``yaw_deg`` in the base frame), like a recenter. It also drops the
@@ -99,6 +100,11 @@ class WebXRController(RemoteDevice):
         self._target_rot: Optional[R] = None
         self._gripper = GRIPPER_OPEN
         self._current_control_signal: Optional[MQ3ControlSignal] = None
+        # Target twist (base frame) estimated from consecutive targets, sent as feed-forward so the
+        # proxy's reference follows between samples instead of lagging behind the held pose
+        self._pos_vel = np.zeros(3)
+        self._rot_vel = np.zeros(3)
+        self._last_step_t: Optional[float] = None
         self.reset()
 
     def connect(self) -> None:
@@ -172,11 +178,25 @@ class WebXRController(RemoteDevice):
         raw_pos = self._base_ee_pos + position_delta(self.m, s.pos, self._base_ctrl_pos)
         raw_pos = clamp_position(raw_pos, self.bounds.lower, self.bounds.upper)
         raw_rot = rotation_delta(self.m, s.rot, self._base_ctrl_rot) * self._base_ee_rot
+        prev_pos, prev_rot = self._target_pos, self._target_rot
         self._target_pos, self._target_rot = limit_step(
             self._target_pos, self._target_rot, raw_pos, raw_rot, self.max_pos_step, self.max_rot_step
         )
+        self._update_twist(s, prev_pos, prev_rot)
         self._gripper = float(np.clip(s.trigger, 0.0, 1.0))
         self._publish()
+
+    def _update_twist(self, s: XRSample, prev_pos: np.ndarray, prev_rot: R) -> None:
+        # headset clock (regular frame times); arrival time if the page sent none
+        t = s.t_client_ms / 1000.0 if s.t_client_ms > 0.0 else s.recv_t
+        dt = None if self._last_step_t is None else t - self._last_step_t
+        self._last_step_t = t
+        if dt is None or not 1e-3 <= dt <= self.stale_timeout_s:
+            self._pos_vel = np.zeros(3)
+            self._rot_vel = np.zeros(3)
+            return
+        self._pos_vel = (self._target_pos - prev_pos) / dt
+        self._rot_vel = (self._target_rot * prev_rot.inv()).as_rotvec() / dt
 
     def _realign(self, s: XRSample) -> None:
         if s.head_rot is None:
@@ -231,12 +251,18 @@ class WebXRController(RemoteDevice):
         self._base_ee_rot = None
         self._base_ctrl_pos = None
         self._base_ctrl_rot = None
+        # stop the feed-forward at once, otherwise the proxy keeps following the last twist
+        self._pos_vel = np.zeros(3)
+        self._rot_vel = np.zeros(3)
+        self._last_step_t = None
+        if self._current_control_signal is not None and self._target_pos is not None:
+            self._publish()
 
     def _publish(self) -> None:
         self._current_control_signal = MQ3ControlSignal(
             pos=self._target_pos.tolist(),
             rot=self._target_rot.as_quat().tolist(),
-            pos_vel=[0.0, 0.0, 0.0],
-            rot_vel=[0.0, 0.0, 0.0],
+            pos_vel=self._pos_vel.tolist(),
+            rot_vel=self._rot_vel.tolist(),
             gripper_width=self._gripper,
         )

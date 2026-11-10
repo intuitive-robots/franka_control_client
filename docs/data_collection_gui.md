@@ -3,13 +3,44 @@
 Collect demonstrations from a browser, save them as IRL raw data and/or a LeRobot dataset,
 convert existing IRL recordings, and inspect LeRobot datasets.
 
+## Quick start
+
+**Try it without hardware** (any machine): simulated arm, GELLO, VR controller and cameras.
+
 ```bash
-pixi run data-collection-gui        # robot PC, edit configs/data_collection_gui.json first
-pixi run data-collection-gui-sim    # no robot: simulated arm, GELLO, VR controller, cameras
-# open http://localhost:8090   (from another PC: ssh -L 8090:localhost:8090 <robot-pc>)
+pixi run data-collection-gui-sim    # open http://localhost:8090
 ```
 
+**Real robot**
+
+1. Start the franka proxy (`./bin/proxy ./config/proxy/droid.yaml`, see the FrankaControlProxy
+   README), the cameras, and the leader for your mode (GELLO, or the Meta Quest 3 app for VR).
+2. Robot PC:
+
+   ```bash
+   cd franka_control_client
+   pixi run data-collection-gui        # settings: configs/data_collection_gui.json
+   # dashboard: http://localhost:8090 (from another PC: ssh -L 8090:localhost:8090 <robot-pc>)
+   ```
+
+3. In the **Setup** panel (then *Apply*, which writes the config file):
+   * *Collection mode* (GELLO / VR / kinesthetic / teach & replay / keyboard), *Task (folder)*,
+     *Task instruction* (the LeRobot `task`, empty = folder name with spaces), *Data folder*.
+   * *What to save*: IRL raw data and/or LeRobot dataset (fps, image size, state space, action).
+   * Cameras (*+ camera*, name = pyzlc topic, rate 0 = every robot sample) and
+     *Robot & network* (node IP, group / port, robot / GELLO / MQ3 names) are connection
+     settings: change them only while disconnected.
+   * *Import* loads settings from a JSON file (an *Export* or a `configs/*.json`) into the form;
+     review, then *Apply* (*Revert* discards). *Export* saves what the form shows. Keep your own
+     settings this way instead of committing changes to `configs/data_collection_gui.json`.
+4. *Connect*, wait for the state tile to show **idle**, then press **R** to reset (or **H** home).
+5. Record with the page focused: **N** start, **S** save, **D** discard (Space toggles
+   start/save, Esc discards). Saved episodes appear in the *Episodes* table; with LeRobot on they
+   are appended to the dataset in the background.
+6. *Disconnect* before closing the page; the arm goes to Idle.
+
 The page can move the robot and binds to `127.0.0.1`; `--host 0.0.0.0` only on a trusted network.
+Other options: `--port`, `--connect` (connect at start), `--sim`, `--verbose`.
 Deep links: `#convert=<irl folder>`, `#view=<lerobot folder>&ep=<n>`.
 
 ## Collect

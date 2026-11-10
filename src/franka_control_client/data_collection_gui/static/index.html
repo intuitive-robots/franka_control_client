@@ -315,7 +315,12 @@ tr.click:hover td { background: var(--surface-2); }
     <div class="card">
       <h2><span id="liveTitle">Joints, last 20 s</span> <span class="grow"></span><span class="hint" id="jointLegendNote">solid: arm · dashed: leader</span></h2>
       <div class="legend" id="liveLegend"></div>
-      <div class="chart-wrap"><canvas id="liveJoints" height="200"></canvas></div>
+      <div class="chart-wrap" id="jointsWrap"><canvas id="liveJoints" height="200"></canvas></div>
+      <div id="eeWrap" hidden>
+        <div class="chart-title">x [m]</div><div class="chart-wrap"><canvas id="liveEEx" height="80"></canvas></div>
+        <div class="chart-title">y [m]</div><div class="chart-wrap"><canvas id="liveEEy" height="80"></canvas></div>
+        <div class="chart-title">z [m]</div><div class="chart-wrap"><canvas id="liveEEz" height="80"></canvas></div>
+      </div>
       <div id="xyWrap" hidden><div class="chart-title">Top view, last 20 s (base frame: x up, y left) · box = keyboard workspace</div>
         <div class="legend" id="xyLegend"></div><canvas id="xyMap" height="260" style="width:100%;display:block"></canvas></div>
       <div class="chart-title">Gripper (0 open, 1 closed)</div>
@@ -855,6 +860,18 @@ document.addEventListener("click", (e) => {
   c.onClick(c.x0 + (e.clientX - rect.left - c.L) / (c.w - c.L - c.R) * (c.x1 - c.x0));
 });
 
+// y range with hysteresis: grows at once when data leaves it, shrinks only when it is > 3x the needed span
+const liveRanges = {};
+function stableRange(key, series, minSpan) {
+  let lo = Infinity, hi = -Infinity;
+  for (const s of series) for (const v of s.y) if (v !== null && isFinite(v)) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  if (!isFinite(lo)) { delete liveRanges[key]; return undefined; }
+  const span = Math.max(hi - lo, minSpan);
+  const r = liveRanges[key];
+  if (r && lo >= r[0] && hi <= r[1] && r[1] - r[0] <= 3 * span) return r;
+  const c = (lo + hi) / 2, half = span * 0.75;  // 50 % head room so small moves do not rescale
+  return (liveRanges[key] = [c - half, c + half]);
+}
 function drawLive() {
   const colors = SERIES();
   const now = status ? status.now : 0;
@@ -862,15 +879,19 @@ function drawLive() {
   const series = [];
   const cart = status && (status.mode === "keyboard" || status.mode === "vr");
   $("xyWrap").hidden = !cart;
+  $("eeWrap").hidden = !cart;
+  $("jointsWrap").hidden = cart;
   if (cart) {
     $("liveTitle").textContent = "EE position, last 20 s";
     const names = ["x", "y", "z"];
     const hasT = live.some((p) => p.lp);
+    // one chart per axis, each with its own (stable) y range: cm motions stay visible and the scale does not jump
     for (let j = 0; j < 3; j++) {
-      series.push({y: live.map((p) => p.p ? p.p[j] : null), color: colors[j], label: names[j]});
-      if (hasT) series.push({y: live.map((p) => p.lp ? p.lp[j] : null), color: colors[j], dash: true, label: `target ${names[j]}`});
+      const s = [{y: live.map((p) => p.p ? p.p[j] : null), color: colors[j], label: names[j]}];
+      if (hasT) s.push({y: live.map((p) => p.lp ? p.lp[j] : null), color: colors[j], dash: true, label: `target ${names[j]}`});
+      const yRange = stableRange(`ee${j}`, s, 0.04);
+      drawChart($(`liveEE${names[j]}`), x.length ? x : [-20, 0], x.length ? s : [], {xRange: [-20, 0], yRange, fmtX: (v) => `${v.toFixed(0)} s`});
     }
-    drawChart($("liveJoints"), x.length ? x : [-20, 0], x.length ? series : [], {xRange: [-20, 0], fmtX: (v) => `${v.toFixed(0)} s`});
     $("liveLegend").innerHTML = legendHtml(names.map((n, j) => ({label: n, color: colors[j]})));
     $("jointLegendNote").textContent = hasT ? "solid: measured · dashed: target" : "measured EE";
     drawXY(colors);

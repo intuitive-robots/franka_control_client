@@ -408,6 +408,8 @@ const FIELDS = [
     { k: "inference_mode", l: "Inference mode", t: "select", o: [["sync", "Sync — observe, infer, play"], ["async", "Async — infer while playing"]] },
     { k: "env_hz", l: "Env frequency (Hz)", t: "number", step: 1, h: "Stream every env frame to the policy at this rate during a rollout, independent of action requests (memory models; needs server support). 0 = off: a frame is sent only with each action request." },
     { k: "request_timeout_s", l: "Request timeout (s)", t: "number", step: 1, h: "0 = wait forever." },
+    { k: "send_joint_velocities", l: "Send joint velocities", t: "bool", h: "observation.joint_velocities: measured dq0..dq6 (rad/s). Always sent: observation.state, task and the cameras ticked under Cameras. Servers that do not read a key ignore it." },
+    { k: "send_ee_pose", l: "Send EE pose", t: "bool", h: "observation.ee_pose: x, y, z (m) + quaternion w, x, y, z, robot base frame." },
   ]},
   { sec: "LeRobot dataset", open: false, items: [
     { k: "save_lerobot", l: "Save rollouts as LeRobot dataset", t: "bool", h: "One episode per rollout in <rollout>/lerobot/; merge them below the rollout table." },

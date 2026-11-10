@@ -868,6 +868,15 @@ class InferenceSession:
             vec = list(state["EE_pos"]) + list(state["EE_quat"]) + [grip]
         obs_state = np.asarray(vec, dtype=np.float64)
         obs: Dict[str, Any] = {"observation.state": obs_state.astype(np.float32), "task": cfg.task}
+        if cfg.send_joint_velocities:
+            dq = state.get("dq")
+            if dq is None:
+                raise RuntimeError("Joint velocities (dq) missing from the arm state; "
+                                   "turn off 'Send joint velocities'.")
+            obs["observation.joint_velocities"] = np.asarray(dq, dtype=np.float32)[:7]
+        if cfg.send_ee_pose:
+            qx, qy, qz, qw = state["EE_quat"]  # the arm reports (x, y, z, w)
+            obs["observation.ee_pose"] = np.asarray([*state["EE_pos"], qw, qx, qy, qz], dtype=np.float32)
         if self._env_stream_on:
             obs["env_stream"] = True
         frames: Dict[str, np.ndarray] = {}

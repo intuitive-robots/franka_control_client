@@ -85,6 +85,10 @@ class SessionConfig:
     # on every frame), independent of the action requests. 0 = off: the policy
     # only sees the observation sent with each action request.
     env_hz: float = 0.0
+    # Extra proprioception added to every observation (always sent: observation.state,
+    # task and the cameras marked "send to policy"). Servers that do not read a key ignore it.
+    send_joint_velocities: bool = True  # observation.joint_velocities [7] rad/s (measured dq)
+    send_ee_pose: bool = True  # observation.ee_pose [7] base frame: x, y, z, qw, qx, qy, qz
     task: str = ""
 
     # ---- safety ------------------------------------------------------------

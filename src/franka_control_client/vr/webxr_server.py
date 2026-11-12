@@ -37,6 +37,8 @@ class XRSample:
     conn_id: int
     stick: bool = False  # right thumbstick pressed (realign)
     head_rot: Optional[Tuple[float, float, float, float]] = None  # headset orientation, xyzw
+    x: bool = False  # left controller X / Y
+    y: bool = False
 
 
 @dataclass(frozen=True)
@@ -47,6 +49,12 @@ class XRSnapshot:
     reset_count: int  # bumped by recenter, session end, visibility loss and new connections
     rtt_ms: Optional[float]
     frame_reset_count: int = 0  # bumped only when the WebXR frame itself changes: recenter, session end
+    # cumulative A/B/X/Y presses (rising edges), so a tap between two polls is not missed. A button
+    # already held when a connection opens counts only after it was seen released.
+    a_presses: int = 0
+    b_presses: int = 0
+    x_presses: int = 0
+    y_presses: int = 0
 
 
 @dataclass(frozen=True)
@@ -66,6 +74,10 @@ class WebXRServer:
         self._connected = False
         self._reset_count = 0
         self._frame_reset_count = 0
+        self._a_presses = 0
+        self._b_presses = 0
+        self._x_presses = 0
+        self._y_presses = 0
         self._rtt_ms: Optional[float] = None
         self._arrivals: Deque[float] = deque()
         self._thread: Optional[threading.Thread] = None
@@ -93,7 +105,7 @@ class WebXRServer:
         with self._lock:
             return XRSnapshot(
                 self._sample, self._conn_id, self._connected, self._reset_count, self._rtt_ms,
-                self._frame_reset_count,
+                self._frame_reset_count, self._a_presses, self._b_presses, self._x_presses, self._y_presses,
             )
 
     def stats(self) -> XRStats:
@@ -154,6 +166,7 @@ class WebXRServer:
             self._arrivals.clear()
         log.info("WebXR client %d connected from %s", conn_id, request.remote)
         last_seq = -1
+        a_prev = b_prev = x_prev = y_prev = True  # a press counts only after the button was seen released
         try:
             async for msg in ws:
                 if msg.type != WSMsgType.TEXT:
@@ -182,13 +195,20 @@ class WebXRServer:
                         conn_id=conn_id,
                         stick=bool(data.get("stick", False)),
                         head_rot=tuple(float(v) for v in data["head"]) if data.get("head") else None,
+                        x=bool(data.get("x", False)),
+                        y=bool(data.get("y", False)),
                     )
                     with self._lock:
                         if conn_id == self._conn_id:
                             self._sample = sample
+                            self._a_presses += sample.a and not a_prev
+                            self._b_presses += sample.b and not b_prev
+                            self._x_presses += sample.x and not x_prev
+                            self._y_presses += sample.y and not y_prev
                             self._arrivals.append(recv_t)
                             while self._arrivals and recv_t - self._arrivals[0] > STATS_PERIOD_S:
                                 self._arrivals.popleft()
+                    a_prev, b_prev, x_prev, y_prev = sample.a, sample.b, sample.x, sample.y
                 elif kind in ("reset", "recenter", "session_end"):
                     log.info("WebXR client %d: %s", conn_id, kind)
                     with self._lock:

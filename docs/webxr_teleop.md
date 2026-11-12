@@ -38,11 +38,19 @@ outside the immersive session. Inside it you see passthrough and nothing is rend
 | Grip    | Clutch. Hold to move the EE, release to freeze it. Engages above 0.9 and releases below 0.1. |
 | Trigger | Robotiq position, 0 open … 1 closed (proportional). The gripper holds its last value while de-clutched. |
 | Thumbstick press | Realign: your current facing becomes forward (see [Frames and yaw](#frames-and-yaw)). Releases the clutch. |
-| A / B   | Streamed and shown in `webxr-echo`, not used. Episodes are controlled from the keyboard TUI. |
+| A       | Start an episode (same as `n` in the collection TUI). A short pulse confirms the press. |
+| B       | Stop and save the episode (same as `s`). |
+| X (left) | Delete: discards the running episode, or, while waiting, deletes the episode saved last (same as `x`). Double pulse. |
+| Y (left) | Home the robot (same as `r`): turns teleop off and moves the arm home. Only while waiting. |
+
+The buttons only act in `data-collection-webxr`, and only in the matching state: A while waiting,
+B while recording. X deletes only the most recent episode, and only until the next one starts,
+so a second press never reaches older recordings. A button already held when the page connects
+counts only after it is released. The pulses play on the right controller.
 
 The arm only follows the controller while the control loop runs. In the collection TUI, press
 **`t`** while waiting to turn teleop on or off without recording. Pressing `n` with teleop on
-keeps control running into the episode. Saving or discarding (`s`/`d`/`x`) leaves teleop
+keeps control running into the episode. Saving or discarding (`s`/`d`/`x`, B/X) leaves teleop
 running, so the arm keeps following and keeps holding what it grasped; start
 `data-collection-webxr` with `--stop-after-episode` to stop control (arm Idle, gripper opens) at
 the end of each episode instead. `r` turns teleop off before moving the arm home.

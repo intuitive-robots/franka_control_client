@@ -34,6 +34,7 @@ from franka_control_client.franka_robot.panda_robotiq import PandaRobotiq
 from franka_control_client.control_pair.mq3_panda_control_pair import (
     MQ3PandaControlPair,
 )
+from franka_control_client.vr.webxr_buttons import WebXRButtons
 from franka_control_client.vr.webxr_controller import WebXRController, WorkspaceBounds
 from franka_control_client.vr.webxr_server import WebXRServer
 
@@ -118,6 +119,9 @@ if __name__ == "__main__":
         control_pair=control_pair,
         stop_control_on_episode_end=args.stop_after_episode,
     )
+    # Quest buttons, same as the keys: A 'n' start, B 's' save, X 'x' delete running/last episode, Y 'r' home
+    data_collection_manager.register_input_source(WebXRButtons(leader.server).poll)
+    pyzlc.info("WebXR: A = start episode, B = save, X = delete running/last episode, Y = home robot")
     control_pair.control_reset()
     data_collection_manager.run()
     pyzlc.shutdown()

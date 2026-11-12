@@ -96,6 +96,10 @@ let refSpace = null;
 let gl = null;
 let seq = 0;
 let stickPrev = false;
+let aPrev = false;
+let bPrev = false;
+let xPrev = false;
+let yPrev = false;
 
 async function pickMode() {
   if (!navigator.xr) return null;
@@ -153,6 +157,16 @@ function onFrame(t, frame) {
   const viewer = frame.getViewerPose(refSpace);
   const hq = viewer ? viewer.transform.orientation : null;
 
+  // left controller: only its X / Y buttons are used (xr-standard: 4 = X, 5 = Y); sent with the right pose
+  let x = false;
+  let y = false;
+  for (const src of s.inputSources) {
+    if (src.handedness !== "left" || !src.gamepad) continue;
+    const lb = src.gamepad.buttons;
+    x = !!(lb[4] && lb[4].pressed);
+    y = !!(lb[5] && lb[5].pressed);
+  }
+
   for (const src of s.inputSources) {
     // skip hand tracking (no gamepad) and the left controller
     if (src.handedness !== "right" || !src.gamepad || !src.gripSpace) continue;
@@ -174,10 +188,22 @@ function onFrame(t, frame) {
       a: !!(b[4] && b[4].pressed),
       b: !!(b[5] && b[5].pressed),
       stick: !!(b[3] && b[3].pressed), // xr-standard: 3 = thumbstick press
+      x,
+      y,
       head: hq ? [hq.x, hq.y, hq.z, hq.w] : null,
     };
     if (msg.stick && !stickPrev) { buzz([[0.8, 40], [0, 60], [0.8, 40]]); logLine("realign"); }
     stickPrev = msg.stick;
+    // data collection: A starts an episode, B saves it; a short tick confirms the press
+    if (msg.a && !aPrev) { buzz([[0.5, 30]]); logLine("A: start episode"); }
+    if (msg.b && !bPrev) { buzz([[0.5, 30]]); logLine("B: save episode"); }
+    // X deletes the running or the just-saved episode, Y homes the robot (the pulse is on the right controller)
+    if (msg.x && !xPrev) { buzz([[0.5, 30], [0, 50], [0.5, 30]]); logLine("X: delete episode"); }
+    if (msg.y && !yPrev) { buzz([[0.5, 30]]); logLine("Y: home robot"); }
+    aPrev = msg.a;
+    bPrev = msg.b;
+    xPrev = msg.x;
+    yPrev = msg.y;
     send(msg);
     sentSinceTick++;
     if (seq % 10 === 0) {

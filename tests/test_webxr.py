@@ -391,7 +391,76 @@ def test_webxr_modules_do_not_import_simpub():
     subprocess.run([sys.executable, "-c", code], check=True)
 
 
-# ---- data collection ----
+# ---- A/B buttons (data collection) ----
+
+def _pose_msg(seq, a=False, b=False, x=False, y=False):
+    return {"type": "pose", "seq": seq, "t": 0.0, "pos": [0, 1, 0], "rot": list(IDENT),
+            "trigger": 0.0, "grip": 0.0, "a": a, "b": b, "x": x, "y": y}
+
+
+def test_server_counts_button_presses_but_not_one_held_at_connect():
+    import asyncio
+    import json
+    import socket
+
+    import aiohttp
+
+    from franka_control_client.vr.webxr_server import WebXRServer
+
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+    server = WebXRServer("127.0.0.1", port)
+    server.start()
+    # A held at connect, released, pressed twice; B pressed once and held
+    states = [(True, False), (True, False), (False, False), (True, False), (False, False),
+              (True, True), (False, True), (False, True)]
+
+    async def run():
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(f"http://127.0.0.1:{port}/ws") as ws:
+                for seq, (a, b) in enumerate(states):
+                    await ws.send_str(json.dumps(_pose_msg(seq, a, b, x=b, y=a)))  # left mirrors right
+                for _ in range(100):
+                    if server.snapshot().sample is not None and server.snapshot().sample.seq == len(states) - 1:
+                        break
+                    await asyncio.sleep(0.01)
+
+    try:
+        asyncio.run(run())
+        snap = server.snapshot()
+        assert (snap.a_presses, snap.b_presses, snap.x_presses, snap.y_presses) == (2, 1, 1, 2)
+    finally:
+        server.stop()
+
+
+class CountingServer:
+    def __init__(self):
+        self.a = self.b = self.x = self.y = 0
+
+    def snapshot(self):
+        return XRSnapshot(None, 1, True, 1, None, 0, self.a, self.b, self.x, self.y)
+
+
+def test_buttons_map_a_to_new_episode_and_b_to_save():
+    from franka_control_client.vr.webxr_buttons import WebXRButtons
+
+    server = CountingServer()
+    server.a = 3  # presses before the collection started are ignored
+    buttons = WebXRButtons(server)
+    assert buttons.poll() == []
+    server.a += 2  # two taps between polls act once
+    assert buttons.poll() == ["n"]
+    assert buttons.poll() == []
+    server.b += 1
+    assert buttons.poll() == ["s"]
+    server.a += 1
+    server.b += 1
+    assert sorted(buttons.poll()) == ["n", "s"]
+    server.x += 1
+    server.y += 1
+    assert sorted(buttons.poll()) == ["r", "x"]
+
 
 def test_x_discards_running_or_deletes_only_the_last_saved_episode(tmp_path):
     from franka_control_client.data_collection.data_collection_manager import DataCollectionState

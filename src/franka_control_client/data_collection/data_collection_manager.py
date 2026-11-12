@@ -83,6 +83,7 @@ class DataCollectionManager(abc.ABC):
         self._ui_console = UIConsole()
         self._start_collecting_event = VoidEvent()
         self._stop_collecting_event = VoidEvent()
+        self._input_sources: List[Callable[[], List[str]]] = []
         self._last_saved_dir: Optional[Path] = None  # deletable with 'x' until the next episode starts
         self._state_machine = DataCollectionStateMachine(
             initial_state=DataCollectionState.WAITING,
@@ -146,6 +147,13 @@ class DataCollectionManager(abc.ABC):
     ) -> None:
         self._stop_collecting_event.subscribe(handler)
 
+    def register_input_source(self, poll: Callable[[], List[str]]) -> None:
+        """Add a non-keyboard input (e.g. controller buttons).
+
+        ``poll`` is called every loop iteration and returns the keys to handle, as if typed.
+        """
+        self._input_sources.append(poll)
+
     def run(self) -> None:
         self._on_state_enter(self._state_machine.state)
         try:
@@ -154,6 +162,9 @@ class DataCollectionManager(abc.ABC):
                     key = kp.get_data()
                     if key:
                         self._handle_keypress(key)
+                    for poll in self._input_sources:
+                        for key in poll():
+                            self._handle_keypress(key)
                     if (
                         self._state_machine.state
                         == DataCollectionState.COLLECTING

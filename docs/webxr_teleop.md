@@ -55,6 +55,26 @@ running, so the arm keeps following and keeps holding what it grasped; start
 `data-collection-webxr` with `--stop-after-episode` to stop control (arm Idle, gripper opens) at
 the end of each episode instead. `r` turns teleop off before moving the arm home.
 
+## Recording
+
+`data-collection-webxr` writes a LeRobot dataset directly to `<data-dir>/lerobot/<task>`, at
+50 Hz by default (`--fps`). The features are the same as in `dataset_utils/convert_webxr_to_lerobot.py`,
+so no conversion step is needed. If the folder already holds a dataset, recording resumes into
+it, as long as the fps, cameras and image size match.
+
+- Cameras are sampled on every step and resized to `--image-size` (default 256×256). A camera
+  slower than `--fps` produces repeated frames, which cost almost nothing after video encoding.
+- Video is encoded while recording (LeRobot streaming encoding, `--vcodec`, default
+  `libsvtav1`), so saving takes well under a second.
+- `action[t]` is the WebXR target `--action-offset` steps (default 1) after observation `t`.
+- Episodes are written when the next one starts or on quit. That is what lets X delete the last
+  one. To remove an episode that is already written, use
+  `lerobot-edit-dataset --operation.type delete_episodes`.
+- Quit with `q` or Ctrl-C, which finalizes the files. A hard kill or power loss leaves the files
+  of that session without parquet footers, and the dataset won't load until they are repaired.
+  Back up the folder between sessions if that risk matters.
+- `--raw` keeps the old per-episode `.pt` + PNG layout in `<data-dir>/<task>`.
+
 While the clutch is held, the EE follows the controller's motion relative to where both were
 when the clutch engaged: `pos = ee_base + M·Δp` and `rot = (M·R_Δ·Mᵀ)·R_ee_base`.
 

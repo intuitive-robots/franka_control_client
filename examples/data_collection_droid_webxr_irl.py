@@ -14,6 +14,9 @@ from franka_control_client.camera.camera import CameraDevice
 from franka_control_client.data_collection.irl_vr_data_collection import (
     IRLDataCollection,
 )
+from franka_control_client.data_collection.irl_lerobot_data_collection import (
+    IRLLeRobotDataCollection,
+)
 from franka_control_client.data_collection.irl_wrapper import (
     IRL_HardwareDataWrapper,
     ImageDataWrapper,
@@ -63,6 +66,17 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Stop teleop (arm Idle, gripper opens) when an episode is saved/discarded; by default it keeps running",
     )
+    rec = parser.add_argument_group("recording (LeRobot dataset in <data-dir>/lerobot/<task>, resumed if it exists)")
+    rec.add_argument("--fps", type=int, default=50, help="Recording rate for robot state, action and cameras")
+    rec.add_argument("--instruction", help="Language instruction stored with every frame (default: task name)")
+    rec.add_argument("--image-size", type=int, nargs=2, default=[256, 256], metavar=("W", "H"),
+                     help="Stored camera size; 0 0 keeps the camera resolution")
+    rec.add_argument("--action-offset", type=int, default=1, help="action[t] = leader command at t + offset")
+    rec.add_argument("--vcodec", default="libsvtav1",
+                     help="libsvtav1 (LeRobot default), h264, hevc, h264_nvenc or auto (hardware if available)")
+    rec.add_argument("--encoder-threads", type=int, help="Threads per camera encoder (default: codec default)")
+    rec.add_argument("--raw", action="store_true",
+                     help="Old format instead: per-episode .pt files + PNGs in <data-dir>/<task>, convert later")
     return parser.parse_args()
 
 
@@ -111,14 +125,29 @@ if __name__ == "__main__":
     data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
     data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))
     task = args.task
-    data_collection_manager = IRLDataCollection(
-        data_collectors,
-        str(args.data_dir / task),
-        task,
-        fps=4,
-        control_pair=control_pair,
-        stop_control_on_episode_end=args.stop_after_episode,
-    )
+    if args.raw:
+        data_collection_manager = IRLDataCollection(
+            data_collectors,
+            str(args.data_dir / task),
+            task,
+            fps=args.fps,
+            control_pair=control_pair,
+            stop_control_on_episode_end=args.stop_after_episode,
+        )
+    else:
+        data_collection_manager = IRLLeRobotDataCollection(
+            data_collectors,
+            args.data_dir / "lerobot" / task,
+            args.instruction or task.replace("_", " "),
+            control_pair=control_pair,
+            fps=args.fps,
+            repo_id=task,
+            image_size=tuple(args.image_size) if all(args.image_size) else None,
+            action_offset=args.action_offset,
+            vcodec=args.vcodec,
+            encoder_threads=args.encoder_threads,
+            stop_control_on_episode_end=args.stop_after_episode,
+        )
     # Quest buttons, same as the keys: A 'n' start, B 's' save, X 'x' delete running/last episode, Y 'r' home
     data_collection_manager.register_input_source(WebXRButtons(leader.server).poll)
     pyzlc.info("WebXR: A = start episode, B = save, X = delete running/last episode, Y = home robot")

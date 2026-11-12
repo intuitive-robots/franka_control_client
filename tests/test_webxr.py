@@ -389,3 +389,172 @@ def test_webxr_modules_do_not_import_simpub():
         "assert 'simpub' not in sys.modules, 'simpub imported'"
     )
     subprocess.run([sys.executable, "-c", code], check=True)
+
+
+# ---- data collection ----
+
+def test_x_discards_running_or_deletes_only_the_last_saved_episode(tmp_path):
+    from franka_control_client.data_collection.data_collection_manager import DataCollectionState
+    from franka_control_client.data_collection.irl_data_collection import IRLDataCollection
+
+    class Probe(IRLDataCollection):
+        # skip hardware: only the state machine and the delete bookkeeping are exercised
+        def __init__(self):
+            super(IRLDataCollection, self).__init__([], "task")
+            self.discarded = 0
+            self._last_saved_dir = None
+            self.n = 0
+
+        def _start_collecting(self):
+            self._last_saved_dir = None
+            self.n += 1
+            self.record_dir = tmp_path / f"ep{self.n}"
+            self.record_dir.mkdir()
+
+        def _save_episode(self):
+            self._last_saved_dir = self.record_dir
+
+        def _discard_collecting(self):
+            self.discarded += 1
+
+        def _reset_to_waiting(self):
+            super(IRLDataCollection, self)._reset_to_waiting()
+
+    m = Probe()
+    m._handle_keypress("n")
+    m._handle_keypress("s")
+    m._reset_to_waiting()
+    m._handle_keypress("n")
+    m._handle_keypress("s")
+    m._reset_to_waiting()
+    assert m._state_machine.state == DataCollectionState.WAITING
+    m._handle_keypress("x")  # deletes ep2 only
+    assert not (tmp_path / "ep2").exists() and (tmp_path / "ep1").exists()
+    m._handle_keypress("x")  # nothing left to delete; ep1 stays
+    assert (tmp_path / "ep1").exists()
+    m._handle_keypress("n")
+    m._handle_keypress("x")  # while recording: discard
+    assert m.discarded == 1
+    m._reset_to_waiting()
+    m._handle_keypress("x")  # the discarded run is not 'last saved', ep1 still stays
+    assert (tmp_path / "ep1").exists()
+
+
+class _StateHolder:
+    def __init__(self, state):
+        self.current_state = state
+
+
+def _webxr_collection(collection_cls, data_dir):
+    import numpy as np
+
+    from franka_control_client.data_collection.irl_wrapper import (
+        MQ3DataWrapper,
+        PandaArmDataWrapper,
+        RobotiqGripperDataWrapper,
+    )
+
+    arm = _StateHolder({
+        "EE_pos": list(EE_POS), "EE_quat": list(EE_QUAT), "q": [0.0] * 7, "dq": [0.0] * 7,
+        "O_T_EE": list(np.eye(4).ravel()), "tau_ext_hat_filtered": [0.0] * 7, "O_F_ext_hat_K": [0.0] * 6,
+    })
+    gripper = _StateHolder({"position": 0.1, "current": 0.0, "commanded_position": 0.0})
+    leader = WebXRController("webxr", arm, server=FakeServer())
+    collectors = [MQ3DataWrapper(leader, hw_name="webxr"), PandaArmDataWrapper(arm), RobotiqGripperDataWrapper(gripper)]
+    return collection_cls(collectors, str(data_dir), "task", fps=1000)
+
+
+def test_webxr_recording_with_buttons_saves_and_deletes(tmp_path):
+    """The WebXR script's real record path: A, a few steps, B, then X deletes the episode."""
+    from franka_control_client.data_collection.irl_vr_data_collection import IRLDataCollection
+
+    m = _webxr_collection(IRLDataCollection, tmp_path)
+    m._handle_keypress("n")  # A
+    for _ in range(3):
+        m._collect_step()
+    m._handle_keypress("s")  # B
+    m._reset_to_waiting()
+    (episode,) = list(tmp_path.iterdir())
+    assert (episode / "webxr" / "EE_pos.pt").exists() and (episode / "FrankaPanda" / "joint_pos.pt").exists()
+    m._handle_keypress("x")  # X
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_gello_collection_cannot_record_a_webxr_leader(tmp_path):
+    # why the WebXR script must use irl_vr_data_collection: the GELLO one crashed on 'A' / 'n'
+    from franka_control_client.data_collection.irl_data_collection import IRLDataCollection
+
+    m = _webxr_collection(IRLDataCollection, tmp_path)
+    m._handle_keypress("n")
+    with pytest.raises(KeyError, match="gello_arm_state"):
+        m._collect_step()
+
+
+def test_two_episodes_in_the_same_second_get_separate_dirs(tmp_path):
+    from franka_control_client.data_collection.irl_vr_data_collection import IRLDataCollection
+
+    m = _webxr_collection(IRLDataCollection, tmp_path)
+    for _ in range(2):
+        m._handle_keypress("n")
+        m._collect_step()
+        m._handle_keypress("s")
+        m._reset_to_waiting()
+    assert len(list(tmp_path.iterdir())) == 2
+
+
+def test_pyzlc_heartbeat_survives_a_send_error(monkeypatch):
+    import threading
+
+    from franka_control_client.core import zlc_heartbeat
+
+    sent = []
+
+    class FlakySocket:
+        calls = 0
+
+        def sendto(self, data, addr):
+            FlakySocket.calls += 1
+            if FlakySocket.calls == 2:
+                raise OSError(101, "Network is unreachable")
+            sent.append(addr)
+            if len(sent) >= 3:
+                worker._stop_event.set()
+
+        def close(self):
+            pass
+
+    attempts = []
+
+    def make_socket(w):
+        attempts.append(1)
+        if len(attempts) > 20:  # hard stop: a broken loop fails the test instead of hanging
+            w._stop_event.set()
+        return FlakySocket()
+
+    monkeypatch.setattr(zlc_heartbeat, "_make_socket", make_socket)
+
+    class Worker:
+        protocol_version = (2, 2, 4)
+        local_info = {"nodeID": "0" * 36, "infoID": 1}
+        service_port = 1
+        group_name = "g"
+        group = "239.0.0.1"
+        group_port = 7720
+        _stop_event = threading.Event()
+
+    worker = Worker()
+    zlc_heartbeat._resilient_multicast_loop(worker, interval=0.0)
+    assert len(sent) == 3  # kept sending after the failure
+
+
+def test_pyzlc_heartbeat_patch_applies():
+    from pyzlc.nodes.multicast import MulticastWorker
+
+    from franka_control_client.core.zlc_heartbeat import _resilient_multicast_loop, patch_pyzlc_heartbeat
+
+    original = MulticastWorker._multicast_loop
+    try:
+        assert patch_pyzlc_heartbeat()
+        assert MulticastWorker._multicast_loop is _resilient_multicast_loop
+    finally:
+        MulticastWorker._multicast_loop = original

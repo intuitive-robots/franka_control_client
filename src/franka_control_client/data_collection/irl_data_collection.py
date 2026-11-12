@@ -149,7 +149,8 @@ class IRLDataCollection(DataCollectionManager):
         fps: int = 50,#for general
         writer_pool_max_workers: Optional[int] = None,
         writer_max_pending_writes: int = 4096,
-        
+        # False: saving/discarding an episode leaves the control pair (teleop) running
+        stop_control_on_episode_end: bool = True,
     ) -> None:
         super().__init__(data_collectors, task, fps)
         #data_dir
@@ -160,9 +161,10 @@ class IRLDataCollection(DataCollectionManager):
             self.register_start_collecting_event(
                 self.control_pair.start_control_pair
             )
-            self.register_stop_collecting_event(
-                self.control_pair.stop_control_pair
-            )
+            if stop_control_on_episode_end:
+                self.register_stop_collecting_event(
+                    self.control_pair.stop_control_pair
+                )
         #writer_pool preparation for cams
         self._max_pending_writes = int(writer_max_pending_writes)
         if writer_pool_max_workers is None:
@@ -194,7 +196,7 @@ class IRLDataCollection(DataCollectionManager):
         self.camera_frame_idx = [0] * len(self.camera_streams)
         self.camera_last_capture_times: List[float] = [0.0] * len(self.camera_streams)  # Track last capture time for each camera
         self._last_robot_time: Optional[float] = None
-        
+
 
 
     def _start_collecting(self) -> None:
@@ -291,7 +293,8 @@ class IRLDataCollection(DataCollectionManager):
     def _save_episode(self) -> None:
         self._save_data_task()
         self._stop_collecting()
-        self._ui_console.log("Episode saved.")
+        self._last_saved_dir = self.record_dir
+        self._ui_console.log(f"Episode saved: {self.record_dir.name}")
 
     def _discard_collecting(self) -> None:
         self._stop_collecting()
@@ -352,7 +355,12 @@ class IRLDataCollection(DataCollectionManager):
         super()._close()
 
     def _create_new_recording_dir(self):
-        self.record_dir = self.data_dir / datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
+        name = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
+        self.record_dir = self.data_dir / name
+        n = 0
+        while self.record_dir.exists():  # two episodes started within one second
+            n += 1
+            self.record_dir = self.data_dir / f"{name}_{n}"
         self.record_dir.mkdir()
         
         if self.leader_robot is not None:

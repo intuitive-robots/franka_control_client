@@ -42,8 +42,10 @@ outside the immersive session. Inside it you see passthrough and nothing is rend
 
 The arm only follows the controller while the control loop runs. In the collection TUI, press
 **`t`** while waiting to turn teleop on or off without recording. Pressing `n` with teleop on
-keeps control running into the episode. `s`/`d` end the episode and stop control as before, and
-`r` turns teleop off before moving the arm home.
+keeps control running into the episode. Saving or discarding (`s`/`d`/`x`) leaves teleop
+running, so the arm keeps following and keeps holding what it grasped; start
+`data-collection-webxr` with `--stop-after-episode` to stop control (arm Idle, gripper opens) at
+the end of each episode instead. `r` turns teleop off before moving the arm home.
 
 While the clutch is held, the EE follows the controller's motion relative to where both were
 when the clutch engaged: `pos = ee_base + M·Δp` and `rot = (M·R_Δ·Mᵀ)·R_ee_base`.

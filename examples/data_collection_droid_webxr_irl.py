@@ -7,8 +7,11 @@ from typing import List
 
 import pyzlc
 
+from franka_control_client.core.zlc_heartbeat import patch_pyzlc_heartbeat
+
 from franka_control_client.camera.camera import CameraDevice
-from franka_control_client.data_collection.irl_data_collection import (
+# the VR variant records the leader's EE target; irl_data_collection expects GELLO joints
+from franka_control_client.data_collection.irl_vr_data_collection import (
     IRLDataCollection,
 )
 from franka_control_client.data_collection.irl_wrapper import (
@@ -54,12 +57,19 @@ def parse_args() -> argparse.Namespace:
         metavar=("XMIN", "YMIN", "ZMIN", "XMAX", "YMAX", "ZMAX"),
         help="EE target workspace box in the base frame (m)",
     )
+    parser.add_argument(
+        "--stop-after-episode",
+        action="store_true",
+        help="Stop teleop (arm Idle, gripper opens) when an episode is saved/discarded; by default it keeps running",
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
     logging.basicConfig(level=logging.INFO, format="[webxr] %(message)s")
+    # pyzlc stops heartbeating for good on one send error; keep it alive across network blips
+    patch_pyzlc_heartbeat()
     pyzlc.init(
         "data_collection",
         "192.168.1.1",
@@ -105,7 +115,8 @@ if __name__ == "__main__":
         str(args.data_dir / task),
         task,
         fps=4,
-        control_pair=control_pair
+        control_pair=control_pair,
+        stop_control_on_episode_end=args.stop_after_episode,
     )
     control_pair.control_reset()
     data_collection_manager.run()

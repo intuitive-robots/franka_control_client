@@ -12,6 +12,8 @@ from typing import List
 
 import pyzlc
 
+from franka_control_client.core.zlc_heartbeat import patch_pyzlc_heartbeat
+
 from franka_control_client.camera.camera import CameraDevice
 from franka_control_client.data_collection.irl_data_collection import (
     IRLDataCollection,
@@ -60,11 +62,18 @@ def parse_args() -> argparse.Namespace:
         default="stiff",
         help="Controller gain preset for teleoperation",
     )
+    parser.add_argument(
+        "--stop-after-episode",
+        action="store_true",
+        help="Stop teleop (arm Idle) when an episode is saved/discarded; by default it keeps running",
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
+    # pyzlc stops heartbeating for good on one send error; keep it alive across network blips
+    patch_pyzlc_heartbeat()
     pyzlc.init(
         "data_collection",
         "192.168.1.1",
@@ -100,7 +109,8 @@ if __name__ == "__main__":
         str(args.data_dir / task),
         task,
         fps=4,
-        control_pair=control_pair
+        control_pair=control_pair,
+        stop_control_on_episode_end=args.stop_after_episode,
     )
     control_pair.control_reset()
     data_collection_manager.run()

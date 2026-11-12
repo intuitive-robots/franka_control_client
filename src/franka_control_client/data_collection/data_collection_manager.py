@@ -1,6 +1,8 @@
 import time
 import abc
+import shutil
 from enum import Enum
+from pathlib import Path
 from typing import Callable, Dict, Optional, List, Tuple
 
 
@@ -81,6 +83,7 @@ class DataCollectionManager(abc.ABC):
         self._ui_console = UIConsole()
         self._start_collecting_event = VoidEvent()
         self._stop_collecting_event = VoidEvent()
+        self._last_saved_dir: Optional[Path] = None  # deletable with 'x' until the next episode starts
         self._state_machine = DataCollectionStateMachine(
             initial_state=DataCollectionState.WAITING,
             on_enter=self._on_state_enter,
@@ -176,6 +179,12 @@ class DataCollectionManager(abc.ABC):
             self._state_machine.trigger(DataCollectionEvent.SAVE)
         elif key == "d":
             self._state_machine.trigger(DataCollectionEvent.DISCARD)
+        elif key == "x":
+            # delete the running episode, or the one saved just before (only that one, once)
+            if self._state_machine.state == DataCollectionState.COLLECTING:
+                self._state_machine.trigger(DataCollectionEvent.DISCARD)
+            elif self._state_machine.state == DataCollectionState.WAITING:
+                self._delete_last_episode()
         elif key == "q":
             self._state_machine.trigger(DataCollectionEvent.QUIT)
         elif key == "r":
@@ -196,10 +205,23 @@ class DataCollectionManager(abc.ABC):
             if control_pair is not None and hasattr(control_pair, "close_gripper"):
                 control_pair.close_gripper()
 
+    def _delete_last_episode(self) -> None:
+        """Delete the episode saved last, if nothing was started since.
+
+        Subclasses set ``self._last_saved_dir`` to the episode directory in ``_save_episode``.
+        """
+        path, self._last_saved_dir = self._last_saved_dir, None
+        if path is None or not Path(path).exists():
+            self._ui_console.log("No episode to delete (only the one saved last, before a new one starts).")
+            return
+        shutil.rmtree(path)
+        self._ui_console.log(f"Deleted episode {Path(path).name}.")
+
     def _set_teleop(self, enabled: bool) -> None:
         """Run the control pair while WAITING, without recording.
 
-        Starting an episode keeps it running; saving/discarding stops it as usual.
+        Starting an episode keeps it running; saving/discarding stops it unless the subclass was
+        created with stop_control_on_episode_end=False.
         """
         control_pair = getattr(self, "control_pair", None)
         if control_pair is None:
@@ -218,11 +240,11 @@ class DataCollectionManager(abc.ABC):
             teleop = "ON" if control_pair is not None and control_pair.is_running else "OFF"
             self._ui_console.update_hint(
                 f"[teleop {teleop}] Press 'n' to start collecting, 't' to toggle teleop, 'r' to reset, "
-                "'o' to open gripper, 'p' to close gripper, or 'q' to quit"
+                "'x' to delete the last episode, 'o' to open gripper, 'p' to close gripper, or 'q' to quit"
             )
         elif state == DataCollectionState.COLLECTING:
             self._ui_console.update_hint(
-                "Collecting... Press 'o' to open gripper, 'p' to close gripper, 's' to save, 'd' to discard, or 'q' to quit"
+                "Collecting... Press 'o' to open gripper, 'p' to close gripper, 's' to save, 'd'/'x' to discard, or 'q' to quit"
             )
         elif state == DataCollectionState.STOPPED:
             self._ui_console.update_hint("Collecting stopped. Resetting...")
@@ -236,6 +258,7 @@ class DataCollectionManager(abc.ABC):
     @abc.abstractmethod
     def _start_collecting(self) -> None:
         self._ui_console.update_hint("Starting data collection...")
+        self._last_saved_dir = None
         self._start_collecting_event.emit()
 
     @abc.abstractmethod

@@ -7,6 +7,7 @@ explicit actions the GUI calls:
     IDLE --start--> RUNNING --stop / e-stop / timeout / safety / error--> REVIEW
     REVIEW --save | discard--> IDLE
     IDLE | REVIEW --home--> BUSY --> (previous state)
+    IDLE | REVIEW --gripper_open | gripper_close--> (same state)
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ import numpy as np
 
 from ..policy_inference.policy_server_client import PolicyServerClient
 from .config import CONNECTION_FIELDS, SessionConfig
-from .hardware import Q_LOWER, Q_UPPER, Hardware, build_hardware, gripper_closedness
+from .hardware import Q_LOWER, Q_UPPER, Hardware, build_hardware, command_gripper, gripper_closedness
 from .policy_server import ACTION_SPACES
 from .recorder import (
     EpisodeRecorder,
@@ -195,6 +196,8 @@ class InferenceSession:
             "estop": lambda p: self.software_estop(),
             "home": lambda p: self.go_home(),
             "set_home_current": lambda p: self.set_home_to_current(),
+            "gripper_open": lambda p: self.set_gripper(closed=False),
+            "gripper_close": lambda p: self.set_gripper(closed=True),
             "save": lambda p: self.save_episode(
                 p.get("name", ""), p.get("description", ""), p.get("outcome", "unlabeled")
             ),
@@ -1157,6 +1160,17 @@ class InferenceSession:
             self.state = SessionState.BUSY
             self.busy_label = "Moving home"
         self._spawn(lambda: self._home_worker(back_to), "home")
+
+    def set_gripper(self, closed: bool) -> None:
+        """Manually open/close the gripper. Only outside a rollout (idle/review),
+        so it never fights the policy's gripper commands."""
+        with self._lock:
+            self._require(SessionState.IDLE, SessionState.REVIEW)
+            hw = self.hw
+        if hw is None:
+            raise ActionError("Robot not connected.")
+        command_gripper(hw.gripper, closed)
+        self.log("Closing gripper." if closed else "Opening gripper.")
 
     def set_home_to_current(self) -> Dict[str, Any]:
         """Store the arm's measured joint pose as the home pose (config file included)."""

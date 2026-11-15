@@ -158,6 +158,29 @@ def gripper_closedness(gripper: GripperT) -> Optional[float]:
     return None
 
 
+# Same speed/force as the policy control pairs use for the Robotiq.
+GRIPPER_SPEED = 0.7
+GRIPPER_FORCE = 0.3
+
+
+def command_gripper(gripper: GripperT, closed: bool) -> None:
+    """Fully open (closed=False) or close (closed=True) the gripper, non-blocking."""
+    if isinstance(gripper, RemoteRobotiqGripper):
+        gripper.send_grasp_command(
+            position=1.0 if closed else 0.0, speed=GRIPPER_SPEED, force=GRIPPER_FORCE, blocking=False
+        )
+        return
+    if closed:
+        gripper.send_gripper_command(width=0.0, speed=0.1)
+        return
+    state = gripper.current_state
+    max_width = float(state.get("max_width", 0.0) or 0.0) if isinstance(state, dict) else 0.0
+    if max_width > 0.0:
+        gripper.send_gripper_command(width=max_width, speed=0.1)
+    else:
+        gripper.open()
+
+
 # ---------------------------------------------------------------- real robot
 def build_real_hardware(cfg: SessionConfig, log: Callable[[str], None]) -> Hardware:
     log(f"Connecting to arm '{cfg.robot_name}'...")

@@ -6,7 +6,6 @@ import traceback
 from typing import Optional, Union
 
 import numpy as np
-import torch
 import pyzlc
 from collections import deque
 
@@ -24,6 +23,9 @@ ACTION_LOG_INTERVAL_S: float = 0.5
 GRIPPER_TOGGLE_WARN_WINDOW_S: float = 3.0
 GRIPPER_TOGGLE_WARN_COUNT: int = 6
 DEFAULT_POSITION = (0.0, 0.0, 0.0, -2.15, 0.0, 2.15, 0.0)
+# Velocity-limited waypoints advanced per control step (so the effective joint
+# speed cap is WAYPOINTS_PER_STEP * VELOCITY_LIMITS_MAX).
+WAYPOINTS_PER_STEP = 3
 
 # Calculate velocity limits using the standard approach from training
 # VELOCITY_LIMITS = np.array([[-4 * np.pi / 2, 4 * np.pi / 2]] * 7).T / 16
@@ -164,22 +166,27 @@ class PolicyPandaControlPair(ControlPair):
         goal: np.ndarray,
         hz: float,
         max_joint_vel: Optional[np.ndarray] = None,
-    ) -> tuple[torch.Tensor, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Generate waypoints that respect velocity limits.
-        
+
+        Pure numpy on purpose: this runs in the control thread every step, and
+        each torch call releases and re-acquires the GIL. With another busy
+        Python thread in the process every re-acquire can wait a full switch
+        interval (5 ms), which stretched control steps to 100-300 ms.
+
         Args:
             start: Current joint positions (7,)
             goal: Target joint positions (7,)
             hz: Control frequency
             max_joint_vel: Maximum per-joint velocities in rad/s (7,)
-        
+
         Returns:
-            waypoints: Tensor of shape (n_steps, 7)
+            waypoints: Array of shape (n_steps, 7)
             feasible_vel: Feasible velocity (7,)
         """
-        start = torch.as_tensor(start, dtype=torch.float32)
-        goal = torch.as_tensor(goal, dtype=torch.float32)
+        start = np.asarray(start, dtype=np.float32).reshape(-1)
+        goal = np.asarray(goal, dtype=np.float32).reshape(-1)
         step_duration = 1.0 / hz
         delta = goal - start
 
@@ -187,28 +194,24 @@ class PolicyPandaControlPair(ControlPair):
             feasible_vel = delta / step_duration
             n_steps = 1
         else:
-            max_joint_vel_tensor = torch.as_tensor(
-                max_joint_vel, dtype=torch.float32
-            ).reshape(-1)
-            if max_joint_vel_tensor.numel() != 7:
-                raise ValueError(
-                    f"Expected 7 per-joint velocity limits, got {max_joint_vel_tensor.numel()}"
-                )
-            if torch.any(max_joint_vel_tensor <= 0):
+            max_vel = np.asarray(max_joint_vel, dtype=np.float32).reshape(-1)
+            if max_vel.size != 7:
+                raise ValueError(f"Expected 7 per-joint velocity limits, got {max_vel.size}")
+            if np.any(max_vel <= 0):
                 raise ValueError("Per-joint velocity limits must be positive")
 
-            required_time = torch.abs(delta) / max_joint_vel_tensor
-            n_steps = max(1, int(torch.ceil(torch.max(required_time) * hz).item()))
+            required_time = np.abs(delta) / max_vel
+            n_steps = max(1, int(np.ceil(float(np.max(required_time)) * hz)))
             feasible_vel = delta / (n_steps * step_duration)
 
-        if torch.max(torch.abs(delta)).item() < 1e-6:
+        if float(np.max(np.abs(delta))) < 1e-6:
             # No movement needed
-            return torch.stack([goal]), feasible_vel.numpy()
+            return goal[None, :].copy(), feasible_vel
 
-        t = torch.linspace(0, 1, n_steps + 1)[1:]
+        t = np.linspace(0.0, 1.0, n_steps + 1, dtype=np.float32)[1:]
         waypoints = (1 - t[:, None]) * start + t[:, None] * goal
-        
-        return waypoints, feasible_vel.numpy()
+
+        return waypoints, feasible_vel
 
     def _send_waypoint_command(
         self, goal_joint_pos: np.ndarray, max_vel_norm_factor: float = 1.0
@@ -248,15 +251,15 @@ class PolicyPandaControlPair(ControlPair):
             # f"debug:Generated {len(waypoints)} waypoints with max joint velocity "
             # f"{max_joint_vel} rad/s"s
         # )
-        #too jerky to actuate the entire waypoint sequence in one control step, so we send one waypoint at a time in each control step. The next waypoint will be generated in the next control step based on the latest joint position, which ensures smoother motion and better adherence to velocity limits.
-        for i in range(min(3, len(waypoints))):
-            joint_cmd = (waypoints[i].numpy())
-            self.panda_arm.send_joint_position_command(joint_cmd)
-            #???
-            self._last_joint_pos = np.asarray(joint_cmd, dtype=np.float32)
-
-            #need to refine
-            pyzlc.sleep(1.0 / 1000)
+        # Advance at most WAYPOINTS_PER_STEP waypoints per control step. This used
+        # to publish waypoints 0..2 back to back with a 1 ms sleep in between,
+        # which ends at the same target; publishing only that target once gives
+        # the same motion without the extra sleeps / GIL hand-offs.
+        joint_cmd = np.asarray(
+            waypoints[min(WAYPOINTS_PER_STEP, len(waypoints)) - 1], dtype=np.float32
+        )
+        self.panda_arm.send_joint_position_command(joint_cmd)
+        self._last_joint_pos = joint_cmd.copy()
         # self._last_joint_pos = self._get_current_joint_pos()
         ###
         ##only execute action once
@@ -376,16 +379,19 @@ class PolicyPandaControlPair(ControlPair):
         try:
             self.control_reset()
             print("debug:velocity limit", VELOCITY_LIMITS_MAX)
+            period = 1.0 / self.control_hz
+            next_t = time.perf_counter()
             while self.is_running:
-                start = time.perf_counter()
                 self.control_step()
-                end_time = time.perf_counter()
-                # print(f"Control step took {end_time - start:.3f} seconds")
-                elapsed = end_time - start
-                sleep_time = (1.0 / self.control_hz)-elapsed
-                if elapsed < (1.0 / self.control_hz) and elapsed >= 0.001 :
-                    pyzlc.sleep(sleep_time)
-               
+                # Fixed-rate schedule: sleep until the next slot. After an overrun,
+                # restart the grid from now instead of bursting to catch up.
+                next_t += period
+                delay = next_t - time.perf_counter()
+                if delay > 0:
+                    pyzlc.sleep(delay)
+                else:
+                    next_t = time.perf_counter()
+
             self.control_end()
         except Exception as e:
             print(f"Control task encountered an error: {e}")

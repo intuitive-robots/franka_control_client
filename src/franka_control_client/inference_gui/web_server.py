@@ -5,7 +5,8 @@ GET  /api/status?since=&log_after=   state, metrics, incremental series, logs
 GET  /api/config            current SessionConfig
 POST /api/config            partial update (JSON)
 POST /api/action/<name>     connect | disconnect | reconnect_policy | start | stop |
-                            estop | home | save | discard | clear_error
+                            estop | home | gripper_open | gripper_close |
+                            save | discard | clear_error
 GET  /api/episodes          saved rollouts of the current batch
 GET  /api/camera/<name>     latest frame as JPEG (?w=<max width>)
 """

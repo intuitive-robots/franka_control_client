@@ -239,6 +239,8 @@ td.num, th.num { white-space: nowrap; }
           <button class="btn go big" id="btnStart" disabled>Start<kbd>N</kbd></button>
           <button class="btn big" id="btnStop" disabled>Stop<kbd>S</kbd></button>
           <button class="btn big" id="btnHome" disabled>Home<kbd>H</kbd></button>
+          <button class="btn big" id="btnGripOpen" disabled title="Open the gripper (not during a rollout)">Open gripper<kbd>O</kbd></button>
+          <button class="btn big" id="btnGripClose" disabled title="Close the gripper (not during a rollout)">Close gripper<kbd>C</kbd></button>
           <button class="btn danger big" id="btnEstop" title="Stops the control loop and sets the arm to Idle. Not a replacement for the hardware e-stop.">Software stop<kbd>Esc</kbd></button>
         </div>
       </div>
@@ -584,6 +586,8 @@ $("#btnStart").addEventListener("click", startRollout);
 $("#btnStop").addEventListener("click", () => act("stop"));
 $("#btnHome").addEventListener("click", () => act("home"));
 $("#btnHome2").addEventListener("click", () => act("home"));
+$("#btnGripOpen").addEventListener("click", () => act("gripper_open"));
+$("#btnGripClose").addEventListener("click", () => act("gripper_close"));
 $("#btnEstop").addEventListener("click", () => act("estop"));
 $("#btnClearErr").addEventListener("click", () => act("clear_error"));
 $("#btnSave").addEventListener("click", saveRollout);
@@ -631,6 +635,8 @@ document.addEventListener("keydown", (e) => {
   if (k === "n" && st === "idle") startRollout();
   else if (k === "s" && st === "running") act("stop");
   else if (k === "h" && (st === "idle" || st === "review")) act("home");
+  else if (k === "o" && (st === "idle" || st === "review")) act("gripper_open");
+  else if (k === "c" && (st === "idle" || st === "review")) act("gripper_close");
 });
 
 // ======================================================================= polling
@@ -695,6 +701,8 @@ function render(st) {
   $("#btnStop").disabled = stName !== "running";
   $("#btnHome").disabled = !["idle", "review"].includes(stName);
   $("#btnHome2").disabled = !["idle", "review"].includes(stName);
+  $("#btnGripOpen").disabled = !(st.connected && ["idle", "review"].includes(stName));
+  $("#btnGripClose").disabled = !(st.connected && ["idle", "review"].includes(stName));
   if ($("#btnHomeCurrent")) $("#btnHomeCurrent").disabled = !(st.connected && ["idle", "review"].includes(stName));
   $("#btnEstop").disabled = !st.connected;
 

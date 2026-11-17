@@ -45,6 +45,7 @@ FRANKA_COLOR = [30, 144, 255]
 ERROR_COLOR = [220, 20, 60]
 TARGET_COLOR = [255, 0, 255]
 AXES = ("x", "y", "z")
+POLICY_CAMERAS = ("left", "right", "wrist")   # droid_rollout dataset names
 
 PANDA_MODEL_DIR = Path(__file__).resolve().parents[2] / "franka_control_proxy/models/franka_emika_panda"
 
@@ -165,7 +166,7 @@ class RateLimiter:
         return True
 
 
-def blueprint(window_s: float, cartesian_first: bool = False) -> rrb.Blueprint:
+def blueprint(window_s: float, cartesian_first: bool = False, policy_images: bool = False) -> rrb.Blueprint:
     """3D view of both arms and the EE frames next to one plot per joint (GELLO and Franka
     overlaid) and the Cartesian plots (EE target and Franka overlaid)."""
     scroll = rrb.VisibleTimeRange(
@@ -187,13 +188,18 @@ def blueprint(window_s: float, cartesian_first: bool = False) -> rrb.Blueprint:
         grid_columns=2,
         name="Cartesian",
     )
+    scene = rrb.Spatial3DView(
+        origin="/",
+        contents=["/franka_arm/**", "/gello_arm/**", "/ee/**", "/policy/**", "- /policy/images/**"],
+        name="Franka (solid) / GELLO (transparent) / EE target / policy field",
+    )
+    if policy_images:
+        # the frames the ODE policy computed its last chunk from (droid_rollout --viz-field), box = encoder crop
+        views = [rrb.Spatial2DView(origin=f"/policy/images/{c}", name=f"policy input: {c}") for c in POLICY_CAMERAS]
+        scene = rrb.Vertical(scene, rrb.Horizontal(*views), row_shares=[3, 1])
     return rrb.Blueprint(
         rrb.Horizontal(
-            rrb.Spatial3DView(
-                origin="/",
-                contents=["/franka_arm/**", "/gello_arm/**", "/ee/**", "/policy/**"],
-                name="Franka (solid) / GELLO (transparent) / EE target / policy field",
-            ),
+            scene,
             rrb.Tabs(
                 grid("position", "deg", [gripper]),
                 grid("tracking_error", "deg"),
@@ -354,6 +360,9 @@ def main() -> None:
     parser.add_argument(
         "--recording-id", default="droid_live", help="Rerun recording other processes join (rollout --viz-field)"
     )
+    parser.add_argument(
+        "--policy-images", action="store_true", help="Show the ODE policy input frames under the 3D view"
+    )
     args = parser.parse_args()
 
     import pyzlc
@@ -369,7 +378,7 @@ def main() -> None:
     )
     url = rr.serve_grpc(grpc_port=args.grpc_port, server_memory_limit=args.memory_limit)
     # active, not only default: the viewer otherwise restores the layout it stored for this app id
-    rr.send_blueprint(blueprint(args.window, args.cartesian_first), make_active=True)
+    rr.send_blueprint(blueprint(args.window, args.cartesian_first, args.policy_images), make_active=True)
     log_series_styles()
     # both arms and the EE frames share the base frame, so they overlap exactly when Franka tracks the leader
     rr.log("/", rr.ViewCoordinates.RIGHT_HAND_Z_UP, static=True)

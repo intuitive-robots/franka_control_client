@@ -1,11 +1,18 @@
-"""Plot the GELLO and Franka joint values in real time with Rerun.
+"""Plot the leader (GELLO, Cartesian EE target) and Franka state in real time with Rerun.
 
-Passive: subscribes to the gello node (`pixi run gello`) and the franka_control_proxy and
-streams both to a Rerun gRPC server on this host. Every joint gets its own plot with GELLO
-and Franka overlaid (tabs: position, tracking error Franka - GELLO), next to a 3D view with
-two Panda URDFs in the same scene: the real arm (solid) and the GELLO configuration
-(transparent). Connect a viewer of the same Rerun version (0.26.2) from another machine,
-e.g. a MacBook:
+Passive: subscribes to the gello node (`pixi run gello`), the Cartesian pose commands sent to
+the franka_control_proxy (Quest 3 WebXR teleop, policy rollouts of code/ode_policy) and the
+Franka state, and streams them to a Rerun gRPC server on this host.
+
+- GELLO (joint space): every joint gets its own plot with GELLO and Franka overlaid (tabs:
+  position, tracking error Franka - GELLO); the GELLO configuration is drawn as a transparent
+  Panda next to the real arm (solid). It only appears once the gello node publishes.
+- Cartesian (WebXR teleop, policy rollouts): the commanded EE target is drawn as a coordinate
+  frame (labelled "target") next to the actual EE frame, with x/y/z plots (target vs Franka)
+  and the position / rotation tracking error in the "Cartesian" tab. The target is hidden when
+  no command arrived for --target-timeout s (e.g. while the rollout homes in joint space).
+
+Connect a viewer of the same Rerun version (0.26.2) from another machine, e.g. a MacBook:
 
     mac$ pip install rerun-sdk==0.26.2
     mac$ ssh -p 2222 -L 9876:localhost:9876 dev@<this-host>
@@ -15,11 +22,13 @@ The server keeps a buffer (--memory-limit), so a viewer connecting late still se
 
 Usage:
     python examples/gello_rerun_viz.py --window 10
+    python examples/gello_rerun_viz.py --cartesian-first   # WebXR teleop / policy rollout
 """
 
 from __future__ import annotations
 
 import argparse
+import threading
 import time
 import xml.etree.ElementTree as ET
 from datetime import timedelta
@@ -34,6 +43,8 @@ JOINTS = [f"j{i + 1}" for i in range(7)]
 GELLO_COLOR = [255, 140, 0]
 FRANKA_COLOR = [30, 144, 255]
 ERROR_COLOR = [220, 20, 60]
+TARGET_COLOR = [255, 0, 255]
+AXES = ("x", "y", "z")
 
 PANDA_MODEL_DIR = Path(__file__).resolve().parents[2] / "franka_control_proxy/models/franka_emika_panda"
 
@@ -154,8 +165,9 @@ class RateLimiter:
         return True
 
 
-def blueprint(window_s: float) -> rrb.Blueprint:
-    """3D view of both arms next to one plot per joint (GELLO and Franka overlaid)."""
+def blueprint(window_s: float, cartesian_first: bool = False) -> rrb.Blueprint:
+    """3D view of both arms and the EE frames next to one plot per joint (GELLO and Franka
+    overlaid) and the Cartesian plots (EE target and Franka overlaid)."""
     scroll = rrb.VisibleTimeRange(
         "time",
         start=rrb.TimeRangeBoundary.cursor_relative(seconds=-window_s),
@@ -169,14 +181,24 @@ def blueprint(window_s: float) -> rrb.Blueprint:
         return rrb.Grid(*views, *(extra or []), grid_columns=2, name=group.replace("_", " ").capitalize())
 
     gripper = rrb.TimeSeriesView(origin="/gripper", name="GELLO gripper", time_ranges=scroll)
+    cartesian = rrb.Grid(
+        *(rrb.TimeSeriesView(origin=f"/cartesian/{a}", name=f"EE {a} [mm]", time_ranges=scroll) for a in AXES),
+        rrb.TimeSeriesView(origin="/cartesian_error", name="EE error Franka - target [mm, deg]", time_ranges=scroll),
+        grid_columns=2,
+        name="Cartesian",
+    )
     return rrb.Blueprint(
         rrb.Horizontal(
             rrb.Spatial3DView(
-                origin="/", contents=["/franka_arm/**", "/gello_arm/**"], name="Franka (solid) / GELLO (transparent)"
+                origin="/",
+                contents=["/franka_arm/**", "/gello_arm/**", "/ee/**"],
+                name="Franka (solid) / GELLO (transparent) / EE target",
             ),
             rrb.Tabs(
                 grid("position", "deg", [gripper]),
                 grid("tracking_error", "deg"),
+                cartesian,
+                active_tab=2 if cartesian_first else 0,
             ),
             column_shares=[2, 3],
         ),
@@ -190,21 +212,48 @@ def log_series_styles() -> None:
         rr.log(f"position/{j}/franka", rr.SeriesLines(names="Franka", colors=FRANKA_COLOR), static=True)
         rr.log(f"tracking_error/{j}", rr.SeriesLines(names="Franka - GELLO", colors=ERROR_COLOR), static=True)
     rr.log("gripper", rr.SeriesLines(names="gripper", colors=GELLO_COLOR), static=True)
+    for a in AXES:
+        rr.log(f"cartesian/{a}/target", rr.SeriesLines(names="target", colors=TARGET_COLOR), static=True)
+        rr.log(f"cartesian/{a}/franka", rr.SeriesLines(names="Franka", colors=FRANKA_COLOR), static=True)
+    rr.log("cartesian_error/pos", rr.SeriesLines(names="position [mm]", colors=ERROR_COLOR), static=True)
+    rr.log("cartesian_error/rot", rr.SeriesLines(names="rotation [deg]", colors=[255, 165, 0]), static=True)
 
 
 class Visualizer:
-    def __init__(self, gello_arm: UrdfArm, franka_arm: UrdfArm, plot_rate_hz: float, arm_rate_hz: float) -> None:
+    def __init__(
+        self,
+        gello_arm: UrdfArm,
+        franka_arm: UrdfArm,
+        plot_rate_hz: float,
+        arm_rate_hz: float,
+        gello_alpha: float = 0.4,
+        frame_size: float = 0.1,
+        target_timeout_s: float = 0.5,
+    ) -> None:
         self._gello_arm = gello_arm
         self._franka_arm = franka_arm
+        self._gello_alpha = gello_alpha
+        self._gello_shown = False  # GELLO meshes are logged on the first GELLO message only
+        self._gello_lock = threading.Lock()
         self._gello_q: np.ndarray | None = None  # latest GELLO position [rad] for the tracking error
-        # GELLO publishes at its bus rate (up to ~1 kHz); logging every sample makes the viewer lag
-        self._plot_limit = {name: RateLimiter(plot_rate_hz) for name in ("gello", "gripper", "franka")}
+        self._frame_size = frame_size
+        self._target_timeout_s = target_timeout_s
+        # latest Cartesian command (pos [m], Rotation, local receive time) for the tracking error
+        self._target: tuple[np.ndarray, Rotation, float] | None = None
+        self._target_shown = False
+        # GELLO publishes at its bus rate (up to ~1 kHz) and the rollout / teleop command at up to
+        # 500 Hz; logging every sample makes the viewer lag
+        self._plot_limit = {name: RateLimiter(plot_rate_hz) for name in ("gello", "gripper", "franka", "target")}
         # posing an arm costs ~0.5 ms and 3D needs far less than the plot rate
-        self._arm_limit = {name: RateLimiter(arm_rate_hz) for name in ("gello", "franka")}
+        self._arm_limit = {name: RateLimiter(arm_rate_hz) for name in ("gello", "franka", "target")}
 
     def on_gello_arm_state(self, msg: dict) -> None:
         q = np.asarray(msg["joint_state"], dtype=float)
         self._gello_q = q
+        with self._gello_lock:
+            if not self._gello_shown:
+                self._gello_arm.log_static(alpha=self._gello_alpha)
+                self._gello_shown = True
         # local receive time, so GELLO and Franka share one timeline
         now = time.time()
         rr.set_time("time", timestamp=now)
@@ -221,12 +270,48 @@ class Visualizer:
             rr.set_time("time", timestamp=now)
             rr.log("gripper", rr.Scalars(msg["gripper"]))
 
+    def on_cartesian_command(self, msg: dict) -> None:
+        """EE target sent to the proxy (WebXR teleop, policy rollout): pos [m], rot quaternion xyzw."""
+        now = time.time()
+        pos = np.asarray(msg["pos"], dtype=float).reshape(3)
+        quat = np.asarray(msg["rot"], dtype=float).reshape(4)
+        self._target = (pos, Rotation.from_quat(quat), now)
+        rr.set_time("time", timestamp=now)
+        if self._arm_limit["target"].ready(now) or not self._target_shown:
+            if not self._target_shown:
+                rr.log(
+                    "ee/target/label",
+                    rr.Points3D([[0.0, 0.0, 0.0]], colors=[TARGET_COLOR], radii=0.006, labels=["target"]),
+                )
+                self._target_shown = True
+            rr.log(
+                "ee/target",
+                rr.Transform3D(translation=pos, quaternion=rr.Quaternion(xyzw=quat), axis_length=self._frame_size),
+            )
+        if self._plot_limit["target"].ready(now):
+            for i, a in enumerate(AXES):
+                rr.log(f"cartesian/{a}/target", rr.Scalars(1e3 * pos[i]))
+
     def on_franka_arm_state(self, msg: dict) -> None:
         now = time.time()
         rr.set_time("time", timestamp=now)
         q_rad = np.asarray(msg["q"], dtype=float)
+        ee_pos = np.asarray(msg["EE_pos"], dtype=float)
+        ee_quat = np.asarray(msg["EE_quat"], dtype=float)
+        target = self._target
+        if target is not None and now - target[2] > self._target_timeout_s:
+            target = None  # the leader stopped commanding Cartesian poses (joint-space homing, GELLO, idle)
+        if target is None and self._target_shown:
+            rr.log("ee/target", rr.Clear(recursive=True))
+            self._target_shown = False
         if self._arm_limit["franka"].ready(now):
             self._franka_arm.log_configuration(q_rad)
+            rr.log(
+                "ee/franka",
+                rr.Transform3D(
+                    translation=ee_pos, quaternion=rr.Quaternion(xyzw=ee_quat), axis_length=0.6 * self._frame_size
+                ),
+            )
         if not self._plot_limit["franka"].ready(now):
             return
         q = np.degrees(q_rad)
@@ -235,6 +320,12 @@ class Visualizer:
             rr.log(f"position/{j}/franka", rr.Scalars(q[i]))
             if err is not None:
                 rr.log(f"tracking_error/{j}", rr.Scalars(err[i]))
+        for i, a in enumerate(AXES):
+            rr.log(f"cartesian/{a}/franka", rr.Scalars(1e3 * ee_pos[i]))
+        if target is not None:
+            rr.log("cartesian_error/pos", rr.Scalars(1e3 * np.linalg.norm(ee_pos - target[0])))
+            rot_err = (target[1].inv() * Rotation.from_quat(ee_quat)).magnitude()
+            rr.log("cartesian_error/rot", rr.Scalars(np.degrees(rot_err)))
 
 
 def main() -> None:
@@ -253,6 +344,13 @@ def main() -> None:
     parser.add_argument("--arm-rate", type=float, default=30.0, help="Update rate of the 3D arms [Hz]")
     parser.add_argument("--flush-ms", type=float, default=20.0, help="Rerun send interval (SDK default 200 ms)")
     parser.add_argument("--gello-alpha", type=float, default=0.4, help="Opacity of the GELLO arm (0..1)")
+    parser.add_argument("--frame-size", type=float, default=0.1, help="Axis length of the EE target frame [m]")
+    parser.add_argument(
+        "--target-timeout", type=float, default=0.5, help="Hide the EE target after this long without a command [s]"
+    )
+    parser.add_argument(
+        "--cartesian-first", action="store_true", help="Open on the Cartesian tab (WebXR teleop, rollouts)"
+    )
     args = parser.parse_args()
 
     import pyzlc
@@ -266,22 +364,26 @@ def main() -> None:
     )
     url = rr.serve_grpc(grpc_port=args.grpc_port, server_memory_limit=args.memory_limit)
     # active, not only default: the viewer otherwise restores the layout it stored for this app id
-    rr.send_blueprint(blueprint(args.window), make_active=True)
+    rr.send_blueprint(blueprint(args.window, args.cartesian_first), make_active=True)
     log_series_styles()
-    # both arms share the base frame, so they overlap exactly when Franka tracks GELLO
+    # both arms and the EE frames share the base frame, so they overlap exactly when Franka tracks the leader
     rr.log("/", rr.ViewCoordinates.RIGHT_HAND_Z_UP, static=True)
     franka_arm = UrdfArm("franka_arm", args.urdf, args.mjcf)
     franka_arm.log_static()
     gello_arm = UrdfArm("gello_arm", args.urdf, args.mjcf)
-    gello_arm.log_static(alpha=args.gello_alpha)
+    # GELLO meshes appear with the first GELLO message, so Cartesian teleop / rollouts show only the real arm
     for arm in (franka_arm, gello_arm):
         arm.log_configuration(np.zeros(arm.num_dof))  # until the first state message
 
-    viz = Visualizer(gello_arm, franka_arm, args.plot_rate, args.arm_rate)
+    viz = Visualizer(
+        gello_arm, franka_arm, args.plot_rate, args.arm_rate, args.gello_alpha, args.frame_size, args.target_timeout
+    )
     pyzlc.init("gello_rerun_viz", args.local_ip, group_name=args.group_name, group_port=args.group_port)
     pyzlc.register_subscriber_handler(f"{args.gello_name}/gello_arm_state", viz.on_gello_arm_state)
     pyzlc.register_subscriber_handler(f"{args.gello_name}/gello_gripper_state", viz.on_gello_gripper_state)
     pyzlc.register_subscriber_handler(f"{args.robot_name}/franka_arm_state", viz.on_franka_arm_state)
+    # WebXR teleop and the code/ode_policy rollouts (ACT, ODE) both send RemotePandaArm.send_cartesian_pose_command
+    pyzlc.register_subscriber_handler(f"{args.robot_name}/cartesian_pose_command", viz.on_cartesian_command)
 
     print(f"Rerun server at {url}")
     print(f"  remote: ssh -p 2222 -L {args.grpc_port}:localhost:{args.grpc_port} dev@<this-host>")

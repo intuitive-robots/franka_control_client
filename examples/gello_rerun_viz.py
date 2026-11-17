@@ -191,8 +191,8 @@ def blueprint(window_s: float, cartesian_first: bool = False) -> rrb.Blueprint:
         rrb.Horizontal(
             rrb.Spatial3DView(
                 origin="/",
-                contents=["/franka_arm/**", "/gello_arm/**", "/ee/**"],
-                name="Franka (solid) / GELLO (transparent) / EE target",
+                contents=["/franka_arm/**", "/gello_arm/**", "/ee/**", "/policy/**"],
+                name="Franka (solid) / GELLO (transparent) / EE target / policy field",
             ),
             rrb.Tabs(
                 grid("position", "deg", [gripper]),
@@ -351,6 +351,9 @@ def main() -> None:
     parser.add_argument(
         "--cartesian-first", action="store_true", help="Open on the Cartesian tab (WebXR teleop, rollouts)"
     )
+    parser.add_argument(
+        "--recording-id", default="droid_live", help="Rerun recording other processes join (rollout --viz-field)"
+    )
     args = parser.parse_args()
 
     import pyzlc
@@ -359,6 +362,8 @@ def main() -> None:
     rr.set_global_data_recording(
         rr.RecordingStream(
             "gello_franka_joints",
+            # fixed, so the rollout (droid_rollout --viz-field) logs its velocity field into the same recording
+            recording_id=args.recording_id,
             batcher_config=rr.ChunkBatcherConfig(flush_tick=timedelta(milliseconds=args.flush_ms)),
         )
     )

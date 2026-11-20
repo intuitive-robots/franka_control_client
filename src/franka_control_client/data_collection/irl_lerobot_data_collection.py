@@ -29,6 +29,8 @@ power loss) leaves this session's parquet files without a footer, and the datase
 until they are repaired; earlier sessions' files (resume always starts new ones) stay intact.
 """
 
+import json
+import shutil
 import time
 from collections import deque
 from pathlib import Path
@@ -100,7 +102,7 @@ class IRLLeRobotDataCollection(DataCollectionManager):
         control_pair: Optional[ControlPair] = None,
         fps: int = 50,
         repo_id: Optional[str] = None,
-        image_size: Optional[Tuple[int, int]] = (256, 256),  # (W, H); None keeps the camera size
+        image_size: Optional[Tuple[int, int]] = (640, 360),  # (W, H); None keeps the camera size
         action_offset: int = 1,
         vcodec: str = "libsvtav1",
         encoder_threads: Optional[int] = None,
@@ -171,6 +173,11 @@ class IRLLeRobotDataCollection(DataCollectionManager):
             encoder_threads=encoder_threads,
             batch_encoding_size=1,
         )
+        if self._is_empty_dataset(root):
+            # A session that ended before its first saved episode leaves only metadata behind;
+            # LeRobotDataset cannot load that (it falls back to the Hub), so start fresh instead
+            pyzlc.warning(f"{root} has no episodes, starting a new dataset")
+            shutil.rmtree(root)
         if (root / "meta" / "info.json").exists():
             ds = LeRobotDataset(repo_id, root=root, **encoder)
             if ds.fps != self.fps:
@@ -196,6 +203,20 @@ class IRLLeRobotDataCollection(DataCollectionManager):
             metadata_buffer_size=1,  # episode metadata reaches disk with every episode
             **encoder,
         )
+
+    @staticmethod
+    def _is_empty_dataset(root) -> bool:
+        """True if root holds LeRobot metadata with zero episodes and no data or video files."""
+        info_path = root / "meta" / "info.json"
+        if not info_path.exists():
+            return False
+        try:
+            total_episodes = json.loads(info_path.read_text()).get("total_episodes")
+        except (OSError, ValueError):
+            return False
+        if total_episodes != 0:
+            return False
+        return not any(p.is_file() for sub in ("data", "videos") for p in (root / sub).rglob("*"))
 
     def _commit_unsaved(self) -> None:
         if not self._has_unsaved:

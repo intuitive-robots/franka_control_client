@@ -24,7 +24,7 @@ scipy = "*"
 matplotlib = "*"
 hydra-core = "*"
 omegaconf = "*"
-rerun-sdk = "*"
+rerun-sdk = "==0.43.2"
 tqdm = "*"
 pytest = ">=8.3.5"
 
@@ -45,3 +45,11 @@ gello-viz = "python examples/gello_rerun_viz.py"
 webxr-echo = "python examples/webxr_echo.py"
 # Quest 3 WebXR teleop data collection (Cartesian impedance, clutch on right grip); extra args are appended (--help)
 data-collection-webxr = "python examples/data_collection_droid_webxr_irl.py"
+# EE pos + R6D + gripper dataset from a WebXR LeRobot dataset: convert-ee-r6d <src> <dst>
+convert-ee-r6d = "python dataset_utils/convert_ee_r6d.py"
+# ACT on an ee-r6d dataset, positions relative to the chunk start (--dataset, --output; --help)
+train-act = "python examples/train_act_ee_r6d.py"
+
+# lerobot 0.4 caps rerun-sdk < 0.27 (only its own viz scripts use it); newer Rerun for StateChange
+[pypi-options]
+dependency-overrides = { rerun-sdk = "==0.43.2" }

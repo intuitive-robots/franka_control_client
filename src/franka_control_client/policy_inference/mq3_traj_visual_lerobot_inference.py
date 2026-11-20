@@ -39,7 +39,7 @@ class MQ3TrajVisualLeRobotInference(LeRobotPolicyInference):
                 RobotModelId.FRANKA_PANDA_ROBOTIQ
             )
         else:
-            pyzlc.warn("digital_twin not installed, MQ3 visualization disabled")
+            pyzlc.warning("digital_twin not installed, MQ3 visualization disabled")
         self.last_chunk_traj: Optional[XRTrajectory] = None
         self.history_way_points = []
         self.history_traj: Optional[XRTrajectory] = None

@@ -1,10 +1,11 @@
-"""Quest 3 teleop over WebXR: right-controller pose -> target EE pose (clutch on grip).
+"""Quest 3 teleop over WebXR: right-controller pose -> target EE pose (clutch on grip),
+trigger toggles the gripper between open and closed.
 
 Same interface as MQ3Controller (current_control_signal, reset). While the grip is
 held, the EE target follows the controller relative to where both were at clutch time:
 
-    pos = ee_base + M @ (ctrl - ctrl_base)
-    rot = (M · R_ctrl R_ctrl_base⁻¹ · Mᵀ) * R_ee_base
+    pos = ee_base + k · M @ (ctrl - ctrl_base)
+    rot = (M · R_ctrl R_ctrl_base⁻¹ · Mᵀ)^k * R_ee_base
 
 Safety: the clutch drops on a stale sample (> stale_timeout_s), WS disconnect, new
 connection, recenter or XR session end, and re-engages only on a fresh grip press.
@@ -15,6 +16,15 @@ Realign: pressing the right thumbstick takes the headset's current heading as th
 operator's forward (``yaw_deg`` in the base frame), like a recenter. It also drops the
 clutch. A recenter or a new XR session clears it, because WebXR forward is then the
 headset heading again.
+
+Motion scale: the controller delta since clutch (translation and rotation angle) is scaled by
+``motion_scale`` in [min_motion_scale, 1]. Left thumbstick up/down raises/lowers it
+(exponentially, motion_scale_rate per second at full deflection), pressing it resets to default_motion_scale.
+A change while clutched rebases the clutch, so the target does not jump.
+
+Haptics (optional): while clutched, the right controller vibrates with the external force
+estimate |O_F_ext_hat_K[:3]|, zeroed at clutch time, scaled from deadband_n (off) to
+max_force_n (full). Vibration only, so it cues contact but does not resist the hand.
 """
 
 import logging
@@ -35,6 +45,7 @@ from .webxr_frames import (
     limit_step,
     position_delta,
     rotation_delta,
+    scale_rotation,
     xr_to_base_matrix,
 )
 from .webxr_server import WebXRServer, XRSample
@@ -43,7 +54,15 @@ log = logging.getLogger("webxr")
 
 GRIP_PRESS = 0.9
 GRIP_RELEASE = 0.1
+TRIGGER_PRESS = 0.7
+TRIGGER_RELEASE = 0.3
+STICK_DEADZONE = 0.2
+DEFAULT_YAW_DEG = -90.0  # CLI default operator heading: 90 deg clockwise (seen from above) from base +X
+DEFAULT_MOTION_SCALE = 0.5
+MIN_MOTION_SCALE = 0.1
+MOTION_SCALE_RATE = 1.5  # per second at full stick deflection (exponential)
 GRIPPER_OPEN = 0.0  # Robotiq position: 0.0 open .. 1.0 closed (droid_robotiq.yaml: alpha 1, beta 0)
+GRIPPER_CLOSED = 1.0
 
 
 class _ArmState(Protocol):
@@ -53,8 +72,19 @@ class _ArmState(Protocol):
 
 @dataclass(frozen=True)
 class WorkspaceBounds:
-    lower: Tuple[float, float, float] = (0.25, -0.45, 0.05)
+    lower: Tuple[float, float, float] = (0.25, -0.45, -0.05)
     upper: Tuple[float, float, float] = (0.80, 0.45, 0.75)
+
+
+@dataclass(frozen=True)
+class HapticConfig:
+    deadband_n: float = 4.0
+    max_force_n: float = 30.0
+    smoothing: float = 0.3  # EMA weight of the newest force per control tick (1: none)
+
+
+def force_to_intensity(force_n: float, cfg: HapticConfig) -> float:
+    return float(np.clip((force_n - cfg.deadband_n) / (cfg.max_force_n - cfg.deadband_n), 0.0, 1.0))
 
 
 class WebXRController(RemoteDevice):
@@ -68,7 +98,14 @@ class WebXRController(RemoteDevice):
         max_pos_step: float = 0.01,
         max_rot_step_deg: float = 5.0,
         stale_timeout_s: float = 0.1,
+        haptics: Optional[HapticConfig] = None,
+        default_motion_scale: float = DEFAULT_MOTION_SCALE,
+        min_motion_scale: float = MIN_MOTION_SCALE,
+        motion_scale_rate: float = MOTION_SCALE_RATE,
     ) -> None:
+        if not 0.0 < min_motion_scale <= default_motion_scale <= 1.0:
+            raise ValueError(f"need 0 < min_motion_scale ({min_motion_scale}) <= default_motion_scale "
+                             f"({default_motion_scale}) <= 1")
         super().__init__(name)
         self.panda_arm = panda_arm
         self.server = server if server is not None else WebXRServer()
@@ -80,7 +117,17 @@ class WebXRController(RemoteDevice):
         self.max_pos_step = max_pos_step
         self.max_rot_step = np.deg2rad(max_rot_step_deg)
         self.stale_timeout_s = stale_timeout_s
+        self.min_motion_scale = min_motion_scale
+        self.motion_scale_rate = motion_scale_rate
+        self.default_motion_scale = default_motion_scale
+        self.motion_scale = default_motion_scale
+        self._lstick_prev = False
+        self._last_scale_t: Optional[float] = None
+        self._scale_unlogged = False
         self._state_lock = threading.Lock()
+        self.haptics = haptics
+        self._force_bias: Optional[np.ndarray] = None
+        self._force_filt = 0.0
 
         self.on_control = False
         self._armed = False  # grip seen released since the last de-clutch
@@ -99,6 +146,7 @@ class WebXRController(RemoteDevice):
         self._target_pos: Optional[np.ndarray] = None
         self._target_rot: Optional[R] = None
         self._gripper = GRIPPER_OPEN
+        self._trigger_pressed = False
         self._current_control_signal: Optional[MQ3ControlSignal] = None
         # Target twist (base frame) estimated from consecutive targets, sent as feed-forward so the
         # proxy's reference follows between samples instead of lagging behind the held pose
@@ -122,6 +170,18 @@ class WebXRController(RemoteDevice):
             self._gripper = GRIPPER_OPEN
             self._publish()
 
+    def sync_target(self, pos: Sequence[float], quat: Sequence[float], gripper: float) -> None:
+        """Start the target from the command the robot currently tracks (e.g. a policy's), without
+        moving the arm or the gripper. Takes effect only while de-clutched; the next clutch walks
+        from this target to the clutch base instead of from a stale one."""
+        with self._state_lock:
+            if self.on_control:
+                return
+            self._target_pos = np.asarray(pos, dtype=float).reshape(3)
+            self._target_rot = R.from_quat(np.asarray(quat, dtype=float).reshape(4))
+            self._gripper = float(gripper)
+            self._publish()
+
     @property
     def last_sample(self) -> Optional[XRSample]:
         return self._last_sample
@@ -130,6 +190,7 @@ class WebXRController(RemoteDevice):
     def current_control_signal(self) -> Optional[MQ3ControlSignal]:
         with self._state_lock:
             self._update(time.monotonic())
+            self._update_haptics()
             return self._current_control_signal
 
     # ---- internals (called with _state_lock held) ----
@@ -160,10 +221,31 @@ class WebXRController(RemoteDevice):
         self._last_sample = sample
         self._step(sample)
 
+    def _external_force(self) -> Optional[np.ndarray]:
+        state = self.panda_arm.current_state
+        f = state.get("O_F_ext_hat_K") if state is not None else None
+        return None if f is None else np.asarray(f[:3], dtype=float)
+
+    def _update_haptics(self) -> None:
+        if self.haptics is None:
+            return
+        f = self._external_force() if self.on_control else None
+        if f is None:
+            self._force_filt = 0.0
+            self.server.set_haptic(0.0)
+            return
+        if self._force_bias is None:
+            self._force_bias = f
+        mag = float(np.linalg.norm(f - self._force_bias))
+        a = self.haptics.smoothing
+        self._force_filt = a * mag + (1.0 - a) * self._force_filt
+        self.server.set_haptic(force_to_intensity(self._force_filt, self.haptics))
+
     def _step(self, s: XRSample) -> None:
         if s.stick and not self._stick_prev:
             self._realign(s)
         self._stick_prev = s.stick
+        self._update_scale(s)
         if not self.on_control:
             if s.grip < GRIP_RELEASE:
                 self._armed = True
@@ -175,16 +257,53 @@ class WebXRController(RemoteDevice):
             self._armed = True
             return
 
-        raw_pos = self._base_ee_pos + position_delta(self.m, s.pos, self._base_ctrl_pos)
+        raw_pos, raw_rot = self._raw_target(s)
         raw_pos = clamp_position(raw_pos, self.bounds.lower, self.bounds.upper)
-        raw_rot = rotation_delta(self.m, s.rot, self._base_ctrl_rot) * self._base_ee_rot
         prev_pos, prev_rot = self._target_pos, self._target_rot
         self._target_pos, self._target_rot = limit_step(
             self._target_pos, self._target_rot, raw_pos, raw_rot, self.max_pos_step, self.max_rot_step
         )
         self._update_twist(s, prev_pos, prev_rot)
-        self._gripper = float(np.clip(s.trigger, 0.0, 1.0))
+        self._toggle_gripper(s.trigger)
         self._publish()
+
+    def _raw_target(self, s: XRSample) -> Tuple[np.ndarray, R]:
+        k = self.motion_scale
+        pos = self._base_ee_pos + k * position_delta(self.m, s.pos, self._base_ctrl_pos)
+        rot = scale_rotation(rotation_delta(self.m, s.rot, self._base_ctrl_rot), k) * self._base_ee_rot
+        return pos, rot
+
+    def _update_scale(self, s: XRSample) -> None:
+        t = s.t_client_ms / 1000.0 if s.t_client_ms > 0.0 else s.recv_t
+        dt = None if self._last_scale_t is None else t - self._last_scale_t
+        self._last_scale_t = t
+        pressed = s.left_stick and not self._lstick_prev
+        self._lstick_prev = s.left_stick
+        if pressed:
+            k = self.default_motion_scale
+        elif abs(s.left_stick_y) > STICK_DEADZONE and dt is not None and 0.0 < dt <= self.stale_timeout_s:
+            k = self.motion_scale * float(np.exp(self.motion_scale_rate * s.left_stick_y * dt))
+            k = float(np.clip(k, self.min_motion_scale, 1.0))
+        else:
+            k = self.motion_scale
+        if k != self.motion_scale:
+            if self.on_control:
+                # new base = current target under the old scale, so the change takes effect without a jump
+                self._base_ee_pos, self._base_ee_rot = self._raw_target(s)
+                self._base_ctrl_pos = np.asarray(s.pos, dtype=float)
+                self._base_ctrl_rot = s.rot
+            self.motion_scale = k
+            self._scale_unlogged = True
+        if self._scale_unlogged and (pressed or abs(s.left_stick_y) <= STICK_DEADZONE):
+            self._scale_unlogged = False
+            log.info("WebXR motion scale %.2f", self.motion_scale)
+
+    def _toggle_gripper(self, trigger: float) -> None:
+        if not self._trigger_pressed and trigger >= TRIGGER_PRESS:
+            self._trigger_pressed = True
+            self._gripper = GRIPPER_OPEN if self._gripper >= 0.5 else GRIPPER_CLOSED
+        elif self._trigger_pressed and trigger <= TRIGGER_RELEASE:
+            self._trigger_pressed = False
 
     def _update_twist(self, s: XRSample, prev_pos: np.ndarray, prev_rot: R) -> None:
         # headset clock (regular frame times); arrival time if the page sent none
@@ -235,6 +354,10 @@ class WebXRController(RemoteDevice):
         self._base_ee_rot = R.from_quat(arm_state["EE_quat"])
         self._base_ctrl_pos = np.asarray(s.pos, dtype=float)
         self._base_ctrl_rot = s.rot
+        # a trigger already down at clutch time toggles only after it has been let go
+        self._trigger_pressed = s.trigger > TRIGGER_RELEASE
+        self._force_bias = self._external_force()
+        self._force_filt = 0.0
         # the target keeps its last commanded value; limit_step walks it to the new base
         self.on_control = True
         self.declutch_reason = None
@@ -251,6 +374,7 @@ class WebXRController(RemoteDevice):
         self._base_ee_rot = None
         self._base_ctrl_pos = None
         self._base_ctrl_rot = None
+        self._force_bias = None
         # stop the feed-forward at once, otherwise the proxy keeps following the last twist
         self._pos_vel = np.zeros(3)
         self._rot_vel = np.zeros(3)

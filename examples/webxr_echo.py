@@ -10,8 +10,7 @@ import time
 
 import numpy as np
 
-from franka_control_client.vr.webxr_controller import WebXRController, WorkspaceBounds
-from franka_control_client.vr.webxr_server import WebXRServer
+from franka_control_client.vr.webxr_cli import add_webxr_args, webxr_controller_from_args
 
 # DROID-like start pose, gripper pointing down
 FAKE_EE_POS = [0.45, 0.0, 0.35]
@@ -28,9 +27,7 @@ class FakeArm:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="WebXR teleop echo (no robot)")
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--yaw", type=float, default=0.0, help="Operator heading in the base frame, deg CCW from +X")
+    add_webxr_args(parser)
     parser.add_argument("--rate", type=float, default=10.0, help="Print rate (Hz)")
     return parser.parse_args()
 
@@ -39,8 +36,8 @@ def main() -> None:
     args = parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
     arm = FakeArm()
-    server = WebXRServer(args.host, args.port)
-    ctrl = WebXRController("webxr", arm, server=server, yaw_deg=args.yaw, bounds=WorkspaceBounds())
+    ctrl = webxr_controller_from_args(args, arm)
+    server = ctrl.server
     print(f"Open http://localhost:{args.port} in the Quest Browser. Ctrl-C to quit.")
     next_print = time.monotonic()
     try:

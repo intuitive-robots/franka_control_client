@@ -41,6 +41,7 @@ function connect() {
     if (sock !== ws) return;
     const msg = JSON.parse(ev.data);
     if (msg.type === "pong") { lastPong = performance.now(); rttMs = lastPong - msg.t; }
+    else if (msg.type === "haptic") forceHaptic(msg.v);
   };
 }
 
@@ -78,12 +79,24 @@ document.addEventListener("visibilitychange", () => {
 // ---- haptics on the right controller: nothing is rendered in XR, so this is the only in-headset feedback ----
 // one short pulse: connected; two strong pulses: connection lost
 let hapticActuator = null;
+let buzzing = false;
 async function buzz(pattern) {
   if (!hapticActuator) return;
-  for (const [intensity, ms] of pattern) {
-    try { if (intensity > 0) await hapticActuator.pulse(intensity, ms); else await new Promise((r) => setTimeout(r, ms)); }
-    catch (_) { return; }
-  }
+  buzzing = true;
+  try {
+    for (const [intensity, ms] of pattern) {
+      if (intensity > 0) await hapticActuator.pulse(intensity, ms); else await new Promise((r) => setTimeout(r, ms));
+    }
+  } catch (_) { /* controller gone */ }
+  finally { buzzing = false; }
+}
+
+// contact force from the server (--haptics), sent every ~25 ms while non-zero. Each pulse replaces the
+// previous one and outlasts the send period, so the motor runs smoothly and stops if messages stop.
+const FORCE_PULSE_MS = 60;
+function forceHaptic(v) {
+  if (!hapticActuator || buzzing) return;
+  hapticActuator.pulse(v > 0 ? v : 0, v > 0 ? FORCE_PULSE_MS : 1).catch(() => {});
 }
 
 // ---- send rate ----
@@ -96,6 +109,7 @@ let refSpace = null;
 let gl = null;
 let seq = 0;
 let stickPrev = false;
+let lstickPrev = false;
 let aPrev = false;
 let bPrev = false;
 let xPrev = false;
@@ -157,14 +171,18 @@ function onFrame(t, frame) {
   const viewer = frame.getViewerPose(refSpace);
   const hq = viewer ? viewer.transform.orientation : null;
 
-  // left controller: only its X / Y buttons are used (xr-standard: 4 = X, 5 = Y); sent with the right pose
+  // left controller, sent with the right pose (xr-standard: buttons 3 = stick press, 4 = X, 5 = Y; axis 3 = stick y, down +)
   let x = false;
   let y = false;
+  let lstick = false;
+  let lstickY = 0;
   for (const src of s.inputSources) {
     if (src.handedness !== "left" || !src.gamepad) continue;
     const lb = src.gamepad.buttons;
     x = !!(lb[4] && lb[4].pressed);
     y = !!(lb[5] && lb[5].pressed);
+    lstick = !!(lb[3] && lb[3].pressed);
+    lstickY = src.gamepad.axes.length > 3 ? -src.gamepad.axes[3] : 0;
   }
 
   for (const src of s.inputSources) {
@@ -190,8 +208,12 @@ function onFrame(t, frame) {
       stick: !!(b[3] && b[3].pressed), // xr-standard: 3 = thumbstick press
       x,
       y,
+      lstick, // motion scale: stick up/down changes it, press resets to the default
+      lstick_y: lstickY,
       head: hq ? [hq.x, hq.y, hq.z, hq.w] : null,
     };
+    if (msg.lstick && !lstickPrev) { buzz([[0.5, 30]]); logLine("motion scale reset"); }
+    lstickPrev = msg.lstick;
     if (msg.stick && !stickPrev) { buzz([[0.8, 40], [0, 60], [0.8, 40]]); logLine("realign"); }
     stickPrev = msg.stick;
     // data collection: A starts an episode, B saves it; a short tick confirms the press

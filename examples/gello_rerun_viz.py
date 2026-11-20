@@ -11,6 +11,8 @@ Franka state, and streams them to a Rerun gRPC server on this host.
   frame (labelled "target") next to the actual EE frame, with x/y/z plots (target vs Franka)
   and the position / rotation tracking error in the "Cartesian" tab. The target is hidden when
   no command arrived for --target-timeout s (e.g. while the rollout homes in joint space).
+- Cameras (--cameras zed_left zed_right ...): the ZED node frames, JPEG-compressed at --camera-rate,
+  in a row under the 3D view.
 
 Connect a viewer of the same Rerun version (0.26.2) from another machine, e.g. a MacBook:
 
@@ -18,11 +20,13 @@ Connect a viewer of the same Rerun version (0.26.2) from another machine, e.g. a
     mac$ ssh -p 2222 -L 9876:localhost:9876 dev@<this-host>
     mac$ rerun rerun+http://localhost:9876/proxy
 
-The server keeps a buffer (--memory-limit), so a viewer connecting late still sees the history.
+The server keeps a buffer (--memory-limit, default 4 GB, oldest data dropped first), so a viewer connecting
+late still sees the history.
 
 Usage:
     python examples/gello_rerun_viz.py --window 10
     python examples/gello_rerun_viz.py --cartesian-first   # WebXR teleop / policy rollout
+    python examples/gello_rerun_viz.py --cartesian-first --cameras zed_left zed_right zed_wrist
 """
 
 from __future__ import annotations
@@ -45,7 +49,7 @@ FRANKA_COLOR = [30, 144, 255]
 ERROR_COLOR = [220, 20, 60]
 TARGET_COLOR = [255, 0, 255]
 AXES = ("x", "y", "z")
-POLICY_CAMERAS = ("left", "right", "wrist")   # droid_rollout dataset names
+POLICY_CAMERAS = ("left", "right", "wrist", "wrist_right")   # droid_rollout dataset names (v0 policies: no wrist_right)
 
 PANDA_MODEL_DIR = Path(__file__).resolve().parents[2] / "franka_control_proxy/models/franka_emika_panda"
 
@@ -166,7 +170,9 @@ class RateLimiter:
         return True
 
 
-def blueprint(window_s: float, cartesian_first: bool = False, policy_images: bool = False) -> rrb.Blueprint:
+def blueprint(
+    window_s: float, cartesian_first: bool = False, policy_images: bool = False, cameras: list[str] | None = None
+) -> rrb.Blueprint:
     """3D view of both arms and the EE frames next to one plot per joint (GELLO and Franka
     overlaid) and the Cartesian plots (EE target and Franka overlaid)."""
     scroll = rrb.VisibleTimeRange(
@@ -196,6 +202,11 @@ def blueprint(window_s: float, cartesian_first: bool = False, policy_images: boo
     if policy_images:
         # the frames the ODE policy computed its last chunk from (droid_rollout --viz-field), box = encoder crop
         views = [rrb.Spatial2DView(origin=f"/policy/images/{c}", name=f"policy input: {c}") for c in POLICY_CAMERAS]
+        # who commands the robot (policy / human / none), from droid_rollout
+        control = rrb.StateTimelineView(origin="/rollout/control", name="control", time_ranges=scroll)
+        scene = rrb.Vertical(scene, rrb.Horizontal(*views), control, row_shares=[3, 1, 0.4])
+    elif cameras:
+        views = [rrb.Spatial2DView(origin=f"/cameras/{c}", name=c) for c in cameras]
         scene = rrb.Vertical(scene, rrb.Horizontal(*views), row_shares=[3, 1])
     return rrb.Blueprint(
         rrb.Horizontal(
@@ -287,16 +298,30 @@ class Visualizer:
             if not self._target_shown:
                 rr.log(
                     "ee/target/label",
-                    rr.Points3D([[0.0, 0.0, 0.0]], colors=[TARGET_COLOR], radii=0.006, labels=["target"]),
+                    rr.Points3D([[0.0, 0.0, 0.0]], colors=[TARGET_COLOR], radii=0.002, labels=["target"]),
                 )
                 self._target_shown = True
             rr.log(
                 "ee/target",
-                rr.Transform3D(translation=pos, quaternion=rr.Quaternion(xyzw=quat), axis_length=self._frame_size),
+                rr.Transform3D(translation=pos, quaternion=rr.Quaternion(xyzw=quat)),
+                rr.TransformAxes3D(self._frame_size),
             )
         if self._plot_limit["target"].ready(now):
             for i, a in enumerate(AXES):
                 rr.log(f"cartesian/{a}/target", rr.Scalars(1e3 * pos[i]))
+
+    def camera_handler(self, topic: str, rate_hz: float, jpeg_quality: int):
+        limit = RateLimiter(rate_hz)
+
+        def on_frame(msg: dict) -> None:
+            now = time.time()
+            if not limit.ready(now):
+                return
+            hwc = np.frombuffer(msg["rgb_data"], dtype=np.uint8).reshape(msg["height"], msg["width"], msg["channels"])
+            rr.set_time("time", timestamp=now)
+            rr.log(f"cameras/{topic}", rr.Image(hwc).compress(jpeg_quality=jpeg_quality))
+
+        return on_frame
 
     def on_franka_arm_state(self, msg: dict) -> None:
         now = time.time()
@@ -314,9 +339,8 @@ class Visualizer:
             self._franka_arm.log_configuration(q_rad)
             rr.log(
                 "ee/franka",
-                rr.Transform3D(
-                    translation=ee_pos, quaternion=rr.Quaternion(xyzw=ee_quat), axis_length=0.6 * self._frame_size
-                ),
+                rr.Transform3D(translation=ee_pos, quaternion=rr.Quaternion(xyzw=ee_quat)),
+                rr.TransformAxes3D(0.6 * self._frame_size),
             )
         if not self._plot_limit["franka"].ready(now):
             return
@@ -342,7 +366,9 @@ def main() -> None:
     parser.add_argument("--group-name", default="DroidGroup")
     parser.add_argument("--group-port", type=int, default=7730)
     parser.add_argument("--grpc-port", type=int, default=9876, help="Port the Rerun viewer connects to")
-    parser.add_argument("--memory-limit", default="25%", help="Rerun server buffer, e.g. '2GB' or '25%%'")
+    parser.add_argument(
+        "--memory-limit", default="4GB", help="Rerun server buffer (oldest data dropped beyond), e.g. '2GB' or '25%%'"
+    )
     parser.add_argument("--window", type=float, default=10.0, help="Visible time window of the plots [s]")
     parser.add_argument("--urdf", type=Path, default=PANDA_MODEL_DIR / "panda_arm.urdf", help="Kinematics")
     parser.add_argument("--mjcf", type=Path, default=PANDA_MODEL_DIR / "panda_nohand.xml", help="Visual meshes")
@@ -363,6 +389,11 @@ def main() -> None:
     parser.add_argument(
         "--policy-images", action="store_true", help="Show the ODE policy input frames under the 3D view"
     )
+    parser.add_argument(
+        "--cameras", nargs="*", default=[], help="ZED topics to show, e.g. zed_left zed_right zed_wrist"
+    )
+    parser.add_argument("--camera-rate", type=float, default=10.0, help="Max. frame rate per camera [Hz]")
+    parser.add_argument("--jpeg-quality", type=int, default=80)
     args = parser.parse_args()
 
     import pyzlc
@@ -378,7 +409,7 @@ def main() -> None:
     )
     url = rr.serve_grpc(grpc_port=args.grpc_port, server_memory_limit=args.memory_limit)
     # active, not only default: the viewer otherwise restores the layout it stored for this app id
-    rr.send_blueprint(blueprint(args.window, args.cartesian_first, args.policy_images), make_active=True)
+    rr.send_blueprint(blueprint(args.window, args.cartesian_first, args.policy_images, args.cameras), make_active=True)
     log_series_styles()
     # both arms and the EE frames share the base frame, so they overlap exactly when Franka tracks the leader
     rr.log("/", rr.ViewCoordinates.RIGHT_HAND_Z_UP, static=True)
@@ -398,6 +429,8 @@ def main() -> None:
     pyzlc.register_subscriber_handler(f"{args.robot_name}/franka_arm_state", viz.on_franka_arm_state)
     # WebXR teleop and the code/ode_policy rollouts (ACT, ODE) both send RemotePandaArm.send_cartesian_pose_command
     pyzlc.register_subscriber_handler(f"{args.robot_name}/cartesian_pose_command", viz.on_cartesian_command)
+    for topic in args.cameras:
+        pyzlc.register_subscriber_handler(topic, viz.camera_handler(topic, args.camera_rate, args.jpeg_quality))
 
     print(f"Rerun server at {url}")
     print(f"  remote: ssh -p 2222 -L {args.grpc_port}:localhost:{args.grpc_port} dev@<this-host>")

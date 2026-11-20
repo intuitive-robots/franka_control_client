@@ -64,6 +64,11 @@ def rotation_delta(m: np.ndarray, rot: Sequence[float], base_rot: Sequence[float
     return R.from_matrix(m @ delta_xr.as_matrix() @ m.T)
 
 
+def scale_rotation(rot: R, k: float) -> R:
+    """Same axis, ``k`` times the angle."""
+    return R.from_rotvec(k * rot.as_rotvec())
+
+
 def clamp_position(pos: np.ndarray, lower: Sequence[float], upper: Sequence[float]) -> np.ndarray:
     return np.clip(pos, np.asarray(lower, dtype=float), np.asarray(upper, dtype=float))
 

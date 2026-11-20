@@ -19,6 +19,8 @@ from aiohttp import WSMsgType, web
 
 STATIC_DIR = Path(__file__).parent / "webxr" / "static"
 STATS_PERIOD_S = 5.0
+HAPTIC_PERIOD_S = 0.025
+HAPTIC_TIMEOUT_S = 0.1  # a value not refreshed within this is treated as 0
 
 log = logging.getLogger("webxr")
 
@@ -39,6 +41,8 @@ class XRSample:
     head_rot: Optional[Tuple[float, float, float, float]] = None  # headset orientation, xyzw
     x: bool = False  # left controller X / Y
     y: bool = False
+    left_stick: bool = False  # left thumbstick pressed (motion scale reset)
+    left_stick_y: float = 0.0  # left thumbstick, -1 (down) .. 1 (up)
 
 
 @dataclass(frozen=True)
@@ -80,6 +84,8 @@ class WebXRServer:
         self._y_presses = 0
         self._rtt_ms: Optional[float] = None
         self._arrivals: Deque[float] = deque()
+        self._haptic = 0.0
+        self._haptic_t = 0.0
         self._thread: Optional[threading.Thread] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._started = threading.Event()
@@ -107,6 +113,16 @@ class WebXRServer:
                 self._sample, self._conn_id, self._connected, self._reset_count, self._rtt_ms,
                 self._frame_reset_count, self._a_presses, self._b_presses, self._x_presses, self._y_presses,
             )
+
+    def set_haptic(self, intensity: float) -> None:
+        """Vibration strength 0..1 of the right controller; call it every control tick to keep it on."""
+        with self._lock:
+            self._haptic = float(np.clip(intensity, 0.0, 1.0))
+            self._haptic_t = time.monotonic()
+
+    def _haptic_value(self) -> float:
+        with self._lock:
+            return self._haptic if time.monotonic() - self._haptic_t <= HAPTIC_TIMEOUT_S else 0.0
 
     def stats(self) -> XRStats:
         now = time.monotonic()
@@ -166,6 +182,7 @@ class WebXRServer:
             self._arrivals.clear()
         log.info("WebXR client %d connected from %s", conn_id, request.remote)
         last_seq = -1
+        haptic_task = asyncio.ensure_future(self._send_haptics(ws, conn_id))
         a_prev = b_prev = x_prev = y_prev = True  # a press counts only after the button was seen released
         try:
             async for msg in ws:
@@ -197,6 +214,8 @@ class WebXRServer:
                         head_rot=tuple(float(v) for v in data["head"]) if data.get("head") else None,
                         x=bool(data.get("x", False)),
                         y=bool(data.get("y", False)),
+                        left_stick=bool(data.get("lstick", False)),
+                        left_stick_y=float(data.get("lstick_y", 0.0)),
                     )
                     with self._lock:
                         if conn_id == self._conn_id:
@@ -226,6 +245,7 @@ class WebXRServer:
         except (KeyError, TypeError, ValueError) as exc:
             log.warning("WebXR client %d sent a malformed message, closing: %s", conn_id, exc)
         finally:
+            haptic_task.cancel()
             with self._lock:
                 if conn_id == self._conn_id:
                     self._connected = False
@@ -234,6 +254,21 @@ class WebXRServer:
                     self._arrivals.clear()
             log.info("WebXR client %d disconnected", conn_id)
         return ws
+
+    async def _send_haptics(self, ws: web.WebSocketResponse, conn_id: int) -> None:
+        # sends while the value is non-zero, plus one 0 to stop the motor
+        prev = 0.0
+        while not ws.closed:
+            await asyncio.sleep(HAPTIC_PERIOD_S)
+            if conn_id != self._conn_id:
+                return
+            v = self._haptic_value()
+            if v > 0.0 or prev > 0.0:
+                try:
+                    await ws.send_str(json.dumps({"type": "haptic", "v": round(v, 3)}))
+                except ConnectionError:
+                    return
+            prev = v
 
     async def _log_stats(self) -> None:
         while True:

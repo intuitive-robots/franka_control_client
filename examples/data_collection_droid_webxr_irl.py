@@ -38,8 +38,8 @@ from franka_control_client.control_pair.mq3_panda_control_pair import (
     MQ3PandaControlPair,
 )
 from franka_control_client.vr.webxr_buttons import WebXRButtons
-from franka_control_client.vr.webxr_controller import WebXRController, WorkspaceBounds
-from franka_control_client.vr.webxr_server import WebXRServer
+from franka_control_client.vr.webxr_cli import add_webxr_args, webxr_controller_from_args
+from franka_control_client.vr.webxr_controller import WorkspaceBounds
 
 
 def parse_args() -> argparse.Namespace:
@@ -51,9 +51,7 @@ def parse_args() -> argparse.Namespace:
         default=Path("/home/irl-admin/new_data_collection"),
         help="Recordings go to <data-dir>/<task>",
     )
-    parser.add_argument("--yaw", type=float, default=0.0, help="Operator heading in the base frame, deg CCW from +X")
-    parser.add_argument("--host", default="127.0.0.1", help="WebXR server address (adb reverse targets 127.0.0.1)")
-    parser.add_argument("--port", type=int, default=8000)
+    add_webxr_args(parser.add_argument_group("Quest 3 (WebXR)"))
     parser.add_argument(
         "--bounds",
         type=float,
@@ -71,6 +69,8 @@ def parse_args() -> argparse.Namespace:
     rec.add_argument("--instruction", help="Language instruction stored with every frame (default: task name)")
     rec.add_argument("--image-size", type=int, nargs=2, default=[256, 256], metavar=("W", "H"),
                      help="Stored camera size; 0 0 keeps the camera resolution")
+    rec.add_argument("--wrist-right", action="store_true",
+                     help="Also record the wrist ZED's right lens (zed_wrist_right, needs right_publish_topic in its config)")
     rec.add_argument("--action-offset", type=int, default=1, help="action[t] = leader command at t + offset")
     rec.add_argument("--vcodec", default="libsvtav1",
                      help="libsvtav1 (LeRobot default), h264, hevc, h264_nvenc or auto (hardware if available)")
@@ -102,14 +102,9 @@ if __name__ == "__main__":
             break
         time.sleep(0.1)
     bounds = WorkspaceBounds(tuple(args.bounds[:3]), tuple(args.bounds[3:])) if args.bounds else WorkspaceBounds()
-    leader = WebXRController(
-        "webxr",
-        follower.panda_arm,
-        server=WebXRServer(args.host, args.port),
-        yaw_deg=args.yaw,
-        bounds=bounds,
-    )
-    pyzlc.info(f"WebXR teleop: yaw {args.yaw} deg, bounds {bounds.lower}..{bounds.upper}")
+    leader = webxr_controller_from_args(args, follower.panda_arm, bounds)
+    pyzlc.info(f"WebXR teleop: yaw {args.yaw} deg, bounds {bounds.lower}..{bounds.upper}, "
+               f"motion scale {args.motion_scale}")
     control_pair = MQ3PandaControlPair(leader, follower)
     #camera frequency controlled individually
     #cams 25hz 0.04
@@ -121,6 +116,9 @@ if __name__ == "__main__":
     data_collectors.append(camera_left)
     data_collectors.append(camera_right)
     data_collectors.append(camera_wrist)
+    if args.wrist_right:
+        data_collectors.append(ImageDataWrapper(CameraDevice("zed_wrist_right", preview=False),
+                                                capture_interval=0.04, hw_name="zed_wrist_right"))
     data_collectors.append(MQ3DataWrapper(leader, hw_name="webxr"))
     data_collectors.append(PandaArmDataWrapper(follower.panda_arm))
     data_collectors.append(RobotiqGripperDataWrapper(follower.robotiq_gripper))

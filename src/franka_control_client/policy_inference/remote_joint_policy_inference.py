@@ -95,7 +95,7 @@ class RemoteJointPolicyInference(PolicyInferenceManager):
             )
         server_fps = health.get("fps")
         if server_fps is not None and int(server_fps) != int(self.fps):
-            pyzlc.warn(
+            pyzlc.warning(
                 f"Server action rate is {server_fps} Hz but fps={self.fps}; "
                 f"using the server's {server_fps} Hz."
             )

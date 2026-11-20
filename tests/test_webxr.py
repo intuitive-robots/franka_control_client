@@ -119,11 +119,13 @@ class FakeServer:
     def start(self):
         pass
 
-    def push(self, pos=(0, 1, 0), rot=IDENT, grip=0.0, trigger=0.0, age=0.0, stick=False, head=IDENT, t_ms=0.0):
+    def push(self, pos=(0, 1, 0), rot=IDENT, grip=0.0, trigger=0.0, age=0.0, stick=False, head=IDENT, t_ms=0.0,
+             lstick=False, lstick_y=0.0):
         self.seq += 1
         self.sample = XRSample(self.seq, t_ms, tuple(pos), tuple(rot), trigger, grip, False, False,
                                time.monotonic() - age, self.conn_id, stick=stick,
-                               head_rot=tuple(head) if head is not None else None)
+                               head_rot=tuple(head) if head is not None else None,
+                               left_stick=lstick, left_stick_y=lstick_y)
 
     def snapshot(self):
         return XRSnapshot(self.sample, self.conn_id, self.connected, self.reset_count, None, self.frame_reset_count)
@@ -131,6 +133,7 @@ class FakeServer:
 
 def make(arm=None, **kw):
     server = FakeServer()
+    kw.setdefault("default_motion_scale", 1.0)
     ctrl = WebXRController("webxr", arm or FakeArm(), server=server, **kw)
     return ctrl, server
 
@@ -183,11 +186,41 @@ def test_forward_motion_moves_ee_plus_x():
     np.testing.assert_allclose(R.from_quat(sig["rot"]).as_quat(), R.from_quat(EE_QUAT).as_quat(), atol=1e-9)
 
 
-def test_trigger_drives_gripper_and_holds_on_declutch():
+def test_trigger_toggles_gripper_and_holds_on_declutch():
     ctrl, server = make()
     engage(ctrl, server)
-    assert step(ctrl, server, grip=1.0, trigger=0.7)["gripper_width"] == pytest.approx(0.7)
-    assert step(ctrl, server, grip=0.0, trigger=0.0)["gripper_width"] == pytest.approx(0.7)
+    assert step(ctrl, server, grip=1.0, trigger=0.5)["gripper_width"] == 0.0  # below press: no toggle
+    assert step(ctrl, server, grip=1.0, trigger=0.8)["gripper_width"] == 1.0
+    assert step(ctrl, server, grip=1.0, trigger=1.0)["gripper_width"] == 1.0  # held: no repeat
+    assert step(ctrl, server, grip=1.0, trigger=0.5)["gripper_width"] == 1.0  # not yet re-armed
+    assert step(ctrl, server, grip=1.0, trigger=0.8)["gripper_width"] == 1.0
+    step(ctrl, server, grip=1.0, trigger=0.1)
+    assert step(ctrl, server, grip=1.0, trigger=0.8)["gripper_width"] == 0.0
+    step(ctrl, server, grip=1.0, trigger=0.1)
+    assert step(ctrl, server, grip=1.0, trigger=0.8)["gripper_width"] == 1.0
+    assert step(ctrl, server, grip=0.0, trigger=0.0)["gripper_width"] == 1.0  # de-clutch holds
+
+
+def test_trigger_ignored_while_declutched():
+    ctrl, server = make()
+    assert step(ctrl, server, grip=0.0, trigger=1.0)["gripper_width"] == 0.0
+
+
+def test_trigger_held_at_clutch_counts_only_after_release():
+    ctrl, server = make()
+    step(ctrl, server, grip=0.0, trigger=1.0)
+    assert step(ctrl, server, grip=1.0, trigger=1.0)["gripper_width"] == 0.0
+    assert ctrl.on_control
+    step(ctrl, server, grip=1.0, trigger=0.0)
+    assert step(ctrl, server, grip=1.0, trigger=1.0)["gripper_width"] == 1.0
+
+
+def test_trigger_toggles_from_synced_gripper():
+    ctrl, server = make()
+    ctrl.sync_target(EE_POS, EE_QUAT, 1.0)
+    engage(ctrl, server)
+    assert ctrl.current_control_signal["gripper_width"] == 1.0
+    assert step(ctrl, server, grip=1.0, trigger=1.0)["gripper_width"] == 0.0
 
 
 def test_stale_sample_declutches_and_needs_fresh_press():
@@ -375,6 +408,66 @@ def test_no_twist_without_a_valid_time_step():
     engage_at(ctrl, server, 1000.0)
     sig = step(ctrl, server, pos=(0, 1, -0.005), grip=1.0, t_ms=1014.0)  # same frame time
     np.testing.assert_allclose(sig["pos_vel"], [0, 0, 0])
+
+
+# ---- motion scale ----
+
+def test_left_stick_changes_scale_within_limits_and_press_resets():
+    ctrl, server = make(min_motion_scale=0.2, motion_scale_rate=1.5)
+    step(ctrl, server, t_ms=1000.0, lstick_y=-1.0)  # no previous sample time: no change
+    assert ctrl.motion_scale == 1.0
+    step(ctrl, server, t_ms=1050.0, lstick_y=-1.0)
+    assert ctrl.motion_scale == pytest.approx(np.exp(-0.075))
+    step(ctrl, server, t_ms=1100.0, lstick_y=0.1)  # deadzone
+    assert ctrl.motion_scale == pytest.approx(np.exp(-0.075))
+    for i in range(60):
+        step(ctrl, server, t_ms=1150.0 + 50 * i, lstick_y=-1.0)
+    assert ctrl.motion_scale == pytest.approx(0.2)
+    step(ctrl, server, t_ms=5000.0, lstick_y=1.0)
+    assert ctrl.motion_scale == pytest.approx(0.2)  # gap > stale_timeout_s: not a valid time step
+    step(ctrl, server, t_ms=5050.0, lstick_y=1.0)
+    assert ctrl.motion_scale == pytest.approx(0.2 * np.exp(0.075))
+    step(ctrl, server, t_ms=5100.0, lstick=True)
+    assert ctrl.motion_scale == 1.0
+    for i in range(60):
+        step(ctrl, server, t_ms=5150.0 + 50 * i, lstick_y=1.0)
+    assert ctrl.motion_scale == 1.0  # 1:1 is the maximum
+
+
+def test_default_scale_is_half_and_press_resets_to_it():
+    server = FakeServer()
+    ctrl = WebXRController("webxr", FakeArm(), server=server)
+    assert ctrl.motion_scale == 0.5
+    step(ctrl, server, t_ms=1000.0)
+    step(ctrl, server, t_ms=1050.0, lstick_y=1.0)
+    assert ctrl.motion_scale > 0.5
+    step(ctrl, server, t_ms=1100.0, lstick=True)
+    assert ctrl.motion_scale == 0.5
+    engage(ctrl, server)
+    sig = step(ctrl, server, pos=(0, 1, -0.008), grip=1.0)
+    np.testing.assert_allclose(sig["pos"], [0.504, 0.0, 0.4], atol=1e-9)
+
+
+def test_scaled_translation_and_rotation():
+    ctrl, server = make()
+    ctrl.motion_scale = 0.5
+    engage(ctrl, server)
+    turn = R.from_rotvec([0, np.deg2rad(4.0), 0]).as_quat()  # about XR up = base +Z
+    sig = step(ctrl, server, pos=(0, 1, -0.008), rot=turn, grip=1.0)
+    np.testing.assert_allclose(sig["pos"], [0.504, 0.0, 0.4], atol=1e-9)
+    rel = R.from_quat(sig["rot"]) * R.from_quat(EE_QUAT).inv()
+    np.testing.assert_allclose(rel.as_rotvec(), [0, 0, np.deg2rad(2.0)], atol=1e-9)
+
+
+def test_scale_change_while_clutched_does_not_jump():
+    ctrl, server = make(motion_scale_rate=np.log(2) / 0.05)  # full deflection for 50 ms halves the scale
+    engage_at(ctrl, server, 1000.0)
+    step(ctrl, server, pos=(0, 1, -0.008), grip=1.0, t_ms=1028.0)
+    sig = step(ctrl, server, pos=(0, 1, -0.008), grip=1.0, t_ms=1078.0, lstick_y=-1.0)
+    assert ctrl.motion_scale == pytest.approx(0.5)
+    np.testing.assert_allclose(sig["pos"], [0.508, 0.0, 0.4], atol=1e-9)
+    sig = step(ctrl, server, pos=(0, 1, -0.016), grip=1.0, t_ms=1092.0)
+    np.testing.assert_allclose(sig["pos"], [0.512, 0.0, 0.4], atol=1e-9)
 
 
 def test_webxr_modules_do_not_import_simpub():
@@ -627,3 +720,96 @@ def test_pyzlc_heartbeat_patch_applies():
         assert MulticastWorker._multicast_loop is _resilient_multicast_loop
     finally:
         MulticastWorker._multicast_loop = original
+
+
+# ---- haptics ----
+
+class HapticServer(FakeServer):
+    def __init__(self):
+        super().__init__()
+        self.haptic = None
+
+    def set_haptic(self, v):
+        self.haptic = v
+
+
+def make_haptic(force=(0.0, 0.0, 0.0), **kw):
+    from franka_control_client.vr.webxr_controller import HapticConfig
+
+    arm = FakeArm()
+    arm.current_state["O_F_ext_hat_K"] = [*force, 0.0, 0.0, 0.0]
+    server = HapticServer()
+    ctrl = WebXRController("webxr", arm, server=server,
+                           haptics=HapticConfig(deadband_n=4.0, max_force_n=24.0, smoothing=1.0), **kw)
+    return ctrl, server, arm
+
+
+def test_force_to_intensity():
+    from franka_control_client.vr.webxr_controller import HapticConfig, force_to_intensity
+
+    cfg = HapticConfig(deadband_n=4.0, max_force_n=24.0)
+    assert force_to_intensity(3.0, cfg) == 0.0
+    assert force_to_intensity(14.0, cfg) == pytest.approx(0.5)
+    assert force_to_intensity(100.0, cfg) == 1.0
+
+
+def test_haptics_zeroed_at_clutch_and_off_when_declutched():
+    ctrl, server, arm = make_haptic(force=(0.0, 0.0, 6.0))  # bias, above the deadband
+    step(ctrl, server)
+    assert server.haptic == 0.0
+    engage(ctrl, server)
+    step(ctrl, server, grip=1.0)
+    assert server.haptic == 0.0  # the force at clutch time is the zero
+    arm.current_state["O_F_ext_hat_K"] = [0.0, 0.0, 6.0 - 14.0, 0, 0, 0]  # 14 N push along -z
+    step(ctrl, server, grip=1.0)
+    assert server.haptic == pytest.approx(0.5)
+    step(ctrl, server, grip=0.0)
+    assert not ctrl.on_control and server.haptic == 0.0
+
+
+def test_no_haptic_calls_without_config():
+    ctrl, server = make()
+    engage(ctrl, server)  # FakeServer has no set_haptic
+
+
+def test_server_sends_haptics_until_zero_or_timeout():
+    import asyncio
+    import json
+    import socket
+
+    import aiohttp
+
+    from franka_control_client.vr.webxr_server import WebXRServer
+
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+    server = WebXRServer("127.0.0.1", port)
+    server.start()
+
+    async def run():
+        values = []
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(f"http://127.0.0.1:{port}/ws") as ws:
+                t0 = time.monotonic()
+                while time.monotonic() - t0 < 0.15:
+                    server.set_haptic(0.7)
+                    await asyncio.sleep(0.01)
+                # stop refreshing: the value times out to one final 0, then nothing
+                while True:
+                    try:
+                        msg = await ws.receive(timeout=0.4)
+                    except asyncio.TimeoutError:
+                        break
+                    data = json.loads(msg.data)
+                    if data["type"] == "haptic":
+                        values.append(data["v"])
+        return values
+
+    try:
+        values = asyncio.run(run())
+        assert values and values[-1] == 0.0
+        assert 0.7 in values and all(v in (0.0, 0.7) for v in values)
+        assert values.count(0.0) == 1
+    finally:
+        server.stop()

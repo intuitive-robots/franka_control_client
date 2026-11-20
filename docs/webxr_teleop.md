@@ -31,17 +31,24 @@ pixi run -m code/franka_control_client data-collection-webxr --help
 On the page, press **Enter XR**. The page shows WebSocket state, send rate and RTT, but only
 outside the immersive session. Inside it you see passthrough and nothing is rendered.
 
-## Controls (right controller)
+## Controls (right controller unless noted)
 
 | Input   | Action |
 |---------|--------|
 | Grip    | Clutch. Hold to move the EE, release to freeze it. Engages above 0.9 and releases below 0.1. |
-| Trigger | Robotiq position, 0 open … 1 closed (proportional). The gripper holds its last value while de-clutched. |
+| Trigger | Toggles the Robotiq gripper between open and closed while clutched: each press (above 0.7) switches it, the next press counts once the trigger is below 0.3 again. A trigger already held when clutching counts only after it is released. The gripper holds its state while de-clutched. |
 | Thumbstick press | Realign: your current facing becomes forward (see [Frames and yaw](#frames-and-yaw)). Releases the clutch. |
 | A       | Start an episode (same as `n` in the collection TUI). A short pulse confirms the press. |
 | B       | Stop and save the episode (same as `s`). |
 | X (left) | Delete: discards the running episode, or, while waiting, deletes the episode saved last (same as `x`). Double pulse. |
 | Y (left) | Home the robot (same as `r`): turns teleop off and moves the arm home. Only while waiting. |
+| Left thumbstick up/down | Motion scale: robot motion = scale × hand motion (translation and rotation angle), from 0.1 up to 1:1, starting at 0.5. Full deflection changes it by e^1.5 per second; changing it while clutched does not move the target. The new value is logged when the stick is let go. |
+| Left thumbstick press | Reset the motion scale to the default 0.5 (short pulse). |
+
+The WebXR options (`--host`, `--port`, `--yaw`, `--motion-scale` (default 0.5), `--min-motion-scale` (0.1),
+`--motion-scale-rate` (1.5), `--haptics`, ...) are defined once in `vr/webxr_cli.py` and shared by data collection,
+`webxr_echo.py` and the policy rollouts (`code/ode_policy/droid_rollout`), which build the controller with
+`webxr_controller_from_args`.
 
 The buttons only act in `data-collection-webxr`, and only in the matching state: A while waiting,
 B while recording. X deletes only the most recent episode, and only until the next one starts,
@@ -55,6 +62,16 @@ running, so the arm keeps following and keeps holding what it grasped; start
 `data-collection-webxr` with `--stop-after-episode` to stop control (arm Idle, gripper opens) at
 the end of each episode instead. `r` turns teleop off before moving the arm home.
 
+## Contact haptics
+
+With `--haptics` (in `data-collection-webxr` and in the `droid_rollout` interventions), the right
+controller vibrates with the external force estimate at the EE (`O_F_ext_hat_K`) while clutched.
+The force at the moment you clutch counts as zero, so libfranka's pose-dependent bias does not
+hum. Vibration starts at `--haptic-deadband` (default 4 N) and is full at `--haptic-max-force`
+(default 30 N). It is a contact cue only: the controller does not push back. Clutching while
+already in contact zeroes that contact, so clutch in free space. The confirmation pulses (A, B,
+X, realign, disconnect) take priority over it.
+
 ## Recording
 
 `data-collection-webxr` writes a LeRobot dataset directly to `<data-dir>/lerobot/<task>`, at
@@ -62,7 +79,7 @@ the end of each episode instead. `r` turns teleop off before moving the arm home
 so no conversion step is needed. If the folder already holds a dataset, recording resumes into
 it, as long as the fps, cameras and image size match.
 
-- Cameras are sampled on every step and resized to `--image-size` (default 256×256). A camera
+- Cameras are sampled on every step and resized to `--image-size` (default 640×360). A camera
   slower than `--fps` produces repeated frames, which cost almost nothing after video encoding.
 - Video is encoded while recording (LeRobot streaming encoding, `--vcodec`, default
   `libsvtav1`), so saving takes well under a second.
@@ -81,18 +98,18 @@ when the clutch engaged: `pos = ee_base + M·Δp` and `rot = (M·R_Δ·Mᵀ)·R_
 ## Frames and yaw
 
 WebXR (`local-floor`) is right-handed, +Y up, −Z forward. Forward is where the headset faced
-when the session started or was last recentered. The default mapping assumes the operator
-stands behind the robot facing base +X:
+when the session started or was last recentered. The default (`--yaw -90`) assumes the operator
+stands on the robot's left side facing base −Y (90° clockwise from +X, seen from above):
 
 | Operator moves | EE moves |
 |----------------|----------|
-| forward        | +X       |
-| left           | +Y       |
+| forward        | −Y       |
+| left           | +X       |
 | up             | +Z       |
 
 If you stand elsewhere, pass `--yaw <deg>`: the operator's facing direction in the base frame,
 counter-clockwise from +X seen from above. `90` means you face base +Y (standing on the robot's
-right side), and `180` means you face the robot. Yaw is relative to WebXR forward, so align
+right side), `0` means you stand behind the robot facing +X, and `180` means you face the robot. Yaw is relative to WebXR forward, so align
 while facing your working direction.
 
 **Realign (press the right thumbstick):** if the motion comes out rotated (for example after the
@@ -111,7 +128,7 @@ heading anyway. `webxr-echo` shows the current offset as `align`.
 - **Re-engage** needs a fresh grip press: the grip must be seen below 0.1 first. A grip still held
   through a dropout, or held while the page connects, does nothing.
 - **Workspace box** (base frame, metres; override with
-  `--bounds XMIN YMIN ZMIN XMAX YMAX ZMAX`): x 0.25…0.80, y −0.45…0.45, z 0.05…0.75. The target is
+  `--bounds XMIN YMIN ZMIN XMAX YMAX ZMAX`): x 0.25…0.80, y −0.45…0.45, z −0.05…0.75. The target is
   clamped to the box. The clutch refuses to engage if the measured EE is outside it, and logs a
   warning. **Check `z_min` against your table height.**
 - **Step cap**: the target moves at most 1 cm and 5° per received sample (≈0.7 m/s and 360°/s at

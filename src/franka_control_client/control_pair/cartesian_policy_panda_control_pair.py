@@ -272,7 +272,7 @@ class CartesianPolicyPandaControlPair(ControlPair):
         window_elapsed = now - self._gripper_toggle_window_start_ts
         if window_elapsed >= GRIPPER_TOGGLE_WARN_WINDOW_S:
             if self._gripper_toggle_count >= GRIPPER_TOGGLE_WARN_COUNT:
-                pyzlc.warn(
+                pyzlc.warning(
                     "Gripper action toggling frequently: "
                     f"{self._gripper_toggle_count} toggles in "
                     f"{window_elapsed:.2f}s (threshold={GRIPPER_TOGGLE_WARN_COUNT}/"

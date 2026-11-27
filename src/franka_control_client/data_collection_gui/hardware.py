@@ -105,8 +105,10 @@ def build_keyboard(cfg: CollectionConfig, robot: PandaRobotiq):
 def build_real_rig(cfg: CollectionConfig, log: Callable[[str], None]) -> Rig:
     log(f"Connecting to arm + Robotiq '{cfg.robot_name}'...")
     arm = RemotePandaArm(cfg.robot_name)
+    arm.node_name = cfg.robot_node_name or cfg.robot_name
     arm.connect()
     gripper = RemoteRobotiqGripper(cfg.robot_name)
+    gripper.node_name = arm.node_name
     gripper.connect()
     robot = PandaRobotiq("PandaRobotiq", arm, gripper)
     leader: Any = None

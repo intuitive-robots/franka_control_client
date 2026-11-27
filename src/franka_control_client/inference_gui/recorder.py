@@ -50,6 +50,10 @@ ARRAY_SCHEMA = {
     "policy/action_raw": "action chunk as returned by the policy, NaN-padded [M,T,D]",
     "policy/action_exec": "rows queued to the control pair after slicing/resampling, NaN-padded [M,T',D]",
     "policy/skipped_rows": "stale rows dropped from the chunk (async mode) [M]",
+    "policy/sys1_plan": "BEAST System-1 refined future per inference [M,T,8] (optional)",
+    "policy/sys2_plan": "BEAST active System-2 coarse plan per inference [M,T,8] (optional)",
+    "policy/obs_timestep": "BEAST streaming observation step [M] (optional)",
+    "policy/sys2_source_timestep": "observation step that produced the active System-2 plan [M] (optional)",
     "control/t": "wall time of every control-loop step",
     "command/arm_t": "wall time of each arm command sent by the controller",
     "command/arm": "arm commands: joint targets [K,7] or EE pose xyz+quat [K,7]",
@@ -348,6 +352,26 @@ class EpisodeRecorder:
                     "policy/action_exec": _pad_stack([p["action_exec"] for p in pol]),
                 }
             )
+            diagnostics = [p.get("diagnostics") or {} for p in pol]
+            if diagnostics and any("sys1_plan" in d or "sys2_plan" in d for d in diagnostics):
+                def plans(name: str) -> List[np.ndarray]:
+                    return [
+                        np.asarray(d.get(name, np.zeros((0, 8))), dtype=np.float64).reshape(-1, 8)
+                        for d in diagnostics
+                    ]
+
+                arrays.update(
+                    {
+                        "policy/sys1_plan": _pad_stack(plans("sys1_plan")),
+                        "policy/sys2_plan": _pad_stack(plans("sys2_plan")),
+                        "policy/obs_timestep": np.asarray(
+                            [d.get("obs_timestep", -1) for d in diagnostics], dtype=np.int64
+                        ),
+                        "policy/sys2_source_timestep": np.asarray(
+                            [d.get("sys2_source_timestep", -1) for d in diagnostics], dtype=np.int64
+                        ),
+                    }
+                )
             if self._video is not None:
                 for cam, ts in self._video.timestamps.items():
                     arrays[f"camera/{cam}/t"] = np.asarray(ts, dtype=np.float64)

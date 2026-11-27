@@ -17,8 +17,11 @@ from franka_control_client.inference_gui.session import (
     ActionError,
     InferenceSession,
     SessionState,
+    clamp_stream_lead,
     resample_chunk,
     speed_limit_chunk,
+    streaming_action_anchor,
+    streaming_action_duration,
 )
 
 
@@ -41,6 +44,41 @@ def test_resample_cartesian_keeps_unit_quaternions():
     assert np.allclose(np.linalg.norm(out[:, 3:7], axis=1), 1.0)
 
 
+def test_streaming_action_duration_reschedules_late_inference():
+    # A 20 ms response still reaches the original 50 ms policy deadline.
+    assert streaming_action_duration(0.020, fps=20.0, control_hz=50.0) == pytest.approx(0.030)
+    # A response that already missed the deadline gets a new ramp matching its
+    # measured latency instead of collapsing to the 20 ms control-period floor.
+    assert streaming_action_duration(0.090, fps=20.0, control_hz=50.0) == pytest.approx(0.090)
+    # A cold or stalled request cannot authorize an arbitrarily long move.
+    assert streaming_action_duration(0.250, fps=20.0, control_hz=50.0) == pytest.approx(0.100)
+
+    anchor = np.array([0.5, 0.0, 0.4, 1.0, 0.0, 0.0, 0.0])
+    rows = np.array([[0.6, 0.0, 0.4, 1.0, 0.0, 0.0, 0.0, 0.0]])
+    duration = streaming_action_duration(0.090, fps=20.0, control_hz=50.0)
+    limited, changed = speed_limit_chunk(
+        rows, np.array([duration]), anchor, ACTION_SPACES["cartesian"], 0.5, 0.15
+    )
+    assert changed
+    assert limited[0, 0] - anchor[0] == pytest.approx(0.15 * 0.090)
+
+
+def test_streaming_action_anchor_supports_current_and_old_following_modes():
+    measured = np.array([0.50, 0.0, 0.40, 1.0, 0.0, 0.0, 0.0])
+    previous = np.array([0.53, 0.0, 0.40, 1.0, 0.0, 0.0, 0.0])
+
+    assert streaming_action_anchor(measured, previous, "persistent-setpoint") is previous
+    assert streaming_action_anchor(measured, previous, "measured-pose") is measured
+    assert streaming_action_anchor(measured, None, "persistent-setpoint") is measured
+    with pytest.raises(ValueError):
+        streaming_action_anchor(measured, previous, "unknown")
+
+
+def test_inference_session_rejects_unknown_stream_anchor_mode():
+    with pytest.raises(ValueError):
+        InferenceSession(SessionConfig(), stream_anchor_mode="unknown")
+
+
 def test_config_roundtrip_and_validation(tmp_path):
     cfg = SessionConfig(cameras=[CameraConfig("cam", "observation.images.ext")])
     path = tmp_path / "cfg.json"
@@ -58,6 +96,53 @@ def test_home_q_config():
     for bad in ([0.0] * 6, [0, 0, 0, 0, 0, 2, 0], [0, 0, 0, -2, 0, 2, float("nan")], [0, 0, 0, -2, 0, 2, "x"]):
         with pytest.raises(ValueError):
             cfg.merged({"home_q": bad})  # wrong length / q3 above its limit / nan / not a number
+
+
+def test_streaming_policy_health_and_shutdown():
+    class StreamingDummy(DummyPolicy):
+        query_every_step = True
+
+        def __init__(self):
+            super().__init__(action_space="joint", fps=20, exec_steps=1, latency_s=0)
+            self.closed = False
+
+        def close(self):
+            self.closed = True
+
+    policy = StreamingDummy()
+    server = PolicyServer(policy, "127.0.0.1", 0)
+    health = server._handle({"type": "health"})
+    assert health["query_every_step"] is True
+    assert health["fps"] == 20 and health["exec_steps"] == 1
+    server.shutdown()
+    assert policy.closed
+
+    session = InferenceSession(SessionConfig(policy_fps=15, exec_steps=9))
+    session.health = health
+    session._apply_policy_timing()
+    assert session.policy_fps == 20
+    assert session.exec_steps == 1
+
+
+def test_policy_server_forwards_optional_inference_diagnostics():
+    class DiagnosticPolicy(DummyPolicy):
+        def inference_diagnostics(self):
+            return {
+                "obs_timestep": 3,
+                "sys1_plan": np.ones((2, 8)),
+                "sys2_plan": np.zeros((3, 8)),
+            }
+
+    policy = DiagnosticPolicy(action_space="joint", latency_s=0)
+    response = PolicyServer(policy, "127.0.0.1", 0)._handle(
+        {
+            "type": "infer",
+            "observation": {"observation.state": np.zeros(8), "task": "test"},
+        }
+    )
+    assert response["ok"]
+    assert response["diagnostics"]["obs_timestep"] == 3
+    assert response["diagnostics"]["sys1_plan"].shape == (2, 8)
 
 
 @pytest.fixture()
@@ -258,6 +343,84 @@ def test_first_step_jump_mode(tmp_path, mode):
         speed = np.abs(np.diff(q0)) / np.maximum(np.diff(t), 1e-3)
         # commanded joint-0 speed stays near the 0.5 rad/s cap (control-loop jitter aside)
         assert np.percentile(speed, 95) < 0.5 * 1.5
+    finally:
+        s.shutdown()
+        server.shutdown()
+
+
+def test_clamp_stream_lead():
+    measured = np.array([0.5, 0.0, 0.4, 1.0, 0.0, 0.0, 0.0])
+    rows = np.array([[0.6, 0.0, 0.4, 0.0, 1.0, 0.0, 0.0, 0.7]])
+    out, clamped = clamp_stream_lead(rows, measured, ACTION_SPACES["cartesian"], 0.05, 0.3)
+    assert clamped
+    assert out[0, 0] == pytest.approx(0.55)  # pulled onto the 5 cm sphere
+    assert np.allclose(out[0, 3:], rows[0, 3:])  # orientation and gripper untouched
+    near = rows.copy()
+    near[0, 0] = 0.53
+    same, clamped = clamp_stream_lead(near, measured, ACTION_SPACES["cartesian"], 0.05, 0.3)
+    assert not clamped and np.allclose(same, near)
+
+    joint_rows = np.zeros((1, 8))
+    joint_rows[0, :2] = [0.5, -0.05]
+    out, clamped = clamp_stream_lead(joint_rows, np.zeros(7), ACTION_SPACES["joint"], 0.05, 0.1)
+    assert clamped and out[0, 0] == pytest.approx(0.1) and out[0, 1] == pytest.approx(-0.05)
+
+
+class _LeadingStreamPolicy(DummyPolicy):
+    """Streaming policy whose target always leads the measured joint 0 by 0.5 rad."""
+
+    query_every_step = True
+
+    def __init__(self):
+        super().__init__(action_space="joint", fps=20, exec_steps=1, latency_s=0)
+
+    def infer(self, observation):
+        state = np.asarray(observation["observation.state"], dtype=np.float64)
+        row = state[None, :8].copy()
+        row[:, 0] += 0.5
+        return row
+
+
+def test_streaming_setpoint_ramps_from_previous_setpoint(tmp_path):
+    import socket
+
+    with socket.socket() as sk:
+        sk.bind(("127.0.0.1", 0))
+        port = sk.getsockname()[1]
+    server = PolicyServer(_LeadingStreamPolicy(), "127.0.0.1", port)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    time.sleep(0.2)
+    cfg = SessionConfig(
+        sim=True, control_hz=50, policy_port=port, cameras=[CameraConfig("ext")],
+        save_root=str(tmp_path), batch_name="b", task="t",
+        first_step_jump_mode="limit", max_joint_speed=0.5, max_stream_lead_joint=0.1,
+    )
+    s = InferenceSession(cfg)
+    try:
+        s.connect()
+        _wait(s, SessionState.IDLE)
+        queued = []
+        s.start_episode()
+        _wait(s, SessionState.RUNNING)
+        original = s.pair.update_action_chunk
+
+        def spy(rows):
+            queued.append((np.array(rows, copy=True), np.asarray(s.hw.arm.current_state["q"], dtype=float)))
+            original(rows)
+
+        s.pair.update_action_chunk = spy
+        time.sleep(1.5)
+        s.stop_episode("stopped by user")
+        assert len(queued) >= 5
+        # A ramp can collapse into one control tick, so bound it by one policy
+        # period at max_joint_speed -- far below the 0.5 rad request.
+        step_cap = 0.5 / 20.0
+        for (prev, _), (cur, _) in zip(queued, queued[1:]):
+            # each ramp continues from the previous setpoint: no snap back to the measured state
+            assert abs(cur[0, 0] - prev[-1, 0]) <= step_cap + 1e-6
+        for rows, q in queued:
+            # the held setpoint never leads the measured state by more than the bound
+            assert rows[-1, 0] - q[0] <= 0.1 + 0.02
     finally:
         s.shutdown()
         server.shutdown()

@@ -39,6 +39,8 @@ class RemoteDevice(ABC):
             name (str): The name of the remote device.
         """
         self._name = name
+        # pyzlc node that serves this device; a proxy may run under another node name
+        self.node_name = name
 
     def connect(self) -> None:
         """
@@ -49,11 +51,11 @@ class RemoteDevice(ABC):
         """
         # Check if the device is reachable for a few attempts
         for _ in range(5):
-            if pyzlc.check_node_info(self._name):
+            if pyzlc.check_node_info(self.node_name):
                 pyzlc.info("Connected to remote device '%s'.", self._name)
                 return
             time.sleep(0.5)
-        if not pyzlc.check_node_info(self._name):
+        if not pyzlc.check_node_info(self.node_name):
             raise DeviceConnectionError(
-                f"Failed to connect to device '{self._name}': Node not found."
+                f"Failed to connect to device '{self._name}': Node '{self.node_name}' not found."
             )

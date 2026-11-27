@@ -248,6 +248,7 @@ tr.click:hover td { background: var(--surface-2); }
         <div class="field"><label>Node IP</label><input type="text" data-key="node_ip"></div>
         <div class="field"><label>Group / port</label><div class="pair"><input type="text" data-key="group_name"><span></span><input type="number" data-key="group_port"></div></div>
         <div class="field"><label>Robot name</label><input type="text" data-key="robot_name"></div>
+        <div class="field"><label>Robot node</label><input type="text" data-key="robot_node_name" placeholder="= robot name"></div>
         <div class="field"><label>GELLO name</label><input type="text" data-key="gello_name"></div>
         <div class="field"><label>MQ3 name / IP</label><div class="pair"><input type="text" data-key="mq3_name"><span></span><input type="text" data-key="mq3_ip"></div></div>
       </details>
@@ -550,7 +551,7 @@ $("revertBtn").onclick = async () => fillForm(await api("/api/config"));
 // Export / import: the form as a JSON file, so each user can keep and reload their own settings.
 const CFG_FILE_KIND = "franka_data_collection_gui_config";
 const CONN_KEYS = new Set(["sim", "node_name", "node_ip", "group_name", "group_port", "robot_name",
-  "gello_name", "mq3_name", "mq3_ip", "cameras", "mode", "gello_gains"]);  // = config.CONNECTION_FIELDS
+  "robot_node_name", "gello_name", "mq3_name", "mq3_ip", "cameras", "mode", "gello_gains"]);  // = config.CONNECTION_FIELDS
 $("cfgExportBtn").onclick = () => {
   const c = {...(cfg || {}), ...formValues()};  // what the form shows, applied or not
   const doc = {kind: CFG_FILE_KIND, version: 1, exported: new Date().toISOString(), config: c};

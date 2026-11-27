@@ -425,13 +425,16 @@ const FIELDS = [
     { k: "max_first_step_jump_cartesian", l: "Max first-step jump (m)", t: "number", step: 0.01 },
     { k: "first_step_jump_mode", l: "On a larger jump", t: "select", o: [["stop", "Stop the rollout"], ["limit", "Keep going, speed-limited"]], h: "Limit: every chunk is speed-limited from the measured state; the arm creeps toward far targets." },
     { k: "max_joint_speed", l: "Max joint speed (rad/s)", t: "number", step: 0.05, h: "Limit mode only. Demos: p99.9 ≈ 1.1–1.3 rad/s." },
-    { k: "max_ee_speed", l: "Max EE speed (m/s)", t: "number", step: 0.01, h: "Limit mode only (cartesian pair, translation)." },
+    { k: "max_ee_speed", l: "Max EE speed (m/s)", t: "number", step: 0.01, h: "Limit mode only (cartesian pair, translation). Streaming policies: caps how fast the held setpoint moves." },
+    { k: "max_stream_lead_cartesian", l: "Max streaming lead (m)", t: "number", step: 0.005, h: "Streaming policies: how far the held EE setpoint may lead the measured pose." },
+    { k: "max_stream_lead_joint", l: "Max streaming lead (rad)", t: "number", step: 0.05, h: "Streaming policies, joint pair: per-joint setpoint lead over the measured state." },
     { k: "clip_joint_limits", l: "Clip to joint limits", t: "bool" },
     { k: "max_episode_s", l: "Auto-stop after (s)", t: "number", step: 5, h: "0 = no limit." },
   ]},
   { sec: "Robot & network", open: false, conn: true, items: [
     { k: "sim", l: "Simulated robot", t: "bool" },
     { k: "robot_name", l: "Robot name", t: "text" },
+    { k: "robot_node_name", l: "Robot node", t: "text", h: "pyzlc node of the franka proxy. Empty = robot name." },
     { k: "gripper_type", l: "Gripper", t: "select", o: [["robotiq", "Robotiq"], ["panda", "Franka Hand"]] },
     { k: "node_name", l: "pyzlc node name", t: "text" },
     { k: "node_ip", l: "Robot PC IP", t: "text" },
@@ -440,7 +443,7 @@ const FIELDS = [
     { k: "state_record_hz", l: "State record rate (Hz)", t: "number", step: 1 },
   ]},
 ];
-const CONN_KEYS = new Set(["sim", "robot_name", "gripper_type", "node_name", "node_ip", "group_name", "group_port", "cameras"]);
+const CONN_KEYS = new Set(["sim", "robot_name", "robot_node_name", "gripper_type", "node_name", "node_ip", "group_name", "group_port", "cameras"]);
 
 function buildForm() {
   const form = $("#cfgForm");

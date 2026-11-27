@@ -11,6 +11,9 @@ Reference implementations:
   example (MemoryVLA), including the workarounds listed under [Pitfalls](#pitfalls)
 - [`examples/meme_policy_server.py`](../examples/meme_policy_server.py): MME-VLA (memevla, JAX
   π0.5 + frame memory); runs in the memevla venv, fills the memory frames the GUI does not send
+- [`examples/beast_refiner_policy_server.py`](../examples/beast_refiner_policy_server.py): BEAST
+  Refiner v2; a streaming policy queried once per observation, with xVLA System 2 running in the
+  background. See the dedicated [BEAST Refiner inference guide](beast_refiner_inference.md).
 
 ```
  policy PC                                     robot PC

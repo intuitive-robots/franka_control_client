@@ -18,7 +18,7 @@ Requests  (robot PC -> policy PC)
     {"type": "close"}
 
 Responses (policy PC -> robot PC), always {"ok": bool, ...}
-    health -> action_space, fps, exec_steps, supports_observe, policy metadata
+    health -> action_space, fps, exec_steps, query_every_step, supports_observe, policy metadata
     observe -> {}
     infer  -> action [T, D] (absolute targets, gripper closedness last),
               action_space, exec_steps, server_infer_s (pure model time)
@@ -75,12 +75,31 @@ class BasePolicy:
     action_space: str = JOINT_ACTION_SPACE
     fps: float = 15.0
     exec_steps: int = 8  # rows the robot executes before the next request
+    # Stateful streaming policies (for example BEAST Refiner) produce one new
+    # action from every observation instead of an open-loop action chunk.  The
+    # GUI then calls infer() at ``fps`` and does not apply its chunk look-ahead
+    # scheduling, which would otherwise run a one-row policy too quickly.
+    query_every_step: bool = False
 
     def metadata(self) -> Dict[str, Any]:
         return {}
 
     def reset(self, task: Optional[str]) -> None:
         """Called at the start of every rollout."""
+
+    def close(self) -> None:
+        """Optional process-shutdown hook (for worker threads, model runtimes, etc.)."""
+
+    def inference_diagnostics(self) -> Dict[str, Any]:
+        """Optional numeric traces captured immediately after ``infer``.
+
+        Stateful policies can expose internal plans here.  The server forwards
+        the mapping with the action response so the robot-side recorder can put
+        model internals, safety-limited commands, and measured motion on one
+        timeline.  Keep this empty unless diagnostics were explicitly enabled;
+        plan tensors add serialization and network overhead on every request.
+        """
+        return {}
 
     def observe(self, observation: Dict[str, Any]) -> None:
         """Optional: one env frame streamed at the GUI's env frequency (for models
@@ -169,6 +188,7 @@ class PolicyServer:
         self._policy_lock = threading.Lock()
         self._sock: Optional[socket.socket] = None
         self._running = False
+        self._policy_closed = False
 
     # ------------------------------------------------------------------ api
     def serve_forever(self) -> None:
@@ -196,6 +216,12 @@ class PolicyServer:
                 self._sock.close()
             finally:
                 self._sock = None
+        if not self._policy_closed:
+            self._policy_closed = True
+            try:
+                self.policy.close()
+            except Exception:
+                LOG.error("Policy shutdown failed:\n%s", traceback.format_exc())
 
     # ------------------------------------------------------------ internals
     def _serve_client(self, conn: socket.socket, addr: Any) -> None:
@@ -223,6 +249,7 @@ class PolicyServer:
                     "action_space": self.policy.action_space,
                     "fps": self.policy.fps,
                     "exec_steps": self.policy.exec_steps,
+                    "query_every_step": bool(getattr(self.policy, "query_every_step", False)),
                     "supports_observe": bool(getattr(self.policy, "supports_observe", False)),
                     "policy": self.policy.metadata(),
                 }
@@ -236,8 +263,9 @@ class PolicyServer:
                     start = time.perf_counter()
                     action = self.policy.infer(request["observation"])
                     infer_s = time.perf_counter() - start
+                    diagnostics = self.policy.inference_diagnostics()
                 action = np.asarray(action, dtype=np.float64)
-                return {
+                response = {
                     "ok": True,
                     "action": action,
                     "action_space": self.policy.action_space,
@@ -245,6 +273,9 @@ class PolicyServer:
                     "server_infer_s": infer_s,
                     "server_recv_time": t_recv,
                 }
+                if diagnostics:
+                    response["diagnostics"] = diagnostics
+                return response
             if kind == "observe":
                 with self._policy_lock:
                     self.policy.observe(request["observation"])

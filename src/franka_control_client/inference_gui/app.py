@@ -17,7 +17,7 @@ import threading
 from pathlib import Path
 
 from .config import SessionConfig
-from .session import InferenceSession
+from .session import InferenceSession, STREAM_ANCHOR_MODES
 from .web_server import serve
 
 
@@ -29,6 +29,15 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--sim", action="store_true", help="use simulated robot/gripper/cameras")
     parser.add_argument("--connect", action="store_true", help="connect right away")
+    parser.add_argument(
+        "--stream-anchor",
+        choices=STREAM_ANCHOR_MODES,
+        default="persistent-setpoint",
+        help=(
+            "anchor for query-every-step policy ramps: persistent-setpoint (current default) "
+            "or measured-pose (old following behavior)"
+        ),
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -45,7 +54,7 @@ def main() -> None:
     if args.sim:
         cfg.sim = True
 
-    session = InferenceSession(cfg, config_path=args.config)
+    session = InferenceSession(cfg, config_path=args.config, stream_anchor_mode=args.stream_anchor)
     server = serve(session, args.host, args.port)
     logging.getLogger("inference_gui").info(
         "Dashboard on http://%s:%d %s", "localhost" if args.host in ("127.0.0.1", "0.0.0.0") else args.host,

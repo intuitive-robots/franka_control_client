@@ -187,3 +187,5 @@ recordings/
 # inference GUI rollouts
 eval_rollouts/
 sim_data_collection/
+
+oopsie_rollouts/

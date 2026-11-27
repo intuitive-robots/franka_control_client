@@ -74,6 +74,15 @@ while the server computes. Async requests the next chunk while the current one p
 arrives. Chunks are interpolated from the measured state to the control rate
 (joints/positions linear, quaternions normalised-linear, gripper held per row).
 
+A streaming policy can report `query_every_step: true` in `health()` (BEAST Refiner does
+this). The GUI then ignores chunk look-ahead/`exec_steps`, requests exactly one fresh action
+per observation at the server's `fps`, and interpolates that target onto the control rate.
+Each streamed target is treated as a held controller setpoint (like a teleop target, which
+the measured pose trails): it is ramped from the *previous setpoint*, not from the measured
+pose, `max_ee_speed`/`max_joint_speed` cap how fast the setpoint moves (limit mode), and
+`max_stream_lead_cartesian` m / `max_stream_lead_joint` rad bound how far it may lead the
+measured state.
+
 Safety checks on each chunk: first row may not jump more than
 `max_first_step_jump_joint` rad / `max_first_step_jump_cartesian` m from the measured
 state (the rollout stops otherwise); joint targets are clipped to the Panda limits;

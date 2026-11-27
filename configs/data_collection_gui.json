@@ -1,30 +1,27 @@
 {
   "sim": false,
   "node_name": "data_collection_gui",
-  "node_ip": "192.168.1.1",
-  "group_name": "DroidGroup",
-  "group_port": 7730,
+  "node_ip": "141.3.53.25",
+  "group_name": "robot_lab_robotiq_202",
+  "group_port": 7725,
   "robot_name": "FrankaPanda",
+  "robot_node_name": "robot_lab_robotiq_202",
   "gello_name": "gello",
   "mq3_name": "IRL-MQ3-2",
   "mq3_ip": "192.168.0.117",
   "cameras": [
     {
-      "name": "zed_right",
-      "hz": 50.0
+      "name": "wrist_cam",
+      "hz": 30.0
     },
     {
-      "name": "zed_wrist",
-      "hz": 50.0
-    },
-    {
-      "name": "zed_left",
-      "hz": 50.0
+      "name": "static_cam",
+      "hz": 30.0
     }
   ],
   "mode": "keyboard",
   "gello_gains": "stiff",
-  "data_dir": "/home/irl-admin/new_data_collection",
+  "data_dir": "/home/jjiang/new_data_collection",
   "task": "T-push_test_lerobot_no_resize",
   "task_instruction": "",
   "record_hz": 200.0,

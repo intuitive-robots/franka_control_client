@@ -26,6 +26,7 @@ DEFAULT_HOME_Q = (0.0, 0.0, 0.0, -2.15, 0.0, 2.15, 0.0)
 # Only changeable while disconnected: they decide which devices get built.
 CONNECTION_FIELDS = {
     "sim", "node_name", "node_ip", "group_name", "group_port", "robot_name",
+    "robot_node_name",
     "gello_name", "mq3_name", "mq3_ip", "cameras", "mode", "gello_gains",
 }
 
@@ -47,7 +48,8 @@ class CollectionConfig:
     node_ip: str = "192.168.1.1"
     group_name: str = "DroidGroup"
     group_port: int = 7730
-    robot_name: str = "FrankaPanda"
+    robot_name: str = "FrankaPanda"  # topic / service prefix: <robot_name>/franka_arm_state
+    robot_node_name: str = ""  # pyzlc node of the franka proxy; empty -> robot_name
     gello_name: str = "gello"
     mq3_name: str = "IRL-MQ3-2"
     mq3_ip: str = "192.168.0.117"

@@ -40,6 +40,48 @@ LOG = logging.getLogger("inference_gui")
 
 OUTCOMES = ("success", "partial", "failure", "unlabeled")
 POLICY_CONNECT_TIMEOUT_S = 5.0
+STREAM_ANCHOR_MODES = ("persistent-setpoint", "measured-pose")
+
+
+def streaming_action_duration(inference_age: float, fps: float, control_hz: float) -> float:
+    """Return a safe ramp duration for one streaming-policy action.
+
+    An on-time prediction still targets its original ``observation + 1/fps``
+    deadline.  Once inference has already missed that deadline, catching up in
+    a single control tick would shrink the speed-limited displacement to almost
+    nothing.  Reschedule that late action over the time inference actually
+    took instead.  The speed limiter then preserves its configured velocity
+    while the controller receives a useful multi-tick trajectory.
+    """
+    age = max(0.0, float(inference_age))
+    policy_period = 1.0 / float(fps)
+    control_period = 1.0 / float(control_hz)
+    remaining = policy_period - age
+    if remaining > 0.0:
+        return max(control_period, remaining)
+    # Do not let an exceptional stall (for example, a cold first request)
+    # authorize an arbitrarily long move from one stale observation.  Two
+    # policy periods cover ordinary jitter while keeping this fallback bounded.
+    return max(control_period, min(age, 2.0 * policy_period))
+
+
+def streaming_action_anchor(
+    measured: np.ndarray,
+    previous_setpoint: Optional[np.ndarray],
+    mode: str,
+) -> np.ndarray:
+    """Select the start of the next streaming-action ramp.
+
+    ``persistent-setpoint`` is the current behavior: preserve command progress
+    by continuing from the last setpoint queued to the controller.  The
+    opt-in ``measured-pose`` mode reproduces the old following behavior by
+    restarting every ramp at the latest measured robot pose.
+    """
+    if mode not in STREAM_ANCHOR_MODES:
+        raise ValueError(f"stream anchor mode must be one of {STREAM_ANCHOR_MODES}, got {mode!r}")
+    if mode == "measured-pose" or previous_setpoint is None:
+        return measured
+    return previous_setpoint
 
 
 class SessionState(str, enum.Enum):
@@ -125,10 +167,45 @@ def speed_limit_chunk(
     return out, not np.allclose(out, rows)
 
 
+def clamp_stream_lead(
+    rows: np.ndarray,
+    measured: np.ndarray,
+    action_space: str,
+    max_lead_cartesian: float,
+    max_lead_joint: float,
+) -> Tuple[np.ndarray, bool]:
+    """Bound how far a held streaming setpoint may lead the measured state.
+
+    Streaming targets are ramped from the previous *setpoint* rather than the
+    measured pose, so this is the check that keeps the setpoint near the robot:
+    EE translation is pulled back onto a ``max_lead_cartesian`` sphere around
+    the measured position; joints are clipped per joint. Orientation and the
+    gripper column are untouched. Returns (rows, any_row_changed)."""
+    out = rows.astype(np.float64, copy=True)
+    if action_space == ACTION_SPACES["cartesian"]:
+        delta = out[:, :3] - measured[None, :3]
+        norm = np.linalg.norm(delta, axis=1, keepdims=True)
+        scale = np.minimum(1.0, max_lead_cartesian / np.maximum(norm, 1e-12))
+        out[:, :3] = measured[None, :3] + delta * scale
+    else:
+        out[:, :7] = np.clip(out[:, :7], measured[None, :7] - max_lead_joint, measured[None, :7] + max_lead_joint)
+    return out, not np.allclose(out, rows)
+
+
 class InferenceSession:
-    def __init__(self, cfg: SessionConfig, config_path: Optional[Path] = None) -> None:
+    def __init__(
+        self,
+        cfg: SessionConfig,
+        config_path: Optional[Path] = None,
+        stream_anchor_mode: str = "persistent-setpoint",
+    ) -> None:
+        if stream_anchor_mode not in STREAM_ANCHOR_MODES:
+            raise ValueError(
+                f"stream anchor mode must be one of {STREAM_ANCHOR_MODES}, got {stream_anchor_mode!r}"
+            )
         self.cfg = cfg
         self.config_path = config_path
+        self.stream_anchor_mode = stream_anchor_mode
         self.state = SessionState.DISCONNECTED
         self.error: Optional[str] = None
         self.busy_label = ""
@@ -342,6 +419,13 @@ class InferenceSession:
             self.log(f"Using the server's chunk rate {server_fps} Hz (settings say {cfg.policy_fps}).", "warn")
         self.policy_fps = float(server_fps) if server_fps is not None else float(cfg.policy_fps)
         self.exec_steps = int(cfg.exec_steps) or int(self.health.get("exec_steps") or 0)
+        if self.health.get("query_every_step"):
+            self.exec_steps = 1
+            self.log(
+                f"Policy requests one inference per observation; running it at {self.policy_fps:g} Hz "
+                "and ignoring chunk execution/look-ahead settings. "
+                f"Streaming anchor: {self.stream_anchor_mode}."
+            )
 
     def _build_control_pair(self) -> None:
         assert self.hw is not None
@@ -622,6 +706,7 @@ class InferenceSession:
                 "policy_fps": self.policy_fps,
                 "exec_steps": self.exec_steps,
                 "inference_mode": cfg.inference_mode,
+                "stream_anchor_mode": self.stream_anchor_mode,
                 "env_hz": cfg.env_hz,
                 "sim": cfg.sim,
                 "policy_server": {"host": cfg.policy_host, "port": cfg.policy_port, "health": self.health},
@@ -769,8 +854,12 @@ class InferenceSession:
         assert client is not None and pair is not None and hw is not None
         action_space = ACTION_SPACES[cfg.control_pair]
         fps = self.policy_fps
+        query_every_step = bool(self.health.get("query_every_step"))
         t_start = time.time()
         reason = ""
+        # Streaming only: the setpoint last queued to the controller. Each new
+        # target ramps from here, not from the (lagging) measured pose.
+        stream_setpoint: Optional[np.ndarray] = None
         try:
             while not stop.is_set():
                 if cfg.max_episode_s > 0 and time.time() - t_start > cfg.max_episode_s:
@@ -791,29 +880,52 @@ class InferenceSession:
                 n_exec = int(response.get("exec_steps") or 0) if not cfg.exec_steps else int(cfg.exec_steps)
                 n_exec = min(n_exec or chunk.shape[0], chunk.shape[0])
 
-                if cfg.inference_mode == "async":
+                if query_every_step:
+                    # A streaming refiner advances its own history and plan
+                    # clock on every infer() call.  Execute exactly its first
+                    # action and pace calls on the training-rate clock.  An
+                    # on-time action keeps its original t_obs + 1/fps target;
+                    # a late action gets a fresh ramp as long as its measured
+                    # inference age.
+                    #
+                    # The target is a setpoint the controller is meant to
+                    # chase (teleop-style; in demos the measured pose trails
+                    # it by ~200 ms), so the ramp starts at the previous
+                    # setpoint and the target is then held.  Restarting from
+                    # the measured pose each step would discard that lead
+                    # and the arm would barely move.
+                    skipped = 0
+                    rows = chunk[:1]
+                    age = t_recv - t_obs
+                    duration = streaming_action_duration(age, fps, pair.control_hz)
+                    row_times = np.asarray([duration], dtype=np.float64)
+                    measured = self._measured_vector(hw, action_space)
+                    anchor = streaming_action_anchor(measured, stream_setpoint, self.stream_anchor_mode)
+                elif cfg.inference_mode == "async":
                     # Row k targets t_obs + (k + 1) / fps; drop rows already in the past.
                     age = time.time() - t_obs
                     skipped = min(int(age * fps), chunk.shape[0] - 1)
                     rows = chunk[skipped : skipped + n_exec]
                     row_times = (skipped + 1 + np.arange(rows.shape[0])) / fps - age
                     row_times = np.maximum(row_times, 1e-3 * (1 + np.arange(rows.shape[0])))
-                    anchor = self._measured_vector(hw, action_space)
+                    anchor = measured = self._measured_vector(hw, action_space)
                 else:
                     # Arm holds while the server computes; the chunk starts now.
                     skipped = 0
                     rows = chunk[:n_exec]
                     row_times = (1 + np.arange(rows.shape[0])) / fps
-                    anchor = obs_state[:7]
+                    anchor = measured = obs_state[:7]
 
                 generated = rows.copy()  # as the policy produced them, for the dashboard
                 if cfg.first_step_jump_mode == "stop":
-                    self._check_first_step(rows[0], anchor, action_space)
+                    self._check_first_step(rows[0], measured, action_space)
                 if action_space == ACTION_SPACES["joint"] and cfg.clip_joint_limits:
                     rows = rows.copy()
                     rows[:, :7] = np.clip(rows[:, :7], Q_LOWER + 0.01, Q_UPPER - 0.01)
                 if cfg.first_step_jump_mode == "limit":
-                    jump = self._first_step_jump(rows[0], anchor, action_space)
+                    jump = self._first_step_jump(rows[0], measured, action_space)
+                    # Streaming: caps the setpoint's own speed (anchor is the
+                    # previous setpoint). Chunks: caps motion from the measured state.
                     rows, limited = speed_limit_chunk(
                         rows, row_times, anchor, action_space, cfg.max_joint_speed, cfg.max_ee_speed
                     )
@@ -826,8 +938,16 @@ class InferenceSession:
                             f"speed-limited instead of stopping.",
                             "warn",
                         )
+                if query_every_step:
+                    rows, clamped = clamp_stream_lead(
+                        rows, measured, action_space, cfg.max_stream_lead_cartesian, cfg.max_stream_lead_joint
+                    )
+                    if clamped:
+                        self.telemetry.count("limited_chunks")
                 exec_rows = resample_chunk(rows, row_times, anchor, pair.control_hz, action_space)
                 pair.update_action_chunk(exec_rows)
+                if query_every_step and self.stream_anchor_mode == "persistent-setpoint":
+                    stream_setpoint = exec_rows[-1, :7].copy()
                 t_base = time.time()  # row_times are measured from (about) now
                 for k in range(generated.shape[0]):
                     self.telemetry.gen_series.append(t_base + float(row_times[k]), generated[k, :8])
@@ -835,9 +955,23 @@ class InferenceSession:
                 rtt = t_recv - t_send
                 model_s = float(response.get("server_infer_s", np.nan))
                 self._ema_rtt = rtt if self._ema_rtt == 0 else 0.8 * self._ema_rtt + 0.2 * rtt
-                self._record_inference(t_obs, t_recv, rtt, model_s, obs_state, chunk, exec_rows, skipped, rows.shape[0], frames)
+                self._record_inference(
+                    t_obs,
+                    t_recv,
+                    rtt,
+                    model_s,
+                    obs_state,
+                    chunk,
+                    exec_rows,
+                    skipped,
+                    rows.shape[0],
+                    frames,
+                    response.get("diagnostics"),
+                )
 
-                if cfg.inference_mode == "async":
+                if query_every_step:
+                    wait = 1.0 / fps - (time.time() - t_obs)
+                elif cfg.inference_mode == "async":
                     wait = float(row_times[-1]) - self._ema_rtt
                 else:
                     wait = float(row_times[-1])
@@ -945,6 +1079,7 @@ class InferenceSession:
         skipped: int,
         n_exec: int,
         frames: Dict[str, np.ndarray],
+        diagnostics: Optional[Dict[str, Any]] = None,
     ) -> None:
         tel = self.telemetry
         tel.infer_rate.tick(t_recv)
@@ -975,6 +1110,7 @@ class InferenceSession:
                 "action_raw": chunk,
                 "action_exec": exec_rows,
                 "skipped_rows": skipped,
+                "diagnostics": diagnostics or {},
             }
         )
         if self.cfg.record_images:

@@ -30,6 +30,7 @@ CONNECTION_FIELDS = {
     "group_name",
     "group_port",
     "robot_name",
+    "robot_node_name",
     "gripper_type",
     "cameras",
 }
@@ -57,7 +58,8 @@ class SessionConfig:
     node_ip: str = "192.168.1.1"
     group_name: str = "DroidGroup"
     group_port: int = 7730
-    robot_name: str = "FrankaPanda"
+    robot_name: str = "FrankaPanda"  # topic / service prefix: <robot_name>/franka_arm_state
+    robot_node_name: str = ""  # pyzlc node of the franka proxy; empty -> robot_name
     gripper_type: str = "robotiq"
     cameras: List[CameraConfig] = field(default_factory=list)
 
@@ -102,6 +104,12 @@ class SessionConfig:
     first_step_jump_mode: str = "stop"
     max_joint_speed: float = 1.0  # rad/s per joint, "limit" mode (demos: p99.9 ~1.1-1.3)
     max_ee_speed: float = 0.15  # m/s EE translation, "limit" mode (orientation unchanged)
+    # Streaming (query_every_step) policies hold each target as the controller
+    # setpoint and ramp it from the previous setpoint, like a teleop target. The
+    # setpoint may lead the measured state by at most this much (m of EE
+    # translation / rad on any joint); a farther target is pulled back.
+    max_stream_lead_cartesian: float = 0.05
+    max_stream_lead_joint: float = 0.3
     clip_joint_limits: bool = True
     max_episode_s: float = 120.0  # 0 disables the auto-stop
 
@@ -139,6 +147,8 @@ class SessionConfig:
             raise ValueError(f"first_step_jump_mode must be one of {FIRST_STEP_JUMP_MODES}")
         if float(self.max_joint_speed) <= 0.0 or float(self.max_ee_speed) <= 0.0:
             raise ValueError("max_joint_speed and max_ee_speed must be > 0")
+        if float(self.max_stream_lead_cartesian) <= 0.0 or float(self.max_stream_lead_joint) <= 0.0:
+            raise ValueError("max_stream_lead_cartesian and max_stream_lead_joint must be > 0")
         if not 0.0 <= float(self.env_hz) <= 100.0:
             raise ValueError("env_hz must be within [0, 100] (0 = off)")
         if int(self.exec_steps) < 0:

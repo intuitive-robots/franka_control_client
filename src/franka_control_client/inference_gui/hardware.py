@@ -162,11 +162,13 @@ def gripper_closedness(gripper: GripperT) -> Optional[float]:
 def build_real_hardware(cfg: SessionConfig, log: Callable[[str], None]) -> Hardware:
     log(f"Connecting to arm '{cfg.robot_name}'...")
     arm = RemotePandaArm(cfg.robot_name)
+    arm.node_name = cfg.robot_node_name or cfg.robot_name
     arm.connect()
     if cfg.gripper_type == "robotiq":
         gripper: GripperT = RemoteRobotiqGripper(cfg.robot_name)
     else:
         gripper = RemotePandaGripper(cfg.robot_name)
+    gripper.node_name = arm.node_name
     gripper.connect()
     cameras: Dict[str, Any] = {}
     for cam in cfg.cameras:
